@@ -3,14 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const smartButtons = [
   { icon: Sparkles, label: "Explain Simply" },
@@ -31,33 +35,93 @@ const ChatPage = () => {
     },
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = (text?: string) => {
+  const streamChat = async (allMessages: { role: string; content: string }[]) => {
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: allMessages }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error: ${resp.status}`);
+    }
+
+    if (!resp.body) throw new Error("No stream body");
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = "";
+    let assistantSoFar = "";
+
+    // Add empty assistant message
+    const assistantId = Date.now().toString();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") break;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            assistantSoFar += content;
+            const snapshot = assistantSoFar;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
+            );
+          }
+        } catch {
+          textBuffer = line + "\n" + textBuffer;
+          break;
+        }
+      }
+    }
+  };
+
+  const handleSend = async (text?: string) => {
     const msg = text || input.trim();
-    if (!msg) return;
+    if (!msg || isStreaming) return;
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", content: msg };
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
-    setIsTyping(true);
+    setIsStreaming(true);
 
-    // Simulated AI response (will be replaced with real AI via Cloud)
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `Great question! To give you a proper AI-powered response, we'll need to connect Lovable Cloud. For now, here's a placeholder:\n\n**Your question:** "${msg}"\n\nOnce the AI backend is connected, I'll provide step-by-step solutions, code examples, and detailed explanations tailored to your SE curriculum. 🚀`,
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 1500);
+    try {
+      const apiMessages = newMessages
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({ role: m.role, content: m.content }));
+      await streamChat(apiMessages);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to get response");
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   return (
@@ -90,19 +154,13 @@ const ChatPage = () => {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
                       ? "gradient-primary text-primary-foreground"
                       : "glass text-foreground"
                   }`}
                 >
-                  {msg.content.split("\n").map((line, i) => (
-                    <p key={i} className={i > 0 ? "mt-1" : ""}>
-                      {line.split("**").map((part, j) =>
-                        j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-                      )}
-                    </p>
-                  ))}
+                  {msg.content || "…"}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
@@ -113,7 +171,7 @@ const ChatPage = () => {
             ))}
           </AnimatePresence>
 
-          {isTyping && (
+          {isStreaming && messages[messages.length - 1]?.role === "user" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
               <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-primary-foreground" />
@@ -137,6 +195,7 @@ const ChatPage = () => {
               size="sm"
               className="rounded-xl text-xs gap-1.5"
               onClick={() => handleSend(btn.label)}
+              disabled={isStreaming}
             >
               <btn.icon className="w-3 h-3" />
               {btn.label}
@@ -150,14 +209,14 @@ const ChatPage = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask anything about your SE courses..."
+            placeholder={user ? "Ask anything about your SE courses..." : "Sign in for personalized experience, or just ask..."}
             className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none"
           />
           <Button
             size="icon"
             className="rounded-xl gradient-primary"
             onClick={() => handleSend()}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isStreaming}
           >
             <Send className="w-4 h-4" />
           </Button>
