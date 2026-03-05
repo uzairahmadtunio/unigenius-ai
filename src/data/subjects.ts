@@ -1,65 +1,88 @@
 export interface Subject {
+  id: string;
   name: string;
   hasLab: boolean;
   icon: string;
 }
 
+const toSlug = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const s = (name: string, hasLab: boolean, icon: string): Subject => ({
+  id: toSlug(name),
+  name,
+  hasLab,
+  icon,
+});
+
 export const semesterSubjects: Record<number, Subject[]> = {
   1: [
-    { name: "Introduction to Computing", hasLab: true, icon: "💻" },
-    { name: "Programming Fundamentals (C++)", hasLab: true, icon: "⌨️" },
-    { name: "Calculus and Analytical Geometry", hasLab: false, icon: "📐" },
-    { name: "English Composition & Comprehension", hasLab: false, icon: "📝" },
-    { name: "Applied Physics / Basic Electronics", hasLab: false, icon: "⚡" },
-    { name: "Islamic and Religious Studies", hasLab: false, icon: "📖" },
+    s("Introduction to Computing", true, "💻"),
+    s("Programming Fundamentals (C++)", true, "⌨️"),
+    s("Calculus and Analytical Geometry", false, "📐"),
+    s("English Composition & Comprehension", false, "📝"),
+    s("Applied Physics / Basic Electronics", false, "⚡"),
+    s("Islamic and Religious Studies", false, "📖"),
   ],
   2: [
-    { name: "Object-Oriented Programming (OOP)", hasLab: true, icon: "🧱" },
-    { name: "Discrete Structures", hasLab: false, icon: "🔢" },
-    { name: "Software Engineering Concepts", hasLab: false, icon: "⚙️" },
-    { name: "Technical and Business Writing", hasLab: false, icon: "✍️" },
-    { name: "Pakistan Studies", hasLab: false, icon: "🏛️" },
-    { name: "Computer Organization & Assembly Language", hasLab: false, icon: "🖥️" },
+    s("Object-Oriented Programming (OOP)", true, "🧱"),
+    s("Discrete Structures", false, "🔢"),
+    s("Software Engineering Concepts", false, "⚙️"),
+    s("Technical and Business Writing", false, "✍️"),
+    s("Pakistan Studies", false, "🏛️"),
+    s("Computer Organization & Assembly Language", false, "🖥️"),
   ],
   3: [
-    { name: "Data Structures and Algorithms", hasLab: true, icon: "🌳" },
-    { name: "Software Requirements Engineering", hasLab: false, icon: "📋" },
-    { name: "Linear Algebra", hasLab: false, icon: "📊" },
-    { name: "Human Computer Interaction (HCI)", hasLab: false, icon: "🎨" },
-    { name: "University Elective-I", hasLab: false, icon: "📚" },
+    s("Data Structures and Algorithms", true, "🌳"),
+    s("Software Requirements Engineering", false, "📋"),
+    s("Linear Algebra", false, "📊"),
+    s("Human Computer Interaction (HCI)", false, "🎨"),
+    s("University Elective-I", false, "📚"),
   ],
   4: [
-    { name: "Software Design and Architecture", hasLab: true, icon: "🏗️" },
-    { name: "Database Systems", hasLab: true, icon: "🗄️" },
-    { name: "Operating Systems", hasLab: false, icon: "💿" },
-    { name: "Probability and Statistics", hasLab: false, icon: "📈" },
-    { name: "Numerical Computing", hasLab: false, icon: "🔬" },
+    s("Software Design and Architecture", true, "🏗️"),
+    s("Database Systems", true, "🗄️"),
+    s("Operating Systems", false, "💿"),
+    s("Probability and Statistics", false, "📈"),
+    s("Numerical Computing", false, "🔬"),
   ],
   5: [
-    { name: "Software Construction & Development", hasLab: true, icon: "🛠️" },
-    { name: "Computer Communication & Networks", hasLab: true, icon: "🌐" },
-    { name: "Web Engineering", hasLab: true, icon: "🕸️" },
-    { name: "Software Quality Engineering", hasLab: false, icon: "✅" },
-    { name: "Advanced Software Requirement Engineering", hasLab: false, icon: "📑" },
+    s("Software Construction & Development", true, "🛠️"),
+    s("Computer Communication & Networks", true, "🌐"),
+    s("Web Engineering", true, "🕸️"),
+    s("Software Quality Engineering", false, "✅"),
+    s("Advanced Software Requirement Engineering", false, "📑"),
   ],
   6: [
-    { name: "Software Project Management", hasLab: false, icon: "📅" },
-    { name: "Software Re-Engineering", hasLab: false, icon: "🔄" },
-    { name: "Information Security", hasLab: false, icon: "🔒" },
-    { name: "Mobile App Development", hasLab: false, icon: "📱" },
-    { name: "AI Supporting Elective", hasLab: false, icon: "🤖" },
-    { name: "Professional Practices", hasLab: false, icon: "💼" },
+    s("Software Project Management", false, "📅"),
+    s("Software Re-Engineering", false, "🔄"),
+    s("Information Security", false, "🔒"),
+    s("Mobile App Development", false, "📱"),
+    s("AI Supporting Elective", false, "🤖"),
+    s("Professional Practices", false, "💼"),
   ],
   7: [
-    { name: "Final Year Project (Part I)", hasLab: false, icon: "🎓" },
-    { name: "Cloud Computing", hasLab: false, icon: "☁️" },
-    { name: "Data Science", hasLab: false, icon: "📊" },
-    { name: "Entrepreneurship", hasLab: false, icon: "🚀" },
+    s("Final Year Project (Part I)", false, "🎓"),
+    s("Cloud Computing", false, "☁️"),
+    s("Data Science", false, "📊"),
+    s("Entrepreneurship", false, "🚀"),
   ],
   8: [
-    { name: "Final Year Project (Part II)", hasLab: false, icon: "🏆" },
-    { name: "SE Elective-IV", hasLab: false, icon: "📘" },
-    { name: "SE Elective-V", hasLab: false, icon: "📗" },
-    { name: "Internship (Field Experience)", hasLab: false, icon: "🏢" },
+    s("Final Year Project (Part II)", false, "🏆"),
+    s("SE Elective-IV", false, "📘"),
+    s("SE Elective-V", false, "📗"),
+    s("Internship (Field Experience)", false, "🏢"),
   ],
+};
+
+/** Find a subject by its slug across all semesters */
+export const findSubjectById = (id: string): { subject: Subject; semester: number } | null => {
+  for (const [sem, subjects] of Object.entries(semesterSubjects)) {
+    const found = subjects.find((s) => s.id === id);
+    if (found) return { subject: found, semester: Number(sem) };
+  }
+  return null;
 };

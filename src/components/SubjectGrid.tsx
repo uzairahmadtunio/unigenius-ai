@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { semesterSubjects } from "@/data/subjects";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
@@ -9,6 +10,7 @@ interface SubjectGridProps {
 
 const SubjectGrid = ({ semester }: SubjectGridProps) => {
   const subjects = semesterSubjects[semester] || [];
+  const navigate = useNavigate();
 
   return (
     <AnimatePresence mode="wait">
@@ -22,11 +24,12 @@ const SubjectGrid = ({ semester }: SubjectGridProps) => {
       >
         {subjects.map((subject, idx) => (
           <motion.div
-            key={subject.name}
+            key={subject.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
             whileHover={{ y: -4 }}
+            onClick={() => navigate(`/subject/${subject.id}`)}
             className="glass rounded-2xl p-5 cursor-pointer transition-shadow hover:shadow-elevated group"
           >
             <div className="flex items-start gap-3">

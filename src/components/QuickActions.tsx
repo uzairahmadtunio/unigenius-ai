@@ -3,12 +3,12 @@ import { MessageSquare, Brain, Code, FileText, Briefcase, ClipboardList } from "
 import { useNavigate } from "react-router-dom";
 
 const actions = [
-  { icon: MessageSquare, label: "AI Tutor", desc: "Chat with your SE Professor", path: "/chat", color: "from-blue-500 to-indigo-500" },
-  { icon: Brain, label: "Practice", desc: "Quizzes & Mock Tests", path: "/", color: "from-violet-500 to-purple-500" },
-  { icon: Code, label: "Code Lab", desc: "Debug & Optimize Code", path: "/", color: "from-emerald-500 to-teal-500" },
-  { icon: FileText, label: "Docs Gen", desc: "Lab Manuals & Notes", path: "/", color: "from-amber-500 to-orange-500" },
-  { icon: ClipboardList, label: "Exam Prep", desc: "Midterms & Finals", path: "/", color: "from-rose-500 to-pink-500" },
-  { icon: Briefcase, label: "Career", desc: "Interviews & Internships", path: "/", color: "from-cyan-500 to-blue-500" },
+  { icon: MessageSquare, label: "AI Tutor", desc: "Chat with your SE Professor", path: "/ai-tutor", color: "from-blue-500 to-indigo-500" },
+  { icon: Brain, label: "Practice", desc: "Quizzes & Mock Tests", path: "/practice", color: "from-violet-500 to-purple-500" },
+  { icon: Code, label: "Code Lab", desc: "Debug & Optimize Code", path: "/code-lab", color: "from-emerald-500 to-teal-500" },
+  { icon: FileText, label: "Docs Gen", desc: "Lab Manuals & Notes", path: "/docs-gen", color: "from-amber-500 to-orange-500" },
+  { icon: ClipboardList, label: "Exam Prep", desc: "Midterms & Finals", path: "/exam-prep", color: "from-rose-500 to-pink-500" },
+  { icon: Briefcase, label: "Career", desc: "Interviews & Internships", path: "/career", color: "from-cyan-500 to-blue-500" },
 ];
 
 const QuickActions = () => {
