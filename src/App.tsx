@@ -7,6 +7,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
 import AuthPage from "./pages/AuthPage";
+import PracticePage from "./pages/PracticePage";
+import CodeLabPage from "./pages/CodeLabPage";
+import DocsGenPage from "./pages/DocsGenPage";
+import ExamPrepPage from "./pages/ExamPrepPage";
+import CareerPage from "./pages/CareerPage";
+import SubjectHubPage from "./pages/SubjectHubPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,7 +26,14 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/ai-tutor" element={<ChatPage />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/practice" element={<PracticePage />} />
+            <Route path="/code-lab" element={<CodeLabPage />} />
+            <Route path="/docs-gen" element={<DocsGenPage />} />
+            <Route path="/exam-prep" element={<ExamPrepPage />} />
+            <Route path="/career" element={<CareerPage />} />
+            <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
