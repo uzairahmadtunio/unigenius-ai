@@ -8,6 +8,7 @@ import { findSubjectById } from "@/data/subjects";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import MarkdownMessage from "@/components/MarkdownMessage";
 
 interface Message {
   id: string;
@@ -191,7 +192,11 @@ const SubjectHubPage = () => {
                       : "glass text-foreground"
                   }`}
                 >
-                  {msg.content || "…"}
+                  {msg.role === "assistant" ? (
+                    <MarkdownMessage content={msg.content} />
+                  ) : (
+                    msg.content || "…"
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
