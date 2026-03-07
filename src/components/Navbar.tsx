@@ -56,7 +56,10 @@ const Navbar = () => {
           </Button>
           {user ? (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
+              <div
+                className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground cursor-pointer"
+                onClick={() => navigate("/profile")}
+              >
                 {user.email?.charAt(0).toUpperCase()}
               </div>
               <Button variant="ghost" size="icon" className="rounded-xl" onClick={signOut}>
