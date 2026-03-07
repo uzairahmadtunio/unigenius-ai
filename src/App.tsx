@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DepartmentProvider } from "@/contexts/DepartmentContext";
 import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
 import AuthPage from "./pages/AuthPage";
@@ -14,30 +15,42 @@ import ExamPrepPage from "./pages/ExamPrepPage";
 import CareerPage from "./pages/CareerPage";
 import SubjectHubPage from "./pages/SubjectHubPage";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
+
+const DarkModeInit = ({ children }: { children: React.ReactNode }) => {
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/ai-tutor" element={<ChatPage />} />
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/practice" element={<PracticePage />} />
-            <Route path="/code-lab" element={<CodeLabPage />} />
-            <Route path="/docs-gen" element={<DocsGenPage />} />
-            <Route path="/exam-prep" element={<ExamPrepPage />} />
-            <Route path="/career" element={<CareerPage />} />
-            <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <DepartmentProvider>
+          <DarkModeInit>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/ai-tutor" element={<ChatPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/practice" element={<PracticePage />} />
+                <Route path="/code-lab" element={<CodeLabPage />} />
+                <Route path="/docs-gen" element={<DocsGenPage />} />
+                <Route path="/exam-prep" element={<ExamPrepPage />} />
+                <Route path="/career" element={<CareerPage />} />
+                <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </DarkModeInit>
+        </DepartmentProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

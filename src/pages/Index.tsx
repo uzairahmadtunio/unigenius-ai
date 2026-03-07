@@ -7,16 +7,25 @@ import Footer from "@/components/Footer";
 import SemesterSelector from "@/components/SemesterSelector";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
+import DepartmentSelector from "@/components/DepartmentSelector";
+import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [semester, setSemester] = useState(1);
+  const { department } = useDepartment();
 
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
+
+  if (!department) {
+    return <DepartmentSelector />;
+  }
+
+  const deptInfo = departmentInfo[department];
 
   return (
     <div className="min-h-screen flex flex-col gradient-hero">
@@ -31,13 +40,13 @@ const Index = () => {
         >
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            AI-Powered Study Assistant
+            AI-Powered Study Assistant — {deptInfo.name}
           </div>
           <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
             Learn Smarter. <span className="gradient-text">Score Higher.</span> Grow Faster.
           </h1>
           <p className="text-muted-foreground max-w-lg mx-auto text-sm">
-            Your intelligent companion for BS Software Engineering — from assignments to career prep.
+            Your intelligent companion for {deptInfo.fullName} — from assignments to career prep.
           </p>
         </motion.section>
 
