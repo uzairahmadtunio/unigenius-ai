@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { semesterSubjects } from "@/data/subjects";
+import { getSubjects } from "@/data/subjects";
+import { useDepartment } from "@/contexts/DepartmentContext";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
 
@@ -9,13 +10,14 @@ interface SubjectGridProps {
 }
 
 const SubjectGrid = ({ semester }: SubjectGridProps) => {
-  const subjects = semesterSubjects[semester] || [];
+  const { department } = useDepartment();
+  const subjects = department ? getSubjects(department, semester) : [];
   const navigate = useNavigate();
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={semester}
+        key={`${department}-${semester}`}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}

@@ -5,6 +5,7 @@ import { Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks, FileQuestio
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { findSubjectById } from "@/data/subjects";
+import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
@@ -21,14 +22,16 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const SubjectHubPage = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
-  const result = findSubjectById(subjectId || "");
+  const { department } = useDepartment();
+  const result = findSubjectById(subjectId || "", department);
 
   const subjectName = result?.subject.name ?? "Unknown Subject";
   const semester = result?.semester ?? 0;
   const icon = result?.subject.icon ?? "📚";
   const hasLab = result?.subject.hasLab ?? false;
+  const deptName = result ? departmentInfo[result.department].fullName : "BS Software Engineering";
 
-  const systemPrompt = `You are now the specialized tutor for "${subjectName}" in Semester ${semester} of a BS Software Engineering program. Help the user with topics, assignments, lab tasks, viva questions, and exam preparation specifically related to ${subjectName}. Provide clear explanations, code examples (if applicable), and exam tips. Be encouraging and use markdown formatting.`;
+  const systemPrompt = `You are now the specialized tutor for "${subjectName}" in Semester ${semester} of a ${deptName} program. Help the user with topics, assignments, lab tasks, viva questions, and exam preparation specifically related to ${subjectName}. Provide clear explanations, code examples (if applicable), and exam tips. Be encouraging and use markdown formatting.`;
 
   const [messages, setMessages] = useState<Message[]>([
     {
