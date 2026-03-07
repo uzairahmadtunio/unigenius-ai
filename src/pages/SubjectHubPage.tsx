@@ -5,6 +5,7 @@ import { Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks, FileQuestio
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { findSubjectById } from "@/data/subjects";
+import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
