@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Award, Github, Linkedin, ExternalLink, ArrowLeft, Code, Briefcase, FileText } from "lucide-react";
+import { Award, Github, Linkedin, ExternalLink, ArrowLeft, Code, Briefcase, FileText, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
