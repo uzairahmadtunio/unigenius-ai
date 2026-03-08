@@ -149,7 +149,25 @@ const Navbar = () => {
             </Popover>
           )}
           {user ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-xl"
+                      onClick={() => {
+                        const msg = `Assalam-o-Alaikum! UniGenius AI use karo, ye Software Engineering students ke liye best assistant hai. C++ errors fix karo aur lab manuals banao! Join here: ${window.location.origin} - Built by Uzair Ahmad`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="text-xs">Invite Friends</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 variant="ghost"
                 size="icon"
