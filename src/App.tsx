@@ -12,6 +12,9 @@ import PracticePage from "./pages/PracticePage";
 import CodeLabPage from "./pages/CodeLabPage";
 import DocsGenPage from "./pages/DocsGenPage";
 import ExamPrepPage from "./pages/ExamPrepPage";
+import VivaPage from "./pages/VivaPage";
+import PastPapersPage from "./pages/PastPapersPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
 import CareerPage from "./pages/CareerPage";
 import SubjectHubPage from "./pages/SubjectHubPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -46,6 +49,9 @@ const App = () => (
                 <Route path="/code-lab" element={<CodeLabPage />} />
                 <Route path="/docs-gen" element={<DocsGenPage />} />
                 <Route path="/exam-prep" element={<ExamPrepPage />} />
+                <Route path="/viva-prep" element={<VivaPage />} />
+                <Route path="/past-papers" element={<PastPapersPage />} />
+                <Route path="/flashcards" element={<FlashcardsPage />} />
                 <Route path="/career" element={<CareerPage />} />
                 <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
