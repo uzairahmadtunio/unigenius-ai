@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks,
-  FileQuestion, ArrowLeft, Mic, Paperclip, X, FileText, Image as ImageIcon,
+  FileQuestion, ArrowLeft, Mic, Paperclip, X, FileText, Image as ImageIcon, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { useFileDrop } from "@/hooks/use-file-drop";
 
 interface Message {
   id: string;
@@ -63,6 +64,7 @@ const SubjectHubPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileIndex, setUploadingFileIndex] = useState(-1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   const systemPrompt = mode === "viva"
     ? `You are a strict but helpful university professor conducting a mock viva voce for "${subjectName}" in Semester ${semester} of a ${deptName} program. 
@@ -88,6 +90,7 @@ Start by greeting the student and asking your first viva question.`
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -361,8 +364,17 @@ Start by greeting the student and asking your first viva question.`
   }
 
   return (
-    <div className="min-h-screen flex flex-col gradient-hero">
+    <div className="min-h-screen flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       <Navbar />
+      {isDragOver && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
+            <Upload className="w-10 h-10 text-primary" />
+            <p className="font-display font-semibold text-foreground">Drop files here</p>
+            <p className="text-xs text-muted-foreground">PDF, Images, DOCX — up to {MAX_FILES} files</p>
+          </div>
+        </div>
+      )}
       <div className="flex-1 container mx-auto max-w-3xl px-4 py-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 mb-3">
