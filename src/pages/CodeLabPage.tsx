@@ -25,7 +25,13 @@ const CodeLabPage = () => {
   const [errorImage, setErrorImage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [lintDismissed, setLintDismissed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lintErrors = useMemo(() => {
+    if (language !== "cpp") return [];
+    return lintCppCode(code);
+  }, [code, language]);
 
   const extractCode = useCallback((text: string) => {
     const match = text.match(/```[\w]*\n([\s\S]*?)```/);
