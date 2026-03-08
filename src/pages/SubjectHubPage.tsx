@@ -64,6 +64,7 @@ const SubjectHubPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileIndex, setUploadingFileIndex] = useState(-1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
 
   const systemPrompt = mode === "viva"
     ? `You are a strict but helpful university professor conducting a mock viva voce for "${subjectName}" in Semester ${semester} of a ${deptName} program. 
