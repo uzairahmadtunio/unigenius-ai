@@ -457,6 +457,74 @@ export type Database = {
         }
         Relationships: []
       }
+      note_votes: {
+        Row: {
+          created_at: string
+          id: string
+          note_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_votes_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          semester: number
+          subject: string
+          title: string
+          uploader_name: string
+          upvotes: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          semester: number
+          subject: string
+          title: string
+          uploader_name?: string
+          upvotes?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          semester?: number
+          subject?: string
+          title?: string
+          uploader_name?: string
+          upvotes?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       past_papers: {
         Row: {
           created_at: string

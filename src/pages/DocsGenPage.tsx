@@ -13,7 +13,11 @@ import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 
+import { usePro } from "@/hooks/use-pro";
+import ProPaywall from "@/components/ProPaywall";
+
 const DocsGenPage = () => {
+  const { isPro, loading: proLoading } = usePro();
   const { department } = useDepartment();
   const { user } = useAuth();
   const [semester, setSemester] = useState(1);
