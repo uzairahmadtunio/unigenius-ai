@@ -69,6 +69,9 @@ const Index = () => {
           </div>
         </motion.section>
 
+        {/* Daily Streak */}
+        <DailyStreakWidget />
+
         {/* Global Search */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex justify-center">
           <GlobalSearch />
