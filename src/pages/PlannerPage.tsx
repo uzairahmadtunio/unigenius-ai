@@ -8,6 +8,7 @@ import { getSubjects } from "@/data/subjects";
 import { supabase } from "@/integrations/supabase/client";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import ThinkingAnimation from "@/components/ThinkingAnimation";
 import { toast } from "sonner";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
