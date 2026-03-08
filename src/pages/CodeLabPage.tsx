@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Code, Sparkles, Loader2, Bot, ImagePlus, X, Copy, Check, RotateCcw } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
+import { lintCppCode } from "@/lib/cpp-linter";
+import CodeLintWarnings from "@/components/CodeLintWarnings";
 
 const defaultCode: Record<string, { lang: string; code: string }> = {
   se: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
@@ -23,7 +25,13 @@ const CodeLabPage = () => {
   const [errorImage, setErrorImage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [lintDismissed, setLintDismissed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lintErrors = useMemo(() => {
+    if (language !== "cpp") return [];
+    return lintCppCode(code);
+  }, [code, language]);
 
   const extractCode = useCallback((text: string) => {
     const match = text.match(/```[\w]*\n([\s\S]*?)```/);
@@ -39,9 +47,18 @@ const CodeLabPage = () => {
 
   const analyzeCode = async (imageData?: string) => {
     if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
+
+    // If C++ and lint found errors and no image, show lint results instead of calling AI
+    if (language === "cpp" && lintErrors.length > 0 && !imageData) {
+      setLintDismissed(false);
+      toast.info("Client-side errors detected! Fix these first, or dismiss to use AI.");
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysis("");
     setFetchError(false);
+    setLintDismissed(false);
 
     try {
       const body: any = { code, language };
@@ -176,6 +193,11 @@ const CodeLabPage = () => {
               ))}
             </div>
           </div>
+
+          {/* Instant Lint Warnings */}
+          {!lintDismissed && (
+            <CodeLintWarnings errors={lintErrors} onDismiss={() => setLintDismissed(true)} />
+          )}
 
           <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "400px" }}>
             <Editor
