@@ -160,6 +160,7 @@ const AdminDashboard = () => {
           {activeTab === "groups" && <GroupsTab />}
           {activeTab === "alerts" && <GlobalAlertsTab />}
           {activeTab === "support" && <SupportTab />}
+          {activeTab === "payments" && <PaymentsTab />}
         </div>
       </main>
     </div>
