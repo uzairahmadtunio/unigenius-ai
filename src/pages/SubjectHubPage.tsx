@@ -81,7 +81,7 @@ Start by greeting the student and asking your first viva question.`
 
   const getWelcome = () => mode === "viva"
     ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Aaj hum "${subjectName}" ke important concepts cover karenge.\n\nTayyar ho? Shuru karte hain...\n\n*Pehla sawal aa raha hai...*`
-    : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation & Practice MCQs\n• 📎 **Upload files** — images, PDFs, DOCX (up to 5 at once)\n• 🔍 **OCR** — extract text from photos & diagrams\n\nWhat would you like to study today?`;
+    : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation & Practice MCQs\n• 📎 **Upload files** — images, PDFs, DOCX (up to 20 at once)\n• 🔍 **OCR** — extract text from photos & diagrams\n\nWhat would you like to study today?`;
 
   const [messages, setMessages] = useState<Message[]>([
     { id: "welcome", role: "assistant", content: getWelcome() },
