@@ -1172,7 +1172,7 @@ const PromoManagerTab = () => {
 
   const deleteCode = async (id: string) => {
     await supabase.from("promo_codes" as any).delete().eq("id", id);
-    toast.success("Code deleted");
+    toast.success("Promo Code Deleted");
     fetchCodes();
   };
 
