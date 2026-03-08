@@ -9,6 +9,7 @@ import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
 import GlobalSearch from "@/components/GlobalSearch";
+import AttendanceAlert from "@/components/AttendanceAlert";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const Index = () => {
@@ -25,6 +26,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col gradient-hero">
+      <AttendanceAlert />
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8 space-y-8">
