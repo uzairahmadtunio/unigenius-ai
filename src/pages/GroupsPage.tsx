@@ -261,9 +261,7 @@ const GroupsPage = () => {
                   className="glass rounded-2xl p-5 cursor-pointer hover:border-primary/30 border-2 border-transparent transition-all group"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <GroupAvatar url={g.avatar_url} name={g.name} />
                     {g.is_owner && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/15 rounded-full px-2 py-0.5 uppercase tracking-wider">
                         <Crown className="w-2.5 h-2.5" /> Owner
