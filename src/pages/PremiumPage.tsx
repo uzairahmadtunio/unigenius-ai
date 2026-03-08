@@ -96,18 +96,7 @@ const PremiumPage = () => {
 
     const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
 
-    // Increment promo usage
-    if (appliedPromo) {
-      const { data: promoData } = await supabase
-        .from("promo_codes" as any)
-        .select("used_count")
-        .eq("code", appliedPromo.code)
-        .single();
-      await supabase
-        .from("promo_codes" as any)
-        .update({ used_count: ((promoData as any)?.used_count || 0) + 1 } as any)
-        .eq("code", appliedPromo.code);
-    }
+    // Promo increment now handled server-side on admin approve
 
     const { error: insertErr } = await (supabase.from("payment_requests" as any) as any).insert({
       user_id: user.id,
