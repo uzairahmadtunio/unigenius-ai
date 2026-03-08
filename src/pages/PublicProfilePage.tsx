@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { InviteButton } from "@/components/InviteModal";
 
 const PublicProfilePage = () => {
   const { rollNumber } = useParams<{ rollNumber: string }>();
