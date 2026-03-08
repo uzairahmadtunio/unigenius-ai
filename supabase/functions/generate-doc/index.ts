@@ -9,12 +9,18 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, subject, topic, additionalNotes } = await req.json();
+    const { type, subject, topic, additionalNotes, semester, studentInfo } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const extra = additionalNotes ? `\n\nAdditional instructions from student: ${additionalNotes}` : "";
-    const docType = type === "lab" ? "Lab Manual" : "Assignment";
+    
+    // Dynamic student info with fallback placeholders
+    const sName = studentInfo?.name || "__________ (Enter Name)";
+    const sRoll = studentInfo?.rollNumber || "__________ (Enter Roll No)";
+    const sDept = studentInfo?.department || "Software Engineering";
+    const sSemester = semester || "(Current Semester)";
+
     const prompt = type === "lab"
       ? `Generate a complete Lab Manual for the subject "${subject}" on the topic "${topic}" in the EXACT style of the University of Larkano lab manuals.
 
@@ -23,17 +29,17 @@ FORMAT — follow this EXACTLY:
 Start with this header block (use markdown):
 
 # UNIVERSITY OF LARKANO
-## Department of Software Engineering
+## Department of ${sDept}
 ### Subject: ${subject}
 ---
 
 **Student Information:**
 | Field | Details |
 |-------|---------|
-| **Name** | Uzair Ahmad Tunio |
-| **Roll No** | 14 |
-| **Department** | Software Engineering |
-| **Semester** | (Current Semester) |
+| **Name** | ${sName} |
+| **Roll No** | ${sRoll} |
+| **Department** | ${sDept} |
+| **Semester** | ${sSemester} |
 
 ---
 

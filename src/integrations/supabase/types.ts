@@ -132,6 +132,7 @@ export type Database = {
           current_semester: number | null
           display_name: string | null
           id: string
+          roll_number: string | null
           updated_at: string
           user_id: string
         }
@@ -141,6 +142,7 @@ export type Database = {
           current_semester?: number | null
           display_name?: string | null
           id?: string
+          roll_number?: string | null
           updated_at?: string
           user_id: string
         }
@@ -150,6 +152,7 @@ export type Database = {
           current_semester?: number | null
           display_name?: string | null
           id?: string
+          roll_number?: string | null
           updated_at?: string
           user_id?: string
         }
