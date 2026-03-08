@@ -10,6 +10,7 @@ import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
 import GlobalSearch from "@/components/GlobalSearch";
 import AttendanceAlert from "@/components/AttendanceAlert";
+import CareerReadinessWidget from "@/components/CareerReadinessWidget";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const SPLASH_KEY = "unigenius-splash-shown";
@@ -65,8 +66,13 @@ const Index = () => {
           <GlobalSearch />
         </motion.section>
 
-        {/* Quick Actions */}
+        {/* Career Readiness */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <CareerReadinessWidget />
+        </motion.section>
+
+        {/* Quick Actions */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <QuickActions />
         </motion.section>
 

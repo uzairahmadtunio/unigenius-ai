@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Code, FileText, Mic, MicOff, Send, Bot, User,
   Play, CheckCircle, XCircle, Upload, FileUp, Award, Target,
-  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles, List, Zap
+  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles, List, Zap, TrendingUp
 } from "lucide-react";
+import SkillAnalyzer from "@/components/SkillAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { fireCelebration, recordCareerActivity, checkAndAwardBadges, PRESET_DSA_PROBLEMS, type DSAProblem } from "@/lib/career-points";
 
-type ActiveTab = "interview" | "dsa" | "cv";
+type ActiveTab = "interview" | "dsa" | "cv" | "skills";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -824,6 +825,7 @@ const tabs = [
   { id: "interview" as ActiveTab, icon: Briefcase, label: "Interview Prep", desc: "AI Mock Interviews", color: "from-sky-500 to-indigo-500" },
   { id: "dsa" as ActiveTab, icon: Code, label: "DSA Practice", desc: "10 Problems + AI", color: "from-emerald-500 to-teal-500" },
   { id: "cv" as ActiveTab, icon: FileText, label: "CV Optimizer", desc: "AI Resume Scorer", color: "from-violet-500 to-purple-500" },
+  { id: "skills" as ActiveTab, icon: TrendingUp, label: "Skill Sync", desc: "Freelance Gigs", color: "from-amber-500 to-orange-500" },
 ];
 
 const CareerPage = () => {
@@ -840,7 +842,7 @@ const CareerPage = () => {
       }
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {tabs.map((tab) => (
             <motion.button
               key={tab.id}
@@ -873,6 +875,7 @@ const CareerPage = () => {
             {activeTab === "interview" && <InterviewPrep />}
             {activeTab === "dsa" && <DSAPractice />}
             {activeTab === "cv" && <CVOptimizer />}
+            {activeTab === "skills" && <SkillAnalyzer />}
           </motion.div>
         </AnimatePresence>
 
