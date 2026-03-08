@@ -20,6 +20,8 @@ import SubjectHubPage from "./pages/SubjectHubPage";
 import ProfilePage from "./pages/ProfilePage";
 import AttendancePage from "./pages/AttendancePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import GroupsPage from "./pages/GroupsPage";
+import GroupDetailPage from "./pages/GroupDetailPage";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -57,6 +59,8 @@ const App = () => (
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
+                <Route path="/groups" element={<GroupsPage />} />
+                <Route path="/groups/:groupId" element={<GroupDetailPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
