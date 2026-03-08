@@ -2,8 +2,9 @@ import { useState } from "react";
 import { FileText, Download, Loader2, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
+import { useDepartment } from "@/contexts/DepartmentContext";
 import { getSubjects } from "@/data/subjects";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -16,6 +17,7 @@ const DocsGenPage = () => {
   const [docType, setDocType] = useState<"lab" | "assignment">("lab");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -33,7 +35,7 @@ const DocsGenPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ type: docType, subject, topic }),
+        body: JSON.stringify({ type: docType, subject, topic, additionalNotes }),
       });
 
       if (!resp.ok) {
@@ -84,7 +86,6 @@ const DocsGenPage = () => {
     doc.text(`Topic: ${topic}`, 20, 30);
     doc.setFontSize(9);
 
-    // Simple text wrapping
     const plainText = content
       .replace(/#{1,6}\s/g, "")
       .replace(/\*\*/g, "")
@@ -152,12 +153,25 @@ const DocsGenPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Topic / Experiment</label>
+              <label className="text-xs text-muted-foreground">
+                {docType === "lab" ? "Experiment / Topic" : "Assignment Topic"}
+              </label>
               <Input
-                placeholder="e.g., Linked List Implementation"
+                placeholder={docType === "lab" ? "e.g., Linked List Implementation" : "e.g., OOP Concepts Report"}
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 className="rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Additional Instructions (optional)</label>
+              <Textarea
+                placeholder="Any specific requirements, page count, formatting notes..."
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                className="rounded-xl min-h-[60px]"
+                rows={2}
               />
             </div>
 
@@ -167,7 +181,7 @@ const DocsGenPage = () => {
               className="w-full rounded-xl gradient-primary text-primary-foreground gap-2"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-              {isGenerating ? "Generating..." : "Generate Document"}
+              {isGenerating ? "Generating..." : `Generate ${docType === "lab" ? "Lab Manual" : "Assignment"}`}
             </Button>
 
             {content && (
@@ -176,10 +190,22 @@ const DocsGenPage = () => {
               </Button>
             )}
           </div>
+
+          {/* Mode info */}
+          <div className="glass rounded-2xl p-4 space-y-2">
+            <h4 className="font-display font-semibold text-foreground text-sm">
+              {docType === "lab" ? "🔬 Lab Manual Mode" : "📝 Assignment Mode"}
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {docType === "lab"
+                ? "Generates: Objective → Apparatus → Theory → Algorithm → Procedure → Code → Output → Conclusion"
+                : "Generates: Title → Introduction → Detailed Content → Examples → Practice Questions → Summary → References"}
+            </p>
+          </div>
         </div>
 
         {/* Preview */}
-        <div className="lg:col-span-2 glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "600px" }}>
+        <div className="lg:col-span-2 glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "700px" }}>
           {content ? (
             <div className="flex gap-3">
               <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
@@ -194,7 +220,11 @@ const DocsGenPage = () => {
               <FileText className="w-12 h-12 text-muted-foreground/30" />
               <div>
                 <p className="font-display font-semibold text-foreground">Document Preview</p>
-                <p className="text-sm text-muted-foreground mt-1">Configure your document and click Generate to create a professional lab manual or assignment.</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {docType === "lab"
+                    ? "Configure your lab manual with subject & experiment, then generate a complete document with Objective, Theory, Algorithm, Code, and Conclusion."
+                    : "Configure your assignment with subject & topic, then generate a professional document with detailed academic formatting."}
+                </p>
               </div>
             </div>
           )}

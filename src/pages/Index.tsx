@@ -8,6 +8,7 @@ import SemesterSelector from "@/components/SemesterSelector";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
+import GlobalSearch from "@/components/GlobalSearch";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const Index = () => {
@@ -17,13 +18,8 @@ const Index = () => {
 
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
-  if (showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
-  }
-
-  if (!department) {
-    return <DepartmentSelector />;
-  }
+  if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
+  if (!department) return <DepartmentSelector />;
 
   const deptInfo = departmentInfo[department];
 
@@ -33,11 +29,7 @@ const Index = () => {
 
       <main className="flex-1 container mx-auto px-4 py-8 space-y-8">
         {/* Hero */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-3"
-        >
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             AI-Powered Study Assistant — {deptInfo.name}
@@ -50,36 +42,25 @@ const Index = () => {
           </p>
         </motion.section>
 
+        {/* Global Search */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex justify-center">
+          <GlobalSearch />
+        </motion.section>
+
         {/* Quick Actions */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <QuickActions />
         </motion.section>
 
         {/* Semester Selector */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-4">
           <h2 className="font-display font-bold text-lg text-foreground">Select Semester</h2>
           <SemesterSelector selected={semester} onSelect={setSemester} />
         </motion.section>
 
         {/* Subject Grid */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-4"
-        >
-          <h2 className="font-display font-bold text-lg text-foreground">
-            Semester {semester} Subjects
-          </h2>
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-4">
+          <h2 className="font-display font-bold text-lg text-foreground">Semester {semester} Subjects</h2>
           <SubjectGrid semester={semester} />
         </motion.section>
       </main>

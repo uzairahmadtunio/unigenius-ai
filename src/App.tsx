@@ -15,6 +15,7 @@ import ExamPrepPage from "./pages/ExamPrepPage";
 import CareerPage from "./pages/CareerPage";
 import SubjectHubPage from "./pages/SubjectHubPage";
 import ProfilePage from "./pages/ProfilePage";
+import AttendancePage from "./pages/AttendancePage";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/career" element={<CareerPage />} />
                 <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
