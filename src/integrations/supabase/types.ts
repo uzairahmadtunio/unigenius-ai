@@ -253,6 +253,33 @@ export type Database = {
         }
         Relationships: []
       }
+      global_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          message: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+        }
+        Relationships: []
+      }
       group_files: {
         Row: {
           created_at: string
@@ -652,6 +679,46 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_group: { Args: { _group_id: string }; Returns: undefined }
+      admin_delete_user: {
+        Args: { _target_user_id: string }
+        Returns: undefined
+      }
+      admin_get_all_groups: {
+        Args: never
+        Returns: {
+          created_at: string
+          description: string
+          file_count: number
+          group_id: string
+          member_count: number
+          name: string
+          owner_id: string
+          owner_name: string
+        }[]
+      }
+      admin_get_all_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          current_semester: number
+          display_name: string
+          email: string
+          roll_number: string
+          user_id: string
+        }[]
+      }
+      admin_get_stats: {
+        Args: never
+        Returns: {
+          total_files: number
+          total_groups: number
+          total_notices: number
+          total_quizzes: number
+          total_users: number
+        }[]
+      }
       get_leaderboard_filtered: {
         Args: { time_filter?: string }
         Returns: {
