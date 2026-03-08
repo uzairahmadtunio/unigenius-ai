@@ -163,7 +163,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard: {
+        Row: {
+          avatar_url: string | null
+          avg_percentage: number | null
+          display_name: string | null
+          perfect_scores: number | null
+          quizzes_taken: number | null
+          total_points: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
