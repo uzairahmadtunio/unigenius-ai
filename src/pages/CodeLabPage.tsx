@@ -194,6 +194,11 @@ const CodeLabPage = () => {
             </div>
           </div>
 
+          {/* Instant Lint Warnings */}
+          {!lintDismissed && (
+            <CodeLintWarnings errors={lintErrors} onDismiss={() => setLintDismissed(true)} />
+          )}
+
           <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "400px" }}>
             <Editor
               height="100%"
