@@ -1,4 +1,4 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2 } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,7 +10,12 @@ import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-const Navbar = () => {
+interface NavbarProps {
+  onMenuToggle?: () => void;
+  showMenu?: boolean;
+}
+
+const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
@@ -55,19 +60,27 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-40 glass border-b border-border/50">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-display font-bold text-foreground">
-              UniGenius <span className="gradient-text">AI</span>
-            </span>
-            {department && (
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                — {departmentInfo[department].name}
+        <div className="flex items-center gap-2">
+          {/* Mobile hamburger for chat pages */}
+          {onMenuToggle && (
+            <Button variant="ghost" size="icon" className="rounded-xl md:hidden" onClick={onMenuToggle}>
+              <Menu className="w-5 h-5" />
+            </Button>
+          )}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-display font-bold text-foreground">
+                UniGenius <span className="gradient-text">AI</span>
               </span>
-            )}
+              {department && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  — {departmentInfo[department].name}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -98,7 +111,7 @@ const Navbar = () => {
             variant="ghost"
             size="icon"
             onClick={() => setIsDark(!isDark)}
-            className="rounded-xl"
+            className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
@@ -158,7 +171,7 @@ const Navbar = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-xl"
+                      className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
                       onClick={() => {
                         const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
@@ -173,13 +186,13 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-xl"
+                className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
                 onClick={() => navigate("/profile")}
               >
                 <Settings className="w-4 h-4" />
               </Button>
               <Avatar
-                className="w-8 h-8 cursor-pointer border border-primary/20"
+                className={`w-8 h-8 cursor-pointer border border-primary/20 ${showMenu ? "hidden sm:flex" : ""}`}
                 onClick={() => navigate("/profile")}
               >
                 <AvatarImage src={avatarUrl} />
@@ -187,7 +200,7 @@ const Navbar = () => {
                   {user.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button variant="ghost" size="icon" className="rounded-xl" onClick={signOut}>
+              <Button variant="ghost" size="icon" className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`} onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>

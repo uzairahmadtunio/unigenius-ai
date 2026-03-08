@@ -62,6 +62,7 @@ const ChatPage = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [titleGenerated, setTitleGenerated] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,7 +291,7 @@ const ChatPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-      <Navbar />
+      <Navbar onMenuToggle={() => setMobileSidebarOpen(prev => !prev)} showMenu />
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
@@ -301,7 +302,15 @@ const ChatPage = () => {
         </div>
       )}
       <div className="flex-1 flex overflow-hidden">
-        <ChatSidebar activeChatId={activeChatId} onSelectChat={loadChat} onNewChat={handleNewChat} refreshTrigger={sidebarRefresh} subject={null} />
+        <ChatSidebar
+          activeChatId={activeChatId}
+          onSelectChat={loadChat}
+          onNewChat={handleNewChat}
+          refreshTrigger={sidebarRefresh}
+          subject={null}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
+        />
 
         <div className="flex-1 flex flex-col max-w-3xl mx-auto px-4 py-4 w-full">
           <div className="flex items-center gap-3 mb-4">
