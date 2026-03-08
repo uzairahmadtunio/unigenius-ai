@@ -17,6 +17,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { useFileDrop } from "@/hooks/use-file-drop";
+import ChatSidebar from "@/components/ChatSidebar";
 
 interface Message {
   id: string;
@@ -36,6 +37,7 @@ interface AttachedFile {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const TITLE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-title`;
 const MAX_FILES = 20;
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -63,8 +65,10 @@ const SubjectHubPage = () => {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileIndex, setUploadingFileIndex] = useState(-1);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [sidebarRefresh, setSidebarRefresh] = useState(0);
+  const [titleGenerated, setTitleGenerated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
 
   const systemPrompt = mode === "viva"
     ? `You are a strict but helpful university professor conducting a mock viva voce for "${subjectName}" in Semester ${semester} of a ${deptName} program. 
