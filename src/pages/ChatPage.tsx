@@ -79,13 +79,21 @@ const ChatPage = () => {
     }
   }, [userScrolledUp]);
 
-  // Detect if user scrolled up manually
+  // Detect if user scrolled up manually + show scroll-to-top
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    // If user is more than 100px from bottom, they've scrolled up
     setUserScrolledUp(distFromBottom > 100);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const scrollToBottomManual = useCallback(() => {
+    setUserScrolledUp(false);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
