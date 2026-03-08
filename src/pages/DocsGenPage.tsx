@@ -79,6 +79,8 @@ const DocsGenPage = () => {
             name: studentName || "",
             rollNumber: rollNumber || "",
             department: studentDept || "",
+            section: studentSection || "",
+            university: studentUniversity || "University of Larkana",
           },
         }),
       });
