@@ -12,6 +12,7 @@ import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
+import ThinkingAnimation from "@/components/ThinkingAnimation";
 
 import { usePro } from "@/hooks/use-pro";
 import ProPaywall from "@/components/ProPaywall";
