@@ -100,6 +100,9 @@ const PublicProfilePage = () => {
             </Button>
           </Link>
           <Badge variant="secondary" className="text-[10px]">Public Portfolio</Badge>
+          <div className="ml-auto">
+            <InviteButton variant="outline" />
+          </div>
         </div>
 
         {/* Profile Card */}

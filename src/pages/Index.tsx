@@ -63,6 +63,9 @@ const Index = () => {
           <p className="text-muted-foreground max-w-lg mx-auto text-sm">
             Your intelligent companion for {deptInfo.fullName} — from assignments to career prep.
           </p>
+          <div className="pt-1">
+            <InviteButton variant="outline" />
+          </div>
         </motion.section>
 
         {/* Global Search */}
