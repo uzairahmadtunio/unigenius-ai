@@ -30,6 +30,7 @@ import NotesPage from "./pages/NotesPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
+import MobileBottomNav from "./components/MobileBottomNav";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
