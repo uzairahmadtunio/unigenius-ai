@@ -24,6 +24,7 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
+import PremiumPage from "./pages/PremiumPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/groups/:groupId" element={<GroupDetailPage />} />
                 <Route path="/u/:rollNumber" element={<PublicProfilePage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
