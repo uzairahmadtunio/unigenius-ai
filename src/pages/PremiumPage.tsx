@@ -230,13 +230,24 @@ const PremiumPage = () => {
               )}
             </div>
             {appliedPromo && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs text-emerald-500 mt-2 font-medium"
-              >
-                ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
-              </motion.p>
+              <div className="space-y-1 mt-2">
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-emerald-500 font-medium"
+                >
+                  ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
+                </motion.p>
+                {appliedPromo.remaining !== undefined && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-amber-500 font-medium"
+                  >
+                    ⚡ Hurry! Only {appliedPromo.remaining} spots left for this discount!
+                  </motion.p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
