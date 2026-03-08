@@ -19,9 +19,10 @@ interface ChatSidebarProps {
   onSelectChat: (chatId: string) => void;
   onNewChat: () => void;
   refreshTrigger: number;
+  subject?: string | null;
 }
 
-const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: ChatSidebarProps) => {
+const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, subject }: ChatSidebarProps) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
