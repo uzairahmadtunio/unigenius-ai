@@ -24,7 +24,7 @@ const PremiumPage = () => {
   // Promo code state
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_percent: number } | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_percent: number; remaining?: number } | null>(null);
 
   const basePrice = 300;
   const finalPrice = appliedPromo ? Math.round(basePrice * (1 - appliedPromo.discount_percent / 100)) : basePrice;
@@ -63,13 +63,14 @@ const PremiumPage = () => {
       }
 
       const promo = data as any;
-      if (promo.used_count >= promo.usage_limit) {
-        toast.error("This promo code has reached its usage limit");
+      const remaining = promo.usage_limit - promo.used_count;
+      if (remaining <= 0) {
+        toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai.");
         setAppliedPromo(null);
         return;
       }
 
-      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent });
+      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent, remaining });
       toast.success("🎉 Mubarak! Uzair bhai ne aapko " + promo.discount_percent + "% discount de diya hai.", {
         duration: 5000,
       });
@@ -95,18 +96,7 @@ const PremiumPage = () => {
 
     const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
 
-    // Increment promo usage
-    if (appliedPromo) {
-      const { data: promoData } = await supabase
-        .from("promo_codes" as any)
-        .select("used_count")
-        .eq("code", appliedPromo.code)
-        .single();
-      await supabase
-        .from("promo_codes" as any)
-        .update({ used_count: ((promoData as any)?.used_count || 0) + 1 } as any)
-        .eq("code", appliedPromo.code);
-    }
+    // Promo increment now handled server-side on admin approve
 
     const { error: insertErr } = await (supabase.from("payment_requests" as any) as any).insert({
       user_id: user.id,
@@ -240,13 +230,24 @@ const PremiumPage = () => {
               )}
             </div>
             {appliedPromo && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs text-emerald-500 mt-2 font-medium"
-              >
-                ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
-              </motion.p>
+              <div className="space-y-1 mt-2">
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-emerald-500 font-medium"
+                >
+                  ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
+                </motion.p>
+                {appliedPromo.remaining !== undefined && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-amber-500 font-medium"
+                  >
+                    ⚡ Hurry! Only {appliedPromo.remaining} spots left for this discount!
+                  </motion.p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
