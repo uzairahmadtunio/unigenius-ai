@@ -33,12 +33,20 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, su
 
   const fetchSessions = async () => {
     if (!user) { setSessions([]); setLoading(false); return; }
-    const { data, error } = await supabase
+    let query = supabase
       .from("chat_sessions")
       .select("id, title, created_at, updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(50);
+    if (subject !== undefined) {
+      if (subject) {
+        query = query.eq("subject", subject);
+      } else {
+        query = query.is("subject", null);
+      }
+    }
+    const { data, error } = await query;
     if (!error && data) setSessions(data);
     setLoading(false);
   };
