@@ -63,13 +63,14 @@ const PremiumPage = () => {
       }
 
       const promo = data as any;
-      if (promo.used_count >= promo.usage_limit) {
-        toast.error("This promo code has reached its usage limit");
+      const remaining = promo.usage_limit - promo.used_count;
+      if (remaining <= 0) {
+        toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai.");
         setAppliedPromo(null);
         return;
       }
 
-      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent });
+      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent, remaining });
       toast.success("🎉 Mubarak! Uzair bhai ne aapko " + promo.discount_percent + "% discount de diya hai.", {
         duration: 5000,
       });
