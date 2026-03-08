@@ -23,7 +23,9 @@ Generate exactly ${count} slides. For EACH slide, output in this EXACT JSON form
   {
     "title": "Slide title here",
     "bullets": ["Point 1", "Point 2", "Point 3", "Point 4"],
-    "imageSuggestion": "Describe a relevant, high-quality image for this slide"
+    "imageSuggestion": "Describe a relevant, high-quality image for this slide",
+    "icon": "one-word-lucide-icon-name",
+    "speakerNotes": "2-3 sentence script for the presenter explaining what to say while presenting this slide"
   }
 ]
 
@@ -33,7 +35,9 @@ Rules:
 - Each slide should have 3-5 bullet points in professional English
 - Image suggestions should be descriptive and specific (e.g., "A modern computer lab with students coding on laptops")
 - Keep bullet points concise and informative
-- Make content educational and well-structured`;
+- Make content educational and well-structured
+- icon must be a valid Lucide icon name in kebab-case (e.g., "book-open", "code", "graduation-cap", "brain", "lightbulb", "users", "target", "trophy", "chart-bar", "layers")
+- speakerNotes should be a natural speech script (2-3 sentences) telling the presenter exactly what to say for this slide`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,7 +50,7 @@ Rules:
         messages: [
           {
             role: "system",
-            content: "You are a professional presentation designer. Generate slide content as a valid JSON array. Output ONLY raw JSON — no markdown code fences, no explanatory text. Each slide object has: title (string), bullets (string array of 3-5 items), imageSuggestion (string).",
+            content: "You are a professional presentation designer. Generate slide content as a valid JSON array. Output ONLY raw JSON — no markdown code fences, no explanatory text. Each slide object has: title (string), bullets (string array of 3-5 items), imageSuggestion (string), icon (string - valid Lucide icon name in kebab-case), speakerNotes (string - 2-3 sentence presenter script).",
           },
           { role: "user", content: prompt },
         ],
@@ -72,7 +76,6 @@ Rules:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
     
-    // Extract JSON from response (handle potential markdown wrapping)
     let slides;
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -81,6 +84,15 @@ Rules:
       console.error("Failed to parse slides JSON:", content);
       throw new Error("Failed to parse AI response");
     }
+
+    // Ensure each slide has the new fields with defaults
+    slides = slides.map((s: any) => ({
+      title: s.title || "Untitled Slide",
+      bullets: Array.isArray(s.bullets) ? s.bullets : [],
+      imageSuggestion: s.imageSuggestion || "",
+      icon: s.icon || "presentation",
+      speakerNotes: s.speakerNotes || "",
+    }));
 
     return new Response(JSON.stringify({ slides }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
