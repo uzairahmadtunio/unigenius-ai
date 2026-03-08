@@ -7,6 +7,7 @@ import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
 import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
+import ThinkingAnimation from "@/components/ThinkingAnimation";
 import CodeDiffView from "@/components/CodeDiffView";
 
 const defaultCode: Record<string, { lang: string; code: string }> = {
