@@ -987,7 +987,7 @@ const PaymentsTab = () => {
       _action: action,
       _note: note || null,
     });
-    toast.success(action === "approve" ? "✅ Payment approved! User is now Pro." : "❌ Payment rejected.");
+    toast.success(action === "approve" ? "Payment Request Approved — User upgraded to Pro." : "Payment Request Rejected");
     fetchRequests();
   };
 
