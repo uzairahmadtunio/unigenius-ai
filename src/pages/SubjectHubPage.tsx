@@ -771,6 +771,7 @@ Start by greeting the student and asking your first viva question.`
             <Send className="w-4 h-4" />
           </Button>
         </div>
+        </div>
       </div>
       <Footer />
     </div>
