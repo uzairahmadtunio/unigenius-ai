@@ -469,7 +469,7 @@ Start by greeting the student and asking your first viva question.`
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
             <Upload className="w-10 h-10 text-primary" />
             <p className="font-display font-semibold text-foreground">Drop files here</p>
-            <p className="text-xs text-muted-foreground">PDF, Images, DOCX — up to {MAX_FILES} files</p>
+            <p className="text-xs text-muted-foreground">{DROP_ZONE_TEXT} — up to {MAX_FILES} files</p>
           </div>
         </div>
       )}
