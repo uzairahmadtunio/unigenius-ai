@@ -41,14 +41,7 @@ interface AttachedFile {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const TITLE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-title`;
 const MAX_FILES = 20;
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+// File types handled by shared lib
 
 const SubjectHubPage = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
