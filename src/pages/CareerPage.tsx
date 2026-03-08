@@ -294,6 +294,7 @@ Start by greeting the candidate and asking your first question.`
 
 // ─── DSA Practice ─────────────────────────────────────────────────
 const DSAPractice = () => {
+  const { user } = useAuth();
   const [problem, setProblem] = useState<string>("");
   const [code, setCode] = useState("// Write your solution here\n\n");
   const [analysis, setAnalysis] = useState("");
