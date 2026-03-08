@@ -26,6 +26,7 @@ import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
+import SupportChatWidget from "./components/SupportChatWidget";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
