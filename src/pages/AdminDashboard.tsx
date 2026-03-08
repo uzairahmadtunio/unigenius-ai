@@ -60,11 +60,22 @@ const AdminDashboard = () => {
       const total = (data || []).reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0);
       setSupportUnread(total);
     };
+    const fetchFeedbackUnread = async () => {
+      const { data, count } = await supabase
+        .from("feedbacks" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new");
+      setFeedbackUnread(count || 0);
+    };
     fetchUnread();
+    fetchFeedbackUnread();
     const channel = supabase
       .channel("admin-support-notify")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, () => {
         fetchUnread();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "feedbacks" }, () => {
+        fetchFeedbackUnread();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
