@@ -71,6 +71,17 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl text-xs gap-1.5 hidden sm:flex text-primary"
+              onClick={() => navigate("/admin")}
+            >
+              <Shield className="w-3 h-3" />
+              Admin
+            </Button>
+          )}
           {department && (
             <Button
               variant="ghost"
