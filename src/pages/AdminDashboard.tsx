@@ -156,6 +156,11 @@ const AdminDashboard = () => {
                 {supportUnread > 9 ? "+" : supportUnread}
               </span>
             )}
+            {tab.id === "feedback" && feedbackUnread > 0 && (
+              <span className="absolute top-1 right-1/4 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
+                {feedbackUnread > 9 ? "+" : feedbackUnread}
+              </span>
+            )}
           </button>
         ))}
       </div>
