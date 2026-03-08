@@ -891,6 +891,7 @@ const CareerPage = () => {
             <span className="font-bold gradient-text">Uzair Ahmad</span>
           </p>
         </div>
+        </div>
       </div>
     </PageShell>
   );

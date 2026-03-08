@@ -73,6 +73,8 @@ const App = () => (
                 <Route path="/u/:rollNumber" element={<PublicProfilePage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/premium" element={<PremiumPage />} />
+                <Route path="/planner" element={<PlannerPage />} />
+                <Route path="/notes" element={<NotesPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
