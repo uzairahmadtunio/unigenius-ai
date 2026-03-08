@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { fireCelebration, recordCareerActivity, checkAndAwardBadges } from "@/lib/career-points";
 
 type ActiveTab = "interview" | "dsa" | "cv";
 
