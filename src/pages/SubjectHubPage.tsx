@@ -697,7 +697,7 @@ Start by greeting the student and asking your first viva question.`
             ref={fileInputRef}
             onChange={handleFileSelect}
             multiple
-            accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx"
+            accept={ACCEPT_EXTENSIONS}
             className="hidden"
           />
           <Button
