@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Code, Sparkles, Loader2, Bot } from "lucide-react";
+import { Code, Sparkles, Loader2, Bot, ImagePlus, X, Copy, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
@@ -22,20 +22,28 @@ const CodeLabPage = () => {
   const [language, setLanguage] = useState(config.lang);
   const [analysis, setAnalysis] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [errorImage, setErrorImage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const analyzeCode = async () => {
-    if (!code.trim()) { toast.error("Write some code first!"); return; }
+  const analyzeCode = async (imageData?: string) => {
+    if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
     setIsAnalyzing(true);
     setAnalysis("");
 
     try {
+      const body: any = { code, language };
+      if (imageData) {
+        body.errorImage = imageData;
+      }
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ code, language }),
+        body: JSON.stringify(body),
       });
 
       if (!resp.ok) {
@@ -79,13 +87,62 @@ const CodeLabPage = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setErrorImage(dataUrl);
+      toast.success("Error image attached! Click Analyze to debug.");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = () => {
+          setErrorImage(reader.result as string);
+          toast.success("Image pasted! Click Analyze to debug.");
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
+  const copyCode = async () => {
+    // Extract code blocks from analysis
+    const codeMatch = analysis.match(/```[\s\S]*?\n([\s\S]*?)```/);
+    if (codeMatch) {
+      await navigator.clipboard.writeText(codeMatch[1].trim());
+    } else {
+      await navigator.clipboard.writeText(analysis);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Code copied!");
+  };
+
   return (
     <PageShell
       title="Code Lab"
       subtitle={`${department ? departmentInfo[department].name : "SE"} IDE`}
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><Code className="w-5 h-5 text-primary-foreground" /></div>}
     >
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-2 gap-4" onPaste={handlePaste}>
         {/* Editor Panel */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -117,7 +174,7 @@ const CodeLabPage = () => {
             </div>
           </div>
 
-          <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "450px" }}>
+          <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "400px" }}>
             <Editor
               height="100%"
               language={language}
@@ -135,22 +192,73 @@ const CodeLabPage = () => {
             />
           </div>
 
-          <Button
-            onClick={analyzeCode}
-            disabled={isAnalyzing}
-            className="w-full rounded-xl gradient-primary text-primary-foreground gap-2"
-          >
-            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {isAnalyzing ? "Analyzing..." : "Analyze with UniGenius"}
-          </Button>
+          {/* Error image section */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
+          />
+
+          {errorImage && (
+            <div className="glass rounded-xl p-3 flex items-center gap-3">
+              <img src={errorImage} alt="Error" className="w-16 h-16 rounded-lg object-cover" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground">Error image attached</p>
+                <p className="text-xs text-muted-foreground">Will be analyzed with your code</p>
+              </div>
+              <button onClick={() => setErrorImage(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              onClick={() => analyzeCode(errorImage || undefined)}
+              disabled={isAnalyzing}
+              className="flex-1 rounded-xl gradient-primary text-primary-foreground gap-2"
+            >
+              {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isAnalyzing ? "Analyzing..." : "Analyze with UniGenius"}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl"
+              onClick={() => fileInputRef.current?.click()}
+              title="Upload error screenshot"
+            >
+              <ImagePlus className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            💡 Tip: Paste (Ctrl+V) an error screenshot directly, or click 📷 to upload
+          </p>
         </div>
 
         {/* Analysis Panel */}
-        <div className="glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "560px" }}>
+        <div className="glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "620px" }}>
           {analysis ? (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-primary-foreground" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">UniGenius Analysis</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl text-xs gap-1.5"
+                  onClick={copyCode}
+                >
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied ? "Copied!" : "Copy Code"}
+                </Button>
               </div>
               <div className="text-sm text-foreground leading-relaxed min-w-0">
                 <MarkdownMessage content={analysis} />
@@ -162,6 +270,7 @@ const CodeLabPage = () => {
               <div>
                 <p className="font-display font-semibold text-foreground">AI Code Analysis</p>
                 <p className="text-sm text-muted-foreground mt-1">Write your code and click "Analyze" for a detailed AI review with bug detection and optimization tips.</p>
+                <p className="text-xs text-muted-foreground mt-2">📷 You can also paste or upload an error screenshot for instant debugging!</p>
               </div>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brain, ListChecks, Trophy, ArrowRight, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Brain, ListChecks, Trophy, ArrowRight, CheckCircle, XCircle, Loader2, BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
@@ -13,6 +13,14 @@ interface MCQ {
   question: string;
   options: { A: string; B: string; C: string; D: string };
   correct: "A" | "B" | "C" | "D";
+  explanation?: string;
+}
+
+interface AnswerRecord {
+  questionIndex: number;
+  selected: string;
+  correct: string;
+  isCorrect: boolean;
 }
 
 const PracticePage = () => {
@@ -27,6 +35,8 @@ const PracticePage = () => {
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [quizDone, setQuizDone] = useState(false);
+  const [answers, setAnswers] = useState<AnswerRecord[]>([]);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const subjects = department ? getSubjects(department, semester) : [];
 
@@ -37,6 +47,8 @@ const PracticePage = () => {
     setCurrentQ(0);
     setScore(0);
     setQuizDone(false);
+    setAnswers([]);
+    setShowBreakdown(false);
 
     try {
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`, {
@@ -48,6 +60,7 @@ const PracticePage = () => {
         body: JSON.stringify({
           subject: subjectName,
           department: department ? departmentInfo[department].fullName : "Software Engineering",
+          count: 30,
         }),
       });
 
@@ -74,9 +87,14 @@ const PracticePage = () => {
     if (showResult) return;
     setSelected(key);
     setShowResult(true);
-    if (key === questions[currentQ].correct) {
-      setScore((s) => s + 1);
-    }
+    const isCorrect = key === questions[currentQ].correct;
+    if (isCorrect) setScore((s) => s + 1);
+    setAnswers((prev) => [...prev, {
+      questionIndex: currentQ,
+      selected: key,
+      correct: questions[currentQ].correct,
+      isCorrect,
+    }]);
   };
 
   const nextQuestion = async () => {
@@ -86,10 +104,7 @@ const PracticePage = () => {
       setCurrentQ((c) => c + 1);
     } else {
       setQuizDone(true);
-      // Save result
       if (user) {
-        const finalScore = selected === questions[currentQ]?.correct ? score + 1 : score;
-        // We already incremented score in handleAnswer, so just use current score
         try {
           await supabase.from("quiz_results").insert({
             user_id: user.id,
@@ -114,31 +129,108 @@ const PracticePage = () => {
     setQuizDone(false);
     setSelected(null);
     setShowResult(false);
+    setAnswers([]);
+    setShowBreakdown(false);
   };
 
   const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
-  // Quiz done screen
+  // Final scorecard
   if (quizDone && selectedSubject) {
     return (
       <PageShell
         title="Practice Mode"
-        subtitle="Quiz Complete!"
+        subtitle="Final Scorecard"
         icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center"><Trophy className="w-5 h-5 text-primary-foreground" /></div>}
       >
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass rounded-2xl p-8 text-center space-y-4 max-w-md mx-auto">
-          <div className="text-6xl">{percentage >= 80 ? "🏆" : percentage >= 50 ? "👍" : "📚"}</div>
-          <h2 className="font-display font-bold text-2xl text-foreground">
-            {percentage >= 80 ? "Excellent!" : percentage >= 50 ? "Good Job!" : "Keep Practicing!"}
-          </h2>
-          <p className="text-muted-foreground">{selectedSubject}</p>
-          <div className="text-4xl font-bold gradient-text">{score}/{questions.length}</div>
-          <p className="text-sm text-muted-foreground">Score: {percentage}%</p>
-          {!user && <p className="text-xs text-muted-foreground">Sign in to save your quiz results!</p>}
-          <Button onClick={resetQuiz} className="rounded-xl gradient-primary text-primary-foreground">
-            Try Another Quiz
-          </Button>
-        </motion.div>
+        <div className="max-w-2xl mx-auto space-y-6">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass rounded-2xl p-8 text-center space-y-4">
+            <div className="text-6xl">{percentage >= 80 ? "🏆" : percentage >= 50 ? "👍" : "📚"}</div>
+            <h2 className="font-display font-bold text-2xl text-foreground">
+              {percentage >= 80 ? "Excellent!" : percentage >= 50 ? "Good Job!" : "Keep Practicing!"}
+            </h2>
+            <p className="text-muted-foreground">{selectedSubject}</p>
+            <div className="text-4xl font-bold gradient-text">{score}/{questions.length}</div>
+            <p className="text-sm text-muted-foreground">Score: {percentage}%</p>
+
+            {/* Stats bar */}
+            <div className="flex justify-center gap-6 pt-2">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-emerald-400">{answers.filter(a => a.isCorrect).length}</p>
+                <p className="text-xs text-muted-foreground">Correct</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-destructive">{answers.filter(a => !a.isCorrect).length}</p>
+                <p className="text-xs text-muted-foreground">Incorrect</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{questions.length}</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+              </div>
+            </div>
+
+            {!user && <p className="text-xs text-muted-foreground">Sign in to save your quiz results!</p>}
+
+            <div className="flex gap-3 justify-center pt-2">
+              <Button onClick={() => setShowBreakdown(!showBreakdown)} variant="outline" className="rounded-xl gap-2">
+                <BarChart3 className="w-4 h-4" />
+                {showBreakdown ? "Hide" : "View"} Breakdown
+                {showBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </Button>
+              <Button onClick={resetQuiz} className="rounded-xl gradient-primary text-primary-foreground">
+                Try Another Quiz
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Detailed breakdown */}
+          <AnimatePresence>
+            {showBreakdown && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3 overflow-hidden"
+              >
+                {questions.map((q, i) => {
+                  const ans = answers[i];
+                  if (!ans) return null;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className={`glass rounded-xl p-4 border-l-4 ${ans.isCorrect ? "border-l-emerald-500" : "border-l-destructive"}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="flex-shrink-0 mt-0.5">
+                          {ans.isCorrect
+                            ? <CheckCircle className="w-5 h-5 text-emerald-500" />
+                            : <XCircle className="w-5 h-5 text-destructive" />}
+                        </span>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <p className="text-sm font-medium text-foreground">Q{i + 1}: {q.question}</p>
+                          {!ans.isCorrect && (
+                            <p className="text-xs text-destructive">
+                              Your answer: {ans.selected} — {q.options[ans.selected as keyof typeof q.options]}
+                            </p>
+                          )}
+                          <p className="text-xs text-emerald-400">
+                            Correct: {ans.correct} — {q.options[ans.correct as keyof typeof q.options]}
+                          </p>
+                          {q.explanation && (
+                            <p className="text-xs text-muted-foreground italic mt-1">💡 {q.explanation}</p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </PageShell>
     );
   }
@@ -154,8 +246,11 @@ const PracticePage = () => {
       >
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Progress bar */}
-          <div className="w-full bg-muted rounded-full h-2">
-            <div className="h-2 rounded-full gradient-primary transition-all" style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }} />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-muted rounded-full h-2">
+              <div className="h-2 rounded-full gradient-primary transition-all" style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }} />
+            </div>
+            <span className="text-xs text-muted-foreground font-medium">{currentQ + 1}/{questions.length}</span>
           </div>
 
           <AnimatePresence mode="wait">
@@ -176,8 +271,10 @@ const PracticePage = () => {
                   }
 
                   return (
-                    <button
+                    <motion.button
                       key={key}
+                      whileHover={!showResult ? { scale: 1.01 } : undefined}
+                      whileTap={!showResult ? { scale: 0.99 } : undefined}
                       onClick={() => handleAnswer(key)}
                       disabled={showResult}
                       className={`glass rounded-xl p-4 text-left flex items-center gap-3 transition-all border-2 ${borderClass} ${!showResult ? "hover:border-primary/50 cursor-pointer" : ""}`}
@@ -186,15 +283,21 @@ const PracticePage = () => {
                       <span className="text-sm text-foreground flex-1">{q.options[key]}</span>
                       {showResult && isCorrect && <CheckCircle className="w-5 h-5 text-emerald-500" />}
                       {showResult && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-destructive" />}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
 
               {showResult && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                  {q.explanation && (
+                    <div className="glass rounded-xl p-4 border-l-4 border-l-primary">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">💡 Explanation</p>
+                      <p className="text-sm text-foreground">{q.explanation}</p>
+                    </div>
+                  )}
                   <Button onClick={nextQuestion} className="w-full rounded-xl gradient-primary text-primary-foreground gap-2">
-                    {currentQ + 1 < questions.length ? "Next Question" : "See Results"} <ArrowRight className="w-4 h-4" />
+                    {currentQ + 1 < questions.length ? "Next Question" : "See Final Scorecard"} <ArrowRight className="w-4 h-4" />
                   </Button>
                 </motion.div>
               )}
@@ -209,45 +312,52 @@ const PracticePage = () => {
   return (
     <PageShell
       title="Practice Mode"
-      subtitle="AI-Powered Quizzes"
+      subtitle="AI-Powered Quizzes — 30 MCQs"
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center"><Brain className="w-5 h-5 text-primary-foreground" /></div>}
     >
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-muted-foreground">Generating quiz questions with AI...</p>
+          <p className="text-muted-foreground">Generating 30 quiz questions with AI...</p>
+          <p className="text-xs text-muted-foreground">This may take a moment</p>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Semester selector */}
           <div className="flex gap-2 flex-wrap">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-              <Button
-                key={s}
-                variant={semester === s ? "default" : "outline"}
-                size="sm"
-                className={`rounded-xl ${semester === s ? "gradient-primary text-primary-foreground" : ""}`}
-                onClick={() => setSemester(s)}
-              >
-                Sem {s}
-              </Button>
+              <motion.div key={s} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant={semester === s ? "default" : "outline"}
+                  size="sm"
+                  className={`rounded-xl ${semester === s ? "gradient-primary text-primary-foreground" : ""}`}
+                  onClick={() => setSemester(s)}
+                >
+                  Sem {s}
+                </Button>
+              </motion.div>
             ))}
           </div>
 
           {/* Subject grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjects.map((sub) => (
-              <button
+            {subjects.map((sub, idx) => (
+              <motion.button
                 key={sub.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => startQuiz(sub.name)}
-                className="glass rounded-2xl p-6 text-left space-y-3 hover:border-primary/50 transition-all border-2 border-transparent"
+                className="glass rounded-2xl p-6 text-left space-y-3 hover:border-primary/50 transition-all border-2 border-transparent hover:shadow-elevated"
               >
                 <span className="text-2xl">{sub.icon}</span>
                 <h3 className="font-display font-semibold text-foreground text-sm">{sub.name}</h3>
                 <div className="flex items-center gap-1 text-xs text-primary">
-                  <ListChecks className="w-3 h-3" /> 5 MCQs
+                  <ListChecks className="w-3 h-3" /> 30 MCQs
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>

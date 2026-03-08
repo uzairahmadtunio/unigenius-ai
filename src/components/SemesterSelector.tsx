@@ -11,10 +11,11 @@ const SemesterSelector = ({ selected, onSelect }: SemesterSelectorProps) => {
       {Array.from({ length: 8 }, (_, i) => i + 1).map((sem) => (
         <motion.button
           key={sem}
-          whileHover={{ scale: 1.05 }}
+          whileHover={{ y: -4, scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
           onClick={() => onSelect(sem)}
-          className={`relative rounded-xl py-3 px-2 font-display font-semibold text-sm transition-all duration-200 ${
+          className={`relative rounded-xl py-3 px-2 font-display font-semibold text-sm transition-colors duration-200 ${
             selected === sem
               ? "gradient-primary text-primary-foreground shadow-elevated"
               : "glass text-foreground hover:shadow-card"

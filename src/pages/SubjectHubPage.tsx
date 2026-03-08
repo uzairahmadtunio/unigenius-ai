@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft } from "lucide-react";
+import { Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { findSubjectById } from "@/data/subjects";
@@ -31,30 +31,73 @@ const SubjectHubPage = () => {
   const hasLab = result?.subject.hasLab ?? false;
   const deptName = result ? departmentInfo[result.department].fullName : "BS Software Engineering";
 
-  const systemPrompt = `You are now the specialized tutor for "${subjectName}" in Semester ${semester} of a ${deptName} program. Help the user with topics, assignments, lab tasks, viva questions, and exam preparation specifically related to ${subjectName}. Provide clear explanations, code examples (if applicable), and exam tips. Be encouraging and use markdown formatting.`;
+  const [mode, setMode] = useState<"tutor" | "viva">("tutor");
+
+  const systemPrompt = mode === "viva"
+    ? `You are a strict but helpful university professor conducting a mock viva voce for "${subjectName}" in Semester ${semester} of a ${deptName} program. 
+
+IMPORTANT RULES:
+- Ask ONE question at a time, then wait for the student's answer
+- Mix Roman Urdu and English naturally (like Pakistani university vivas), e.g., "Ye concept samjhao", "Iska output kya hoga?", "Acha, to agar hum ye change karein..."
+- Start easy, then increase difficulty
+- After the student answers, give brief feedback in the same Roman Urdu/English mix
+- If the answer is wrong, guide them toward the correct answer
+- Be encouraging but academically rigorous
+- Cover different topics within ${subjectName}
+
+Start by greeting the student and asking your first viva question.`
+    : `You are now the specialized tutor for "${subjectName}" in Semester ${semester} of a ${deptName} program. Help the user with topics, assignments, lab tasks, viva questions, and exam preparation specifically related to ${subjectName}. Provide clear explanations, code examples (if applicable), and exam tips. Be encouraging and use markdown formatting.`;
+
+  const getWelcome = () => mode === "viva"
+    ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Aaj hum "${subjectName}" ke important concepts cover karenge.\n\nTayyar ho? Shuru karte hain...\n\n*Pehla sawal aa raha hai...*`
+    : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation\n• Practice MCQs\n\nWhat would you like to study today?`;
 
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation\n• Practice MCQs\n\nWhat would you like to study today?`,
-    },
+    { id: "welcome", role: "assistant", content: getWelcome() },
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const smartButtons = [
-    { icon: MessageSquare, label: `Explain a topic from ${subjectName.split("(")[0].trim()}` },
-    { icon: ListChecks, label: "Solve Step-by-Step" },
-    { icon: Code, label: "Give Code Example" },
-    { icon: FileQuestion, label: "Generate MCQs" },
-    { icon: BookOpen, label: "Prepare for Viva" },
-  ];
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  }, [input]);
+
+  const switchMode = (newMode: "tutor" | "viva") => {
+    setMode(newMode);
+    setMessages([{ id: "welcome-" + newMode, role: "assistant", content: newMode === "viva"
+      ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Tayyar ho? Shuru karte hain...`
+      : getWelcome()
+    }]);
+    setIsStreaming(false);
+    setInput("");
+    // Auto-start viva
+    if (newMode === "viva") {
+      setTimeout(() => handleSend("Start the viva"), 500);
+    }
+  };
+
+  const smartButtons = mode === "viva"
+    ? [
+        { icon: Mic, label: "I'm ready, ask next question" },
+        { icon: BookOpen, label: "Explain the answer" },
+        { icon: ListChecks, label: "Give me a hint" },
+      ]
+    : [
+        { icon: MessageSquare, label: `Explain a topic from ${subjectName.split("(")[0].trim()}` },
+        { icon: ListChecks, label: "Solve Step-by-Step" },
+        { icon: Code, label: "Give Code Example" },
+        { icon: FileQuestion, label: "Generate MCQs" },
+        { icon: BookOpen, label: "Prepare for Viva" },
+      ];
 
   const streamChat = async (allMessages: { role: string; content: string }[]) => {
     const resp = await fetch(CHAT_URL, {
@@ -125,7 +168,7 @@ const SubjectHubPage = () => {
 
     try {
       const apiMessages = newMessages
-        .filter((m) => m.id !== "welcome")
+        .filter((m) => !m.id.startsWith("welcome"))
         .map((m) => ({ role: m.role, content: m.content }));
       await streamChat(apiMessages);
     } catch (err: any) {
@@ -159,7 +202,7 @@ const SubjectHubPage = () => {
       <Navbar />
       <div className="flex-1 container mx-auto max-w-3xl px-4 py-4 flex flex-col">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-3">
           <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate("/")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -171,6 +214,26 @@ const SubjectHubPage = () => {
               {hasLab && <Badge variant="secondary" className="text-xs rounded-lg">Lab</Badge>}
             </div>
           </div>
+        </div>
+
+        {/* Mode Toggle */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant={mode === "tutor" ? "default" : "outline"}
+            size="sm"
+            className={`rounded-xl text-xs gap-1.5 ${mode === "tutor" ? "gradient-primary text-primary-foreground" : ""}`}
+            onClick={() => mode !== "tutor" && switchMode("tutor")}
+          >
+            <BookOpen className="w-3 h-3" /> Study Mode
+          </Button>
+          <Button
+            variant={mode === "viva" ? "default" : "outline"}
+            size="sm"
+            className={`rounded-xl text-xs gap-1.5 ${mode === "viva" ? "gradient-primary text-primary-foreground" : ""}`}
+            onClick={() => mode !== "viva" && switchMode("viva")}
+          >
+            <Mic className="w-3 h-3" /> Mock Viva
+          </Button>
         </div>
 
         {/* Messages */}
@@ -243,17 +306,24 @@ const SubjectHubPage = () => {
         </div>
 
         {/* Input */}
-        <div className="glass rounded-2xl p-2 flex gap-2">
-          <input
+        <div className="glass rounded-2xl p-2 flex gap-2 items-end">
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={`Ask about ${subjectName}...`}
-            className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={mode === "viva" ? "Type your answer..." : `Ask about ${subjectName}...`}
+            className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[40px] max-h-[120px]"
+            rows={1}
           />
           <Button
             size="icon"
-            className="rounded-xl gradient-primary"
+            className="rounded-xl gradient-primary flex-shrink-0"
             onClick={() => handleSend()}
             disabled={!input.trim() || isStreaming}
           >

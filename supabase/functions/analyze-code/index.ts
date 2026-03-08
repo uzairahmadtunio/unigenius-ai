@@ -9,9 +9,40 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { code, language } = await req.json();
+    const { code, language, errorImage } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const messages: any[] = [
+      {
+        role: "system",
+        content: `You are a Senior University Professor analyzing ${language} code. Provide:
+1. **Code Review** — Is the code correct? Any logic errors?
+2. **Line-by-Line Explanation** — Walk through the code like teaching a student.
+3. **Improvements** — Suggest optimizations, better practices, cleaner patterns.
+4. **Potential Bugs** — Any edge cases or runtime issues?
+5. **Corrected Code** — If there are errors, provide the complete corrected code in a code block.
+
+Use markdown formatting with headers and code blocks.${errorImage ? "\n\nThe student has also shared a screenshot of an error they're getting. Analyze the error in the image and provide the corrected code." : ""}`,
+      },
+    ];
+
+    if (errorImage) {
+      messages.push({
+        role: "user",
+        content: [
+          { type: "text", text: `Analyze this ${language} code and fix the error shown in the screenshot:\n\n\`\`\`${language}\n${code}\n\`\`\`` },
+          { type: "image_url", image_url: { url: errorImage } },
+        ],
+      });
+    } else {
+      messages.push({
+        role: "user",
+        content: `Analyze this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``,
+      });
+    }
+
+    const model = errorImage ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -19,23 +50,7 @@ serve(async (req) => {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a Senior University Professor analyzing ${language} code. Provide:
-1. **Code Review** — Is the code correct? Any logic errors?
-2. **Line-by-Line Explanation** — Walk through the code like teaching a student.
-3. **Improvements** — Suggest optimizations, better practices, cleaner patterns.
-4. **Potential Bugs** — Any edge cases or runtime issues?
-
-Use markdown formatting with headers and code blocks.`,
-          },
-          { role: "user", content: `Analyze this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`` },
-        ],
-        stream: true,
-      }),
+      body: JSON.stringify({ model, messages, stream: true }),
     });
 
     if (!response.ok) {
