@@ -12,12 +12,28 @@ import GlobalSearch from "@/components/GlobalSearch";
 import AttendanceAlert from "@/components/AttendanceAlert";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
+const SPLASH_KEY = "unigenius-splash-shown";
+const SEMESTER_KEY = "unigenius-semester";
+
 const Index = () => {
-  const [showSplash, setShowSplash] = useState(true);
-  const [semester, setSemester] = useState(1);
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem(SPLASH_KEY);
+  });
+  const [semester, setSemester] = useState(() => {
+    const stored = localStorage.getItem(SEMESTER_KEY);
+    return stored ? parseInt(stored, 10) : 1;
+  });
   const { department } = useDepartment();
 
-  const handleSplashComplete = useCallback(() => setShowSplash(false), []);
+  const handleSemesterChange = useCallback((sem: number) => {
+    localStorage.setItem(SEMESTER_KEY, String(sem));
+    setSemester(sem);
+  }, []);
+
+  const handleSplashComplete = useCallback(() => {
+    sessionStorage.setItem(SPLASH_KEY, "true");
+    setShowSplash(false);
+  }, []);
 
   if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
   if (!department) return <DepartmentSelector />;
