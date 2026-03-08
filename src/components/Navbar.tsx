@@ -26,6 +26,27 @@ const Navbar = () => {
     supabase.from("profiles").select("avatar_url").eq("user_id", user.id).single().then(({ data }) => {
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
     });
+
+    // Fetch notices and read state
+    const fetchNotices = async () => {
+      const { data: allNotices } = await supabase
+        .from("university_notices" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const { data: reads } = await supabase
+        .from("user_notice_reads" as any)
+        .select("notice_id")
+        .eq("user_id", user.id);
+
+      const readSet = new Set((reads || []).map((r: any) => r.notice_id));
+      const active = (allNotices || []).filter(
+        (n: any) => !readSet.has(n.id) && (!n.expires_at || new Date(n.expires_at) > new Date())
+      );
+      setNotices(active.slice(0, 5));
+      setUnreadCount(active.length);
+    };
+    fetchNotices();
   }, [user]);
 
   return (
