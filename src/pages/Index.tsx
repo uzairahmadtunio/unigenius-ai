@@ -69,8 +69,19 @@ const Index = () => {
           <GlobalSearch />
         </motion.section>
 
-        {/* Career Readiness */}
+        {/* Viva Reminder */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <VivaReminder semester={semester} />
+        </motion.section>
+
+        {/* Notice Board */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <NoticeBoard />
+        </motion.section>
+
+        {/* Exam Countdown + Career Readiness */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ExamCountdown semester={semester} />
           <CareerReadinessWidget />
         </motion.section>
 
