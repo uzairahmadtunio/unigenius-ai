@@ -4,13 +4,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, ArrowLeft, Send, Crown, Copy, Hash, Paperclip,
   FileText, Trash2, Upload, User, Search, UserPlus, X,
+  Settings, Camera, LogOut, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -25,6 +31,7 @@ interface GroupData {
   description: string | null;
   invite_code: string;
   owner_id: string;
+  avatar_url: string | null;
 }
 
 interface Member {
@@ -56,6 +63,23 @@ interface GroupFile {
   uploader_name?: string;
 }
 
+// ── Group Avatar Component ──
+const GroupAvatar = ({ url, name, size = "md" }: { url?: string | null; name?: string; size?: "sm" | "md" | "lg" }) => {
+  const sizes = { sm: "w-8 h-8", md: "w-10 h-10", lg: "w-16 h-16" };
+  const textSizes = { sm: "text-xs", md: "text-sm", lg: "text-xl" };
+  return (
+    <div className={`${sizes[size]} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center`}>
+      {url ? (
+        <img src={url} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span className={`font-bold text-primary-foreground ${textSizes[size]}`}>
+          {(name || "G")[0].toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const GroupDetailPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
@@ -67,11 +91,18 @@ const GroupDetailPage = () => {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [rollSearch, setRollSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit form state
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const isOwner = user && group?.owner_id === user.id;
 
@@ -96,7 +127,6 @@ const GroupDetailPage = () => {
         filter: `group_id=eq.${groupId}`,
       }, async (payload) => {
         const msg = payload.new as any;
-        // Fetch sender name
         const { data: profile } = await supabase
           .from("profiles")
           .select("display_name")
@@ -118,7 +148,11 @@ const GroupDetailPage = () => {
 
   const fetchGroup = async () => {
     const { data } = await supabase.from("groups").select("*").eq("id", groupId!).single();
-    if (data) setGroup(data as any);
+    if (data) {
+      setGroup(data as any);
+      setEditName((data as any).name);
+      setEditDesc((data as any).description || "");
+    }
   };
 
   const fetchMembers = async () => {
@@ -155,7 +189,6 @@ const GroupDetailPage = () => {
       .limit(200);
     if (!data) return;
 
-    // Enrich with names
     const enriched: Message[] = [];
     const nameCache = new Map<string, string>();
     for (const msg of data as any[]) {
@@ -290,6 +323,72 @@ const GroupDetailPage = () => {
     }
   };
 
+  // ── Avatar Upload (Owner only) ──
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !groupId || !isOwner) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5MB for avatar"); return; }
+
+    setUploadingAvatar(true);
+    const path = `${groupId}/${Date.now()}_${file.name}`;
+    const { error: uploadErr } = await supabase.storage.from("group-avatars").upload(path, file);
+    if (uploadErr) { toast.error("Upload failed"); setUploadingAvatar(false); return; }
+
+    const { data: urlData } = supabase.storage.from("group-avatars").getPublicUrl(path);
+    await supabase.from("groups").update({ avatar_url: urlData.publicUrl } as any).eq("id", groupId);
+    setGroup(prev => prev ? { ...prev, avatar_url: urlData.publicUrl } : prev);
+    toast.success("Group picture updated!");
+    setUploadingAvatar(false);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  };
+
+  // ── Edit Group Details (Owner only) ──
+  const saveGroupDetails = async () => {
+    if (!groupId || !isOwner) return;
+    const { error } = await supabase.from("groups").update({
+      name: editName.trim(),
+      description: editDesc.trim() || null,
+    }).eq("id", groupId);
+    if (error) { toast.error(error.message); return; }
+    setGroup(prev => prev ? { ...prev, name: editName.trim(), description: editDesc.trim() || null } : prev);
+    setEditOpen(false);
+    toast.success("Group details updated!");
+  };
+
+  // ── Transfer Ownership ──
+  const transferOwnership = async (newOwnerId: string, memberName: string) => {
+    if (!groupId || !isOwner) return;
+    // Update group owner
+    await supabase.from("groups").update({ owner_id: newOwnerId }).eq("id", groupId);
+    // Update roles
+    await supabase.from("group_members").update({ role: "owner" } as any).eq("group_id", groupId).eq("user_id", newOwnerId);
+    await supabase.from("group_members").update({ role: "member" } as any).eq("group_id", groupId).eq("user_id", user!.id);
+    setGroup(prev => prev ? { ...prev, owner_id: newOwnerId } : prev);
+    fetchMembers();
+    toast.success(`Ownership transferred to ${memberName}!`);
+  };
+
+  // ── Delete Group (Owner only) ──
+  const deleteGroup = async () => {
+    if (!groupId || !isOwner) return;
+    // Cascade handles messages, files, members via FK
+    await supabase.from("group_messages").delete().eq("group_id", groupId);
+    await supabase.from("group_files").delete().eq("group_id", groupId);
+    await supabase.from("group_members").delete().eq("group_id", groupId);
+    await supabase.from("groups").delete().eq("id", groupId);
+    toast.success("Group deleted");
+    navigate("/groups");
+  };
+
+  // ── Leave Group (non-owner) ──
+  const leaveGroup = async () => {
+    if (!groupId || !user || isOwner) return;
+    await supabase.from("group_members").delete()
+      .eq("group_id", groupId).eq("user_id", user.id);
+    toast.success("You left the group");
+    navigate("/groups");
+  };
+
   if (!user) return null;
 
   return (
@@ -301,9 +400,21 @@ const GroupDetailPage = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/groups")} className="rounded-xl">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-            <Users className="w-5 h-5 text-primary-foreground" />
+
+          {/* Group Avatar */}
+          <div className="relative group/avatar">
+            <GroupAvatar url={group?.avatar_url} name={group?.name} size="md" />
+            {isOwner && (
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center"
+              >
+                <Camera className="w-4 h-4 text-white" />
+              </button>
+            )}
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
+
           <div className="flex-1">
             <h1 className="font-display font-bold text-foreground text-lg">{group?.name || "Loading..."}</h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -315,68 +426,161 @@ const GroupDetailPage = () => {
             </div>
           </div>
 
-          {/* Invite Button */}
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
-                <UserPlus className="w-3.5 h-3.5" /> Invite
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="glass border-border/50">
-              <DialogHeader>
-                <DialogTitle className="font-display">Invite Members</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {/* Invite code */}
-                <div className="glass rounded-xl p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Share this code</p>
-                    <p className="font-mono font-bold text-foreground text-lg">{group?.invite_code}</p>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={copyCode} className="rounded-xl gap-1">
-                    <Copy className="w-3 h-3" /> Copy
+          <div className="flex gap-2">
+            {/* Edit Group (Owner) */}
+            {isOwner && (
+              <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl">
+                    <Settings className="w-4 h-4" />
                   </Button>
-                </div>
+                </DialogTrigger>
+                <DialogContent className="glass border-border/50">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Edit Group</DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">Update group details, picture, or manage the group.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {/* Avatar upload in modal */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative group/avlg">
+                        <GroupAvatar url={group?.avatar_url} name={group?.name} size="lg" />
+                        <button
+                          onClick={() => avatarInputRef.current?.click()}
+                          className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avlg:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <Camera className="w-5 h-5 text-white" />
+                        </button>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Group Picture</p>
+                        <p className="text-[10px] text-muted-foreground">Click to upload (max 5MB)</p>
+                      </div>
+                    </div>
 
-                {/* Roll number search */}
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium">Search by Roll Number</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g., 22SW001"
-                      value={rollSearch}
-                      onChange={e => setRollSearch(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && searchByRoll()}
-                      className="rounded-xl"
-                    />
-                    <Button onClick={searchByRoll} disabled={searching} size="sm" className="rounded-xl">
-                      <Search className="w-4 h-4" />
+                    <Input placeholder="Group name" value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" />
+                    <Textarea placeholder="Description" value={editDesc} onChange={e => setEditDesc(e.target.value)} className="rounded-xl" rows={2} />
+
+                    <Button onClick={saveGroupDetails} className="w-full rounded-xl gradient-primary text-primary-foreground">
+                      Save Changes
+                    </Button>
+
+                    <div className="border-t border-border/30 pt-4">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="w-full rounded-xl gap-2">
+                            <Trash2 className="w-4 h-4" /> Delete Group
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2">
+                              <AlertTriangle className="w-5 h-5 text-destructive" /> Delete Group
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete "{group?.name}", all messages, files, and member data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={deleteGroup} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete Forever
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* Leave Group (non-owner) */}
+            {!isOwner && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl text-destructive">
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Leave Group</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to leave "{group?.name}"? You'll need an invite code to rejoin.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={leaveGroup} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Leave
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
+            {/* Invite Button */}
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                  <UserPlus className="w-3.5 h-3.5" /> Invite
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="glass border-border/50">
+                <DialogHeader>
+                  <DialogTitle className="font-display">Invite Members</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="glass rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Share this code</p>
+                      <p className="font-mono font-bold text-foreground text-lg">{group?.invite_code}</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={copyCode} className="rounded-xl gap-1">
+                      <Copy className="w-3 h-3" /> Copy
                     </Button>
                   </div>
-                  {searchResults.map((p: any) => (
-                    <div key={p.user_id} className="flex items-center justify-between glass rounded-xl px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-                          {p.avatar_url ? (
-                            <img src={p.avatar_url} className="w-7 h-7 rounded-full object-cover" />
-                          ) : (
-                            <User className="w-3.5 h-3.5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{p.display_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{p.roll_number}</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => inviteMember(p.user_id)} className="rounded-lg text-xs h-7">
-                        Add
+
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Search by Roll Number</p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g., 22SW001"
+                        value={rollSearch}
+                        onChange={e => setRollSearch(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && searchByRoll()}
+                        className="rounded-xl"
+                      />
+                      <Button onClick={searchByRoll} disabled={searching} size="sm" className="rounded-xl">
+                        <Search className="w-4 h-4" />
                       </Button>
                     </div>
-                  ))}
+                    {searchResults.map((p: any) => (
+                      <div key={p.user_id} className="flex items-center justify-between glass rounded-xl px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                            {p.avatar_url ? (
+                              <img src={p.avatar_url} className="w-7 h-7 rounded-full object-cover" />
+                            ) : (
+                              <User className="w-3.5 h-3.5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{p.display_name}</p>
+                            <p className="text-[10px] text-muted-foreground">{p.roll_number}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => inviteMember(p.user_id)} className="rounded-lg text-xs h-7">
+                          Add
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -389,14 +593,13 @@ const GroupDetailPage = () => {
               📁 Files
             </TabsTrigger>
             <TabsTrigger value="members" className="rounded-lg text-xs gap-1.5 data-[state=active]:gradient-primary data-[state=active]:text-primary-foreground">
-              👥 Members
+              👥 Members ({members.length})
             </TabsTrigger>
           </TabsList>
 
           {/* ── Chat Tab ── */}
           <TabsContent value="chat" className="space-y-0">
             <div className="glass rounded-2xl flex flex-col" style={{ height: "500px" }}>
-              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground text-sm">
@@ -414,7 +617,7 @@ const GroupDetailPage = () => {
                         className={`flex gap-2 ${isMe ? "justify-end" : ""}`}
                       >
                         {!isMe && (
-                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden">
                             <User className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
                         )}
@@ -436,7 +639,6 @@ const GroupDetailPage = () => {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input */}
               <div className="border-t border-border/30 p-3 flex gap-2">
                 <Input
                   placeholder="Type a message..."
@@ -512,7 +714,7 @@ const GroupDetailPage = () => {
           <TabsContent value="members" className="space-y-3">
             {members.map(m => (
               <div key={m.user_id} className="glass rounded-xl p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                   {m.avatar_url ? (
                     <img src={m.avatar_url} className="w-9 h-9 rounded-full object-cover" />
                   ) : (
@@ -531,9 +733,35 @@ const GroupDetailPage = () => {
                   <p className="text-[10px] text-muted-foreground">{m.roll_number || "No roll number"}</p>
                 </div>
                 {isOwner && m.user_id !== user.id && (
-                  <Button size="sm" variant="ghost" className="text-destructive text-xs h-7 rounded-lg" onClick={() => removeMember(m.user_id)}>
-                    Remove
-                  </Button>
+                  <div className="flex gap-1">
+                    {/* Transfer Ownership */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-xs h-7 rounded-lg gap-1" title="Transfer ownership">
+                          <ShieldCheck className="w-3 h-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Transfer Ownership</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Make <strong>{m.display_name}</strong> the owner of this group? You will become a regular member.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => transferOwnership(m.user_id, m.display_name || "member")} className="rounded-xl">
+                            Transfer
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    {/* Remove Member */}
+                    <Button size="sm" variant="ghost" className="text-destructive text-xs h-7 rounded-lg" onClick={() => removeMember(m.user_id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
