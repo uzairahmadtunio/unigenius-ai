@@ -403,7 +403,7 @@ FORMAT:
 
 Use markdown formatting and LaTeX for all complexity expressions.`
             },
-            { role: "user", content: \`**Problem:**\n\${problem}\n\n**My Solution:**\n\\\`\\\`\\\`\n\${code}\n\\\`\\\`\\\`\` }
+            { role: "user", content: `**Problem:**\n${problem}\n\n**My Solution:**\n\`\`\`\n${code}\n\`\`\`` }
           ],
         }),
       });
