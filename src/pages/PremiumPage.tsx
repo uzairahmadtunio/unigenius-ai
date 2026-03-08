@@ -97,9 +97,14 @@ const PremiumPage = () => {
 
     // Increment promo usage
     if (appliedPromo) {
+      const { data: promoData } = await supabase
+        .from("promo_codes" as any)
+        .select("used_count")
+        .eq("code", appliedPromo.code)
+        .single();
       await supabase
         .from("promo_codes" as any)
-        .update({ used_count: (await supabase.from("promo_codes" as any).select("used_count").eq("code", appliedPromo.code).single()).data?.used_count + 1 } as any)
+        .update({ used_count: ((promoData as any)?.used_count || 0) + 1 } as any)
         .eq("code", appliedPromo.code);
     }
 
