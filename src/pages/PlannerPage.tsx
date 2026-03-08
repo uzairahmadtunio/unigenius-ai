@@ -172,12 +172,16 @@ RULES:
           </div>
         </div>
 
+        {loading && !schedule && (
+          <ThinkingAnimation message="UniGenius aapka study plan bana raha hai..." />
+        )}
+
         {/* Schedule output */}
         {schedule ? (
           <div className="glass rounded-2xl p-6 overflow-x-auto">
             <MarkdownMessage content={schedule} />
           </div>
-        ) : (
+        ) : !loading ? (
           <div className="glass rounded-2xl p-12 text-center space-y-3">
             <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto" />
             <p className="font-display font-semibold text-foreground">Your AI Study Plan</p>
@@ -185,7 +189,7 @@ RULES:
               Select your semester and click generate. AI will create a personalized weekly study timetable based on your subjects.
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </PageShell>
   );
