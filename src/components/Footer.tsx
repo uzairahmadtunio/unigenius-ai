@@ -12,7 +12,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t border-border/50 py-6 pb-[110px] md:pb-6 text-center px-4">
+    <footer className="border-t border-border/50 py-6 pb-32 md:pb-6 text-center px-4">
       <div className="flex flex-col items-center gap-3">
         <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
           <span className="text-xs md:text-sm text-muted-foreground">© 2026 UniGenius AI</span>

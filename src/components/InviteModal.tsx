@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 const APP_URL = window.location.origin;
 
-const INVITE_MESSAGE = `Hey! Join me on UniGenius AI - The ultimate study assistant for University of Larkana students. 🎓\n\n✅ Track attendance\n✅ Generate lab manuals\n✅ AI-powered exam prep\n✅ Build your portfolio\n\nJoin here: ${APP_URL}`;
+const INVITE_MESSAGE = `Hey! Check out UniGenius AI – The ultimate all-in-one assistant for Software Engineering students. 🎓\n\n✅ Track attendance & GPA\n✅ Generate lab manuals instantly\n✅ AI-powered exam prep & viva practice\n✅ Build your developer portfolio\n\nJoin here: ${APP_URL} — Built by Uzair Ahmad`;
 
 interface InviteModalProps {
   open: boolean;

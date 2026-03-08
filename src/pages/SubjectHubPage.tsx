@@ -229,7 +229,7 @@ Start by greeting the student and asking your first viva question.`
     setActiveChatId(null);
     setTitleGenerated(false);
     setMessages([{ id: "welcome-" + newMode, role: "assistant", content: newMode === "viva"
-      ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Tayyar ho? Shuru karte hain...`
+      ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! 👋 I'm your viva examiner. Ready? Let's begin...`
       : getWelcome()
     }]);
     setIsStreaming(false);
