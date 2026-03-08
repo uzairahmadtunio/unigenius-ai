@@ -418,6 +418,19 @@ const ChatPage = () => {
                       <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user" ? "gradient-primary text-primary-foreground" : "glass text-foreground"}`}>
                         {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content || "…"}
                       </div>
+                      {msg.role === "assistant" && msg.content && msg.id !== "welcome" && (
+                        <button
+                          onClick={() => handleReadAloud(msg.id, msg.content)}
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-1 ml-1"
+                          title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
+                        >
+                          {speakingMsgId === msg.id ? (
+                            <><Square className="w-3 h-3" /> Stop</>
+                          ) : (
+                            <><Volume2 className="w-3 h-3" /> Read Aloud</>
+                          )}
+                        </button>
+                      )}
                     </div>
                     {msg.role === "user" && (
                       <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
