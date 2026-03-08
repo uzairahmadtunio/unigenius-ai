@@ -80,17 +80,17 @@ const LeaderboardPage = () => {
   };
 
   useEffect(() => {
-    fetchLeaderboard();
+    fetchLeaderboard(timeFilter);
     fetchBadges();
 
     const channel = supabase
       .channel("leaderboard-updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_results" }, () => fetchLeaderboard())
-      .on("postgres_changes", { event: "*", schema: "public", table: "career_activity" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_results" }, () => fetchLeaderboard(timeFilter))
+      .on("postgres_changes", { event: "*", schema: "public", table: "career_activity" }, () => fetchLeaderboard(timeFilter))
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [timeFilter]);
 
   useEffect(() => { fetchBadges(); }, [user]);
 
