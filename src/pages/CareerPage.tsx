@@ -3,17 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Code, FileText, Mic, MicOff, Send, Bot, User,
   Play, CheckCircle, XCircle, Upload, FileUp, Award, Target,
-  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles
+  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles, List, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDepartment } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
-import { fireCelebration, recordCareerActivity, checkAndAwardBadges } from "@/lib/career-points";
+import { fireCelebration, recordCareerActivity, checkAndAwardBadges, PRESET_DSA_PROBLEMS, type DSAProblem } from "@/lib/career-points";
 
 type ActiveTab = "interview" | "dsa" | "cv";
 
@@ -171,7 +172,6 @@ Start by greeting the candidate and asking your first question.`
         }
       }
 
-      // Check if interview is complete
       if (user && assistantText.includes("INTERVIEW_COMPLETE")) {
         const saved = await recordCareerActivity(user.id, "interview_complete", 15, { semester });
         if (saved) {
@@ -202,7 +202,6 @@ Start by greeting the candidate and asking your first question.`
       recorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         toast.success("Voice recorded! (Transcription simulated)");
-        // In a production app, you'd send this to a transcription service
         setInput(prev => prev + " [Voice response recorded]");
       };
 
@@ -217,7 +216,6 @@ Start by greeting the candidate and asking your first question.`
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Semester Focus</label>
@@ -236,13 +234,11 @@ Start by greeting the candidate and asking your first question.`
         </Button>
       </div>
 
-      {/* Topics Preview */}
       <div className="glass rounded-xl px-4 py-2 text-xs text-muted-foreground">
         <span className="font-semibold text-foreground">Topics: </span>
         {semesterTopics[semester]}
       </div>
 
-      {/* Chat Area */}
       {messages.length > 0 && (
         <div className="glass rounded-2xl p-4 space-y-4 max-h-[400px] overflow-y-auto">
           {messages.map((msg, i) => (
@@ -273,7 +269,6 @@ Start by greeting the candidate and asking your first question.`
         </div>
       )}
 
-      {/* Input */}
       {messages.length > 0 && (
         <div className="glass rounded-2xl p-2 flex gap-2 items-end">
           <Button
@@ -304,18 +299,42 @@ Start by greeting the candidate and asking your first question.`
 // ─── DSA Practice ─────────────────────────────────────────────────
 const DSAPractice = () => {
   const { user } = useAuth();
-  const [problem, setProblem] = useState<string>("");
-  const [code, setCode] = useState("// Write your solution here\n\n");
+  const [selectedProblem, setSelectedProblem] = useState<DSAProblem | null>(null);
+  const [code, setCode] = useState("");
   const [analysis, setAnalysis] = useState("");
-  const [loadingProblem, setLoadingProblem] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [solvedIds, setSolvedIds] = useState<Set<number>>(new Set());
+  const [showHints, setShowHints] = useState(false);
+  const [mode, setMode] = useState<"preset" | "ai">("preset");
+  const [aiProblem, setAiProblem] = useState("");
+  const [loadingProblem, setLoadingProblem] = useState(false);
   const [difficulty, setDifficulty] = useState("medium");
 
-  const fetchProblem = async () => {
+  // Load solved problems from career_activity
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("career_activity").select("metadata").eq("user_id", user.id).eq("activity_type", "dsa_solve").then(({ data }) => {
+      if (data) {
+        const ids = new Set<number>();
+        data.forEach((a: any) => { if (a.metadata?.problem_id) ids.add(a.metadata.problem_id); });
+        setSolvedIds(ids);
+      }
+    });
+  }, [user]);
+
+  const selectProblem = (p: DSAProblem) => {
+    setSelectedProblem(p);
+    setCode(p.starterCode);
+    setAnalysis("");
+    setShowHints(false);
+  };
+
+  const fetchAIProblem = async () => {
     setLoadingProblem(true);
-    setProblem("");
+    setAiProblem("");
     setAnalysis("");
     setCode("// Write your solution here\n\n");
+    setSelectedProblem(null);
 
     try {
       const resp = await fetch(CHAT_URL, {
@@ -328,7 +347,7 @@ const DSAPractice = () => {
           messages: [
             {
               role: "system",
-              content: `You are a DSA problem generator for Software Engineering students. Generate a ${difficulty} difficulty Data Structures or Algorithms problem similar to LeetCode.
+              content: `You are a DSA problem generator for Software Engineering students. Generate a ${difficulty} difficulty Data Structures or Algorithms problem.
 
 FORMAT:
 ## Problem Title
@@ -341,7 +360,6 @@ FORMAT:
 ### Examples
 **Input:** ...
 **Output:** ...
-**Explanation:** ...
 
 ### Constraints
 - ...
@@ -374,7 +392,7 @@ FORMAT:
           try { const c = JSON.parse(json).choices?.[0]?.delta?.content; if (c) text += c; } catch {}
         }
       }
-      setProblem(text);
+      setAiProblem(text);
     } catch (e: any) {
       toast.error(e.message || "Failed to generate problem");
     } finally {
@@ -390,6 +408,10 @@ FORMAT:
     setLoadingAnalysis(true);
     setAnalysis("");
 
+    const problemText = selectedProblem
+      ? `## ${selectedProblem.title}\n${selectedProblem.description}\n${selectedProblem.examples}`
+      : aiProblem;
+
     try {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -401,18 +423,18 @@ FORMAT:
           messages: [
             {
               role: "system",
-              content: `You are a DSA expert and code reviewer. Analyze the given solution for the problem. Provide:
+              content: `You are a DSA expert and code reviewer. Analyze the given C++ solution for the problem. Provide:
 
-1. **Correctness**: Is the solution correct? Any edge cases missed?
-2. **Time Complexity**: Explain step-by-step how you derive the Big-O. Use LaTeX: $O(n)$, $O(n \\log n)$, etc.
-3. **Space Complexity**: Same detailed analysis with LaTeX notation.
-4. **Optimization**: Can it be improved? Show the optimized version if applicable.
+1. **Correctness**: Is the solution correct? Does it handle edge cases? Say "CORRECT: yes" or "CORRECT: no".
+2. **Time Complexity**: Explain with LaTeX: $O(n)$, $O(n \\log n)$, etc.
+3. **Space Complexity**: Same detailed analysis.
+4. **Optimization**: Can it be improved?
 5. **Code Quality**: Comments on style, naming, readability.
-6. **Optimized**: At the very end, add a line "OPTIMIZED: yes" if the solution has optimal time complexity for this problem type, or "OPTIMIZED: no" otherwise.
+6. **Optimized**: At the end, add "OPTIMIZED: yes" if optimal, or "OPTIMIZED: no".
 
-Use markdown formatting and LaTeX for all complexity expressions.`
+Be encouraging but honest. Use markdown formatting.`
             },
-            { role: "user", content: `**Problem:**\n${problem}\n\n**My Solution:**\n\`\`\`\n${code}\n\`\`\`` }
+            { role: "user", content: `**Problem:**\n${problemText}\n\n**My Solution:**\n\`\`\`cpp\n${code}\n\`\`\`` }
           ],
         }),
       });
@@ -435,31 +457,30 @@ Use markdown formatting and LaTeX for all complexity expressions.`
           if (json === "[DONE]") break;
           try {
             const c = JSON.parse(json).choices?.[0]?.delta?.content;
-            if (c) {
-              text += c;
-              const snap = text;
-              setAnalysis(snap);
-            }
+            if (c) { text += c; setAnalysis(text); }
           } catch {}
         }
       }
 
-      // Award points after successful analysis
-      if (user && text.length > 50) {
+      // Award points if correct
+      if (user && text.length > 50 && text.toLowerCase().includes("correct: yes")) {
         const isOptimized = text.toLowerCase().includes("optimized: yes");
         const basePoints = 20;
         const bonusPoints = isOptimized ? 10 : 0;
         const totalPoints = basePoints + bonusPoints;
 
-        const saved = await recordCareerActivity(user.id, "dsa_solve", totalPoints, {
-          difficulty,
-          optimized: isOptimized,
-        });
+        const metadata: any = { difficulty: selectedProblem?.difficulty || difficulty, optimized: isOptimized };
+        if (selectedProblem) metadata.problem_id = selectedProblem.id;
+
+        const saved = await recordCareerActivity(user.id, "dsa_solve", totalPoints, metadata);
 
         if (saved) {
+          if (selectedProblem) setSolvedIds(prev => new Set(prev).add(selectedProblem.id));
           fireCelebration(totalPoints);
           checkAndAwardBadges(user.id);
         }
+      } else if (text.toLowerCase().includes("correct: no")) {
+        toast.info("Not quite right — review the feedback and try again! 💪");
       }
     } catch (e: any) {
       toast.error(e.message || "Analysis failed");
@@ -470,37 +491,128 @@ Use markdown formatting and LaTeX for all complexity expressions.`
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Difficulty</label>
-          <Select value={difficulty} onValueChange={setDifficulty}>
-            <SelectTrigger className="rounded-xl w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">🟢 Easy</SelectItem>
-              <SelectItem value="medium">🟡 Medium</SelectItem>
-              <SelectItem value="hard">🔴 Hard</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Mode Toggle */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex rounded-xl overflow-hidden border border-border">
+          <button
+            onClick={() => setMode("preset")}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${mode === "preset" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+          >
+            <List className="w-3.5 h-3.5 inline mr-1.5" />10 Practice Problems
+          </button>
+          <button
+            onClick={() => setMode("ai")}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${mode === "ai" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+          >
+            <Zap className="w-3.5 h-3.5 inline mr-1.5" />AI Generated
+          </button>
         </div>
-        <Button onClick={fetchProblem} disabled={loadingProblem} className="rounded-xl gap-2 gradient-primary">
-          {loadingProblem ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
-          {problem ? "New Problem" : "Problem of the Day"}
-        </Button>
+
+        <Badge variant="secondary" className="text-[10px] gap-1">
+          ⚔️ {solvedIds.size}/5 for DSA Warrior Badge
+        </Badge>
       </div>
 
-      {/* Problem Display */}
-      {problem && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5">
-          <MarkdownMessage content={problem} />
-        </motion.div>
+      {mode === "preset" ? (
+        <>
+          {/* Problem List */}
+          {!selectedProblem && (
+            <div className="grid gap-2">
+              {PRESET_DSA_PROBLEMS.map((p) => {
+                const solved = solvedIds.has(p.id);
+                return (
+                  <motion.button
+                    key={p.id}
+                    whileHover={{ x: 4 }}
+                    onClick={() => selectProblem(p)}
+                    className={`glass rounded-xl p-4 text-left flex items-center gap-3 transition-all ${solved ? "ring-1 ring-emerald-500/30" : "hover:shadow-md"}`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                      solved ? "bg-emerald-500/20 text-emerald-500" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {solved ? <CheckCircle className="w-4 h-4" /> : p.id}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-foreground">{p.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{p.category}</p>
+                    </div>
+                    <Badge variant={p.difficulty === "easy" ? "secondary" : p.difficulty === "medium" ? "outline" : "destructive"} className="text-[10px]">
+                      {p.difficulty === "easy" ? "🟢" : p.difficulty === "medium" ? "🟡" : "🔴"} {p.difficulty}
+                    </Badge>
+                    {solved && <Badge variant="secondary" className="text-[10px] text-emerald-500">+20 pts</Badge>}
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Selected Problem */}
+          {selectedProblem && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => { setSelectedProblem(null); setAnalysis(""); }}>
+                  ← Back to Problems
+                </Button>
+                <Badge variant={selectedProblem.difficulty === "easy" ? "secondary" : selectedProblem.difficulty === "medium" ? "outline" : "destructive"} className="text-[10px]">
+                  {selectedProblem.difficulty}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px]">{selectedProblem.category}</Badge>
+              </div>
+
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5 space-y-3">
+                <h3 className="font-display font-bold text-foreground">#{selectedProblem.id}: {selectedProblem.title}</h3>
+                <p className="text-sm text-foreground/90">{selectedProblem.description}</p>
+                <div className="text-sm"><MarkdownMessage content={selectedProblem.examples} /></div>
+                <div className="text-xs text-muted-foreground"><MarkdownMessage content={selectedProblem.constraints} /></div>
+
+                <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1" onClick={() => setShowHints(!showHints)}>
+                  <Lightbulb className="w-3 h-3" /> {showHints ? "Hide" : "Show"} Hints
+                </Button>
+                {showHints && (
+                  <div className="bg-muted rounded-xl p-3 text-xs space-y-1">
+                    {selectedProblem.hints.map((h, i) => (
+                      <p key={i} className="text-muted-foreground">💡 {h}</p>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          )}
+        </>
+      ) : (
+        /* AI Mode */
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Difficulty</label>
+              <Select value={difficulty} onValueChange={setDifficulty}>
+                <SelectTrigger className="rounded-xl w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">🟢 Easy</SelectItem>
+                  <SelectItem value="medium">🟡 Medium</SelectItem>
+                  <SelectItem value="hard">🔴 Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={fetchAIProblem} disabled={loadingProblem} className="rounded-xl gap-2 gradient-primary">
+              {loadingProblem ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+              {aiProblem ? "New Problem" : "Generate Problem"}
+            </Button>
+          </div>
+
+          {aiProblem && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5">
+              <MarkdownMessage content={aiProblem} />
+            </motion.div>
+          )}
+        </div>
       )}
 
-      {/* Code Editor */}
-      {problem && (
+      {/* Code Editor - shown when a problem is selected or AI problem generated */}
+      {(selectedProblem || aiProblem) && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-display font-semibold text-foreground text-sm">Your Solution</h3>
+            <h3 className="font-display font-semibold text-foreground text-sm">Your C++ Solution</h3>
             <Button
               variant="outline"
               size="sm"
@@ -518,7 +630,7 @@ Use markdown formatting and LaTeX for all complexity expressions.`
           />
           <Button onClick={analyzeSolution} disabled={loadingAnalysis} className="rounded-xl gap-2 gradient-primary">
             {loadingAnalysis ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
-            Analyze Solution
+            Submit & Analyze Solution
           </Button>
         </motion.div>
       )}
@@ -573,7 +685,7 @@ const CVOptimizer = () => {
 
       parts.push({
         type: "text",
-        text: `Analyze this CV/Resume for a Software Engineering student or graduate. Provide:
+        text: `Analyze this CV/Resume for a Software Engineering student at the University of Larkana. Score based on SE standards.
 
 ## CV Score: [X/100]
 
@@ -588,9 +700,9 @@ const CVOptimizer = () => {
 2. ...
 3. ...
 
-### 📋 SE-Specific Recommendations
-- Technical skills to add
-- Projects to highlight
+### 📋 SE-Specific Recommendations (University of Larkana Standards)
+- Technical skills relevant to SE curriculum
+- Projects to highlight for campus placement
 - Keywords for ATS optimization
 - Format and layout feedback
 
@@ -610,7 +722,7 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
           messages: [
             {
               role: "system",
-              content: "You are an expert CV reviewer specializing in Software Engineering careers. Analyze uploaded resumes thoroughly and provide actionable feedback with a numerical score."
+              content: "You are an expert CV reviewer specializing in Software Engineering careers at the University of Larkana. Analyze uploaded resumes thoroughly and provide actionable feedback with a numerical score out of 100."
             },
             { role: "user", content: parts }
           ],
@@ -642,7 +754,7 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
         }
       }
 
-      // Extract score and record activity
+      // Extract score and record activity — also awards CV Ready badge
       if (user && text.length > 50) {
         const scoreMatch = text.match(/CV Score:\s*(\d+)\s*\/\s*100/i);
         const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
@@ -661,7 +773,6 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
 
   return (
     <div className="space-y-4">
-      {/* Upload Zone */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -687,11 +798,11 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
           <>
             <p className="font-display font-semibold text-foreground">Drop your CV here</p>
             <p className="text-xs text-muted-foreground">Supports PDF, PNG, JPG • Max 10MB</p>
+            <p className="text-[10px] text-muted-foreground">📝 Uploading earns you the <strong>CV Ready</strong> badge!</p>
           </>
         )}
       </motion.div>
 
-      {/* Analyze Button */}
       {file && (
         <Button onClick={analyzeCV} disabled={isAnalyzing} className="rounded-xl gap-2 gradient-primary w-full">
           {isAnalyzing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
@@ -699,7 +810,6 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
         </Button>
       )}
 
-      {/* Results */}
       {analysis && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5">
           <MarkdownMessage content={analysis} />
@@ -712,7 +822,7 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
 // ─── Main Career Page ─────────────────────────────────────────────
 const tabs = [
   { id: "interview" as ActiveTab, icon: Briefcase, label: "Interview Prep", desc: "AI Mock Interviews", color: "from-sky-500 to-indigo-500" },
-  { id: "dsa" as ActiveTab, icon: Code, label: "DSA Practice", desc: "LeetCode-Style Problems", color: "from-emerald-500 to-teal-500" },
+  { id: "dsa" as ActiveTab, icon: Code, label: "DSA Practice", desc: "10 Problems + AI", color: "from-emerald-500 to-teal-500" },
   { id: "cv" as ActiveTab, icon: FileText, label: "CV Optimizer", desc: "AI Resume Scorer", color: "from-violet-500 to-purple-500" },
 ];
 
@@ -730,7 +840,6 @@ const CareerPage = () => {
       }
     >
       <div className="space-y-6">
-        {/* Tab Selector */}
         <div className="grid grid-cols-3 gap-3">
           {tabs.map((tab) => (
             <motion.button
@@ -753,7 +862,6 @@ const CareerPage = () => {
           ))}
         </div>
 
-        {/* Active Module */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -768,7 +876,6 @@ const CareerPage = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Footer Credit */}
         <div className="text-center pt-4 border-t border-border/30">
           <p className="text-xs text-muted-foreground">
             Career Hub — Powered by <span className="font-bold text-foreground">UniGenius AI</span> | Built by{" "}
