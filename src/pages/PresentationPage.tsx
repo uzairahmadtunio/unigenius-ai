@@ -1,18 +1,102 @@
 import { useState, useCallback } from "react";
-import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, ImageIcon, Lightbulb, Plus, Minus, Trash2 } from "lucide-react";
+import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Lightbulb, Plus, Minus, Trash2, Volume2, Square, Camera, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageShell from "@/components/PageShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import MarkdownMessage from "@/components/MarkdownMessage";
 
 interface Slide {
   title: string;
   bullets: string[];
   imageSuggestion: string;
 }
+
+type ThemeKey = "academic" | "darkTech" | "minimalist";
+
+interface ThemeConfig {
+  label: string;
+  desc: string;
+  // Preview card styles
+  cardBg: string;
+  cardBorder: string;
+  headerBg: string;
+  badgeBg: string;
+  badgeText: string;
+  titleText: string;
+  bulletText: string;
+  bulletDot: string;
+  hintBg: string;
+  // PPTX export colors (hex without #)
+  pptxBg: string;
+  pptxHeaderBg: string;
+  pptxTitle: string;
+  pptxBullet: string;
+  pptxHint: string;
+  pptxSubtitle: string;
+}
+
+const THEMES: Record<ThemeKey, ThemeConfig> = {
+  academic: {
+    label: "🎓 Academic",
+    desc: "Blue & White — Professional university style",
+    cardBg: "bg-white dark:bg-slate-800",
+    cardBorder: "border-blue-200 dark:border-blue-800",
+    headerBg: "bg-gradient-to-r from-blue-600 to-blue-700",
+    badgeBg: "bg-white/20",
+    badgeText: "text-white",
+    titleText: "text-slate-900 dark:text-white",
+    bulletText: "text-slate-700 dark:text-slate-300",
+    bulletDot: "bg-blue-500",
+    hintBg: "bg-blue-50 dark:bg-blue-950/30",
+    pptxBg: "FFFFFF",
+    pptxHeaderBg: "1E40AF",
+    pptxTitle: "1E293B",
+    pptxBullet: "334155",
+    pptxHint: "6B7280",
+    pptxSubtitle: "64748B",
+  },
+  darkTech: {
+    label: "⚡ Dark Tech",
+    desc: "Black & Neon — Modern programming style",
+    cardBg: "bg-[#0a0a1a]",
+    cardBorder: "border-cyan-500/30",
+    headerBg: "bg-gradient-to-r from-cyan-600 to-purple-600",
+    badgeBg: "bg-white/10",
+    badgeText: "text-white",
+    titleText: "text-cyan-50",
+    bulletText: "text-gray-300",
+    bulletDot: "bg-cyan-400",
+    hintBg: "bg-cyan-950/40",
+    pptxBg: "0A0A1A",
+    pptxHeaderBg: "0E7490",
+    pptxTitle: "E0F2FE",
+    pptxBullet: "CBD5E1",
+    pptxHint: "6B7280",
+    pptxSubtitle: "67E8F9",
+  },
+  minimalist: {
+    label: "📄 Minimalist",
+    desc: "Clean Black on White — Simple & elegant",
+    cardBg: "bg-white dark:bg-zinc-900",
+    cardBorder: "border-zinc-200 dark:border-zinc-700",
+    headerBg: "bg-zinc-900 dark:bg-zinc-800",
+    badgeBg: "bg-white/10",
+    badgeText: "text-white",
+    titleText: "text-zinc-900 dark:text-zinc-100",
+    bulletText: "text-zinc-600 dark:text-zinc-400",
+    bulletDot: "bg-zinc-400",
+    hintBg: "bg-zinc-100 dark:bg-zinc-800/50",
+    pptxBg: "FFFFFF",
+    pptxHeaderBg: "18181B",
+    pptxTitle: "18181B",
+    pptxBullet: "52525B",
+    pptxHint: "A1A1AA",
+    pptxSubtitle: "71717A",
+  },
+};
 
 const SLIDES_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-slides`;
 
@@ -24,6 +108,10 @@ const PresentationPage = () => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editSlide, setEditSlide] = useState<Slide | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [theme, setTheme] = useState<ThemeKey>("darkTech");
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+
+  const t = THEMES[theme];
 
   const generateSlides = useCallback(async () => {
     if (!topic.trim()) { toast.error("Please enter a topic!"); return; }
@@ -73,6 +161,30 @@ const PresentationPage = () => {
     toast.success("Slide removed");
   };
 
+  // TTS Read Aloud for slides
+  const handleReadSlide = useCallback((idx: number) => {
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const slide = slides[idx];
+    const text = `${slide.title}. ${slide.bullets.join(". ")}`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const enVoices = voices.filter(v => v.lang.startsWith("en"));
+    const best = enVoices.find(v => v.name.includes("Google") || v.name.includes("Natural")) || enVoices[0] || voices[0];
+    if (best) utterance.voice = best;
+    utterance.lang = "en-US";
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setSpeakingIdx(null);
+    utterance.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(utterance);
+  }, [speakingIdx, slides]);
+
   const downloadPPTX = useCallback(async () => {
     if (slides.length === 0) return;
     setIsDownloading(true);
@@ -86,45 +198,42 @@ const PresentationPage = () => {
 
       slides.forEach((slide, idx) => {
         const s = pptx.addSlide();
-
-        // Background gradient
-        s.background = { fill: "0D1B2A" };
+        s.background = { fill: t.pptxBg };
 
         // Slide number
         s.addText(`${idx + 1} / ${slides.length}`, {
-          x: 11.5, y: 6.8, w: 1.5, fontSize: 10, color: "6B7280", align: "right",
+          x: 11.5, y: 6.8, w: 1.5, fontSize: 10, color: t.pptxHint, align: "right",
         });
 
         if (idx === 0) {
-          // Title slide
+          // Title slide — header bar
+          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 3.5, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 1, y: 1.5, w: 11, h: 2, fontSize: 36, bold: true, color: "FFFFFF",
+            x: 1, y: 0.8, w: 11, h: 2, fontSize: 36, bold: true, color: "FFFFFF",
             align: "center", fontFace: "Arial",
           });
           s.addText(slide.bullets.join("\n"), {
-            x: 2, y: 4, w: 9, h: 2, fontSize: 18, color: "94A3B8",
+            x: 2, y: 4, w: 9, h: 2, fontSize: 18, color: t.pptxSubtitle,
             align: "center", fontFace: "Arial", lineSpacing: 28,
           });
-          s.addText(`💡 ${slide.imageSuggestion}`, {
-            x: 1, y: 6.2, w: 11, fontSize: 11, color: "6B7280", italic: true, align: "center",
+          s.addText(`📸 Suggested Visual: ${slide.imageSuggestion}`, {
+            x: 1, y: 6.2, w: 11, fontSize: 11, color: t.pptxHint, italic: true, align: "center",
           });
         } else {
           // Content slide
-          s.addShape(pptx.ShapeType.rect, {
-            x: 0, y: 0, w: 13.33, h: 1.2, fill: { color: "1B2838" },
-          });
+          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.2, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
             x: 0.8, y: 0.2, w: 11, h: 0.8, fontSize: 28, bold: true, color: "FFFFFF",
             fontFace: "Arial",
           });
           slide.bullets.forEach((bullet, bIdx) => {
             s.addText(`•  ${bullet}`, {
-              x: 1, y: 1.6 + bIdx * 0.9, w: 10, fontSize: 18, color: "E2E8F0",
+              x: 1, y: 1.6 + bIdx * 0.9, w: 10, fontSize: 18, color: t.pptxBullet,
               fontFace: "Arial", lineSpacing: 24,
             });
           });
-          s.addText(`💡 ${slide.imageSuggestion}`, {
-            x: 0.8, y: 6.2, w: 11, fontSize: 11, color: "6B7280", italic: true,
+          s.addText(`📸 Suggested Visual: ${slide.imageSuggestion}`, {
+            x: 0.8, y: 6.2, w: 11, fontSize: 11, color: t.pptxHint, italic: true,
           });
         }
       });
@@ -137,7 +246,7 @@ const PresentationPage = () => {
     } finally {
       setIsDownloading(false);
     }
-  }, [slides, topic]);
+  }, [slides, topic, t]);
 
   return (
     <PageShell
@@ -158,7 +267,28 @@ const PresentationPage = () => {
               onKeyDown={(e) => { if (e.key === "Enter" && !isGenerating) generateSlides(); }}
             />
           </div>
+
+          {/* Theme Picker + Slide Count */}
           <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-muted-foreground" />
+              <Select value={theme} onValueChange={(v) => setTheme(v as ThemeKey)}>
+                <SelectTrigger className="w-[180px] rounded-xl text-xs h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      <div>
+                        <span className="text-xs font-medium">{THEMES[key].label}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1.5">{THEMES[key].desc.split("—")[0]}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">Slides:</label>
               <div className="flex items-center gap-1">
@@ -171,10 +301,19 @@ const PresentationPage = () => {
                 </Button>
               </div>
             </div>
+
             <Button onClick={generateSlides} disabled={isGenerating || !topic.trim()} className="rounded-xl gradient-primary text-primary-foreground gap-2 ml-auto">
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {isGenerating ? "Generating..." : "Generate Slides"}
             </Button>
+          </div>
+
+          {/* Theme Preview */}
+          <div className="flex gap-2 items-center">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Preview:</span>
+            <div className={`flex-1 h-8 rounded-lg ${t.headerBg} flex items-center px-3`}>
+              <span className="text-[10px] text-white font-medium">{THEMES[theme].desc}</span>
+            </div>
           </div>
         </motion.div>
 
@@ -182,8 +321,8 @@ const PresentationPage = () => {
         {slides.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-sm font-semibold text-foreground">{slides.length} Slides Ready</p>
-              <p className="text-xs text-muted-foreground">Edit any slide below, then download as PowerPoint</p>
+              <p className="text-sm font-semibold text-foreground">{slides.length} Slides Ready — {THEMES[theme].label}</p>
+              <p className="text-xs text-muted-foreground">Edit slides below, then download with {THEMES[theme].label} theme</p>
             </div>
             <Button onClick={downloadPPTX} disabled={isDownloading} className="rounded-xl gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600">
               {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -210,7 +349,7 @@ const PresentationPage = () => {
           </motion.div>
         )}
 
-        {/* Slide Cards */}
+        {/* Slide Cards — Themed */}
         <AnimatePresence>
           {slides.map((slide, idx) => (
             <motion.div
@@ -219,32 +358,36 @@ const PresentationPage = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ delay: idx * 0.05 }}
-              className="glass rounded-2xl overflow-hidden border border-border/30"
+              className={`rounded-2xl overflow-hidden border ${t.cardBorder} ${t.cardBg} shadow-card`}
             >
-              {/* Slide Header */}
-              <div className="bg-gradient-to-r from-[hsl(var(--primary)/0.15)] to-[hsl(var(--secondary)/0.1)] px-5 py-3 flex items-center justify-between border-b border-border/20">
+              {/* Themed Slide Header */}
+              <div className={`${t.headerBg} px-5 py-3 flex items-center justify-between`}>
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+                  <span className={`w-8 h-8 rounded-lg ${t.badgeBg} flex items-center justify-center text-xs font-bold ${t.badgeText}`}>
                     {idx + 1}
                   </span>
-                  <span className="text-xs font-medium text-muted-foreground">Slide {idx + 1} of {slides.length}</span>
+                  <span className="text-xs font-medium text-white/70">Slide {idx + 1} of {slides.length}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  {/* Read Aloud */}
+                  <Button variant="ghost" size="sm" className={`h-7 px-2 text-xs gap-1 ${speakingIdx === idx ? "text-yellow-300" : "text-white/70 hover:text-white"}`} onClick={() => handleReadSlide(idx)}>
+                    {speakingIdx === idx ? <><Square className="w-3 h-3" /> Stop</> : <><Volume2 className="w-3 h-3" /> Listen</>}
+                  </Button>
                   {editingIndex === idx ? (
                     <>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-green-400 hover:text-green-300" onClick={saveEdit}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-green-300 hover:text-green-200" onClick={saveEdit}>
                         <Check className="w-3 h-3" /> Save
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={cancelEdit}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-white/70 hover:text-white" onClick={cancelEdit}>
                         <X className="w-3 h-3" /> Cancel
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => startEdit(idx)}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-white/70 hover:text-white" onClick={() => startEdit(idx)}>
                         <Edit3 className="w-3 h-3" /> Edit
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive" onClick={() => deleteSlide(idx)}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-red-300 hover:text-red-200" onClick={() => deleteSlide(idx)}>
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </>
@@ -252,7 +395,7 @@ const PresentationPage = () => {
                 </div>
               </div>
 
-              {/* Slide Body */}
+              {/* Slide Body — Themed */}
               <div className="p-5 space-y-4">
                 {editingIndex === idx && editSlide ? (
                   <div className="space-y-3">
@@ -295,11 +438,11 @@ const PresentationPage = () => {
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-display font-bold text-lg text-foreground">{slide.title}</h3>
-                    <ul className="space-y-2">
+                    <h3 className={`font-display font-bold text-lg ${t.titleText}`}>{slide.title}</h3>
+                    <ul className="space-y-2.5">
                       {slide.bullets.map((bullet, bIdx) => (
-                        <li key={bIdx} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                        <li key={bIdx} className={`flex items-start gap-2.5 text-sm ${t.bulletText}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${t.bulletDot} mt-2 flex-shrink-0`} />
                           <span>{bullet}</span>
                         </li>
                       ))}
@@ -307,12 +450,12 @@ const PresentationPage = () => {
                   </>
                 )}
 
-                {/* Image Suggestion */}
+                {/* Image Suggestion — Styled */}
                 {editingIndex !== idx && (
-                  <div className="flex items-start gap-2.5 bg-muted/50 rounded-xl p-3 mt-3">
-                    <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className={`flex items-start gap-2.5 ${t.hintBg} rounded-xl p-3 mt-3`}>
+                    <Camera className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Image Suggestion</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Suggested Visual</span>
                       <p className="text-xs text-muted-foreground italic mt-0.5">{slide.imageSuggestion}</p>
                     </div>
                   </div>
@@ -330,8 +473,8 @@ const PresentationPage = () => {
             </div>
             <div>
               <p className="font-display font-semibold text-foreground">AI Presentation Maker</p>
-              <p className="text-sm text-muted-foreground mt-1">Enter a topic above and generate professional slides instantly.</p>
-              <p className="text-xs text-muted-foreground mt-2">✨ Edit any slide • 📥 Download as PowerPoint • 💡 AI image suggestions</p>
+              <p className="text-sm text-muted-foreground mt-1">Enter a topic, pick a theme, and generate professional slides.</p>
+              <p className="text-xs text-muted-foreground mt-2">🎨 3 Themes • ✏️ Edit slides • 🔊 Listen • 📥 Download PPTX</p>
             </div>
           </motion.div>
         )}
