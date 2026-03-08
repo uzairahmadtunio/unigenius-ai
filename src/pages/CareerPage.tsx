@@ -825,6 +825,7 @@ const tabs = [
   { id: "interview" as ActiveTab, icon: Briefcase, label: "Interview Prep", desc: "AI Mock Interviews", color: "from-sky-500 to-indigo-500" },
   { id: "dsa" as ActiveTab, icon: Code, label: "DSA Practice", desc: "10 Problems + AI", color: "from-emerald-500 to-teal-500" },
   { id: "cv" as ActiveTab, icon: FileText, label: "CV Optimizer", desc: "AI Resume Scorer", color: "from-violet-500 to-purple-500" },
+  { id: "skills" as ActiveTab, icon: TrendingUp, label: "Skill Sync", desc: "Freelance Gigs", color: "from-amber-500 to-orange-500" },
 ];
 
 const CareerPage = () => {
