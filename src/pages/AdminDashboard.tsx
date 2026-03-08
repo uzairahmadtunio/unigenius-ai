@@ -614,7 +614,7 @@ const GlobalAlertsTab = () => {
 
   const handleDeactivate = async (id: string) => {
     await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("id", id);
-    toast.success("Alert deactivated.");
+    toast.success("Alert Deactivated Successfully");
     fetchAlerts();
   };
 
