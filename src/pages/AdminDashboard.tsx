@@ -163,6 +163,7 @@ const AdminDashboard = () => {
           {activeTab === "alerts" && <GlobalAlertsTab />}
           {activeTab === "support" && <SupportTab />}
           {activeTab === "payments" && <PaymentsTab />}
+          {activeTab === "promos" && <PromoManagerTab />}
         </div>
       </main>
     </div>
