@@ -641,6 +641,17 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
           } catch {}
         }
       }
+
+      // Extract score and record activity
+      if (user && text.length > 50) {
+        const scoreMatch = text.match(/CV Score:\s*(\d+)\s*\/\s*100/i);
+        const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+        const saved = await recordCareerActivity(user.id, "cv_score", score >= 80 ? 25 : 15, { score });
+        if (saved) {
+          fireCelebration(score >= 80 ? 25 : 15);
+          checkAndAwardBadges(user.id);
+        }
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed");
     } finally {
