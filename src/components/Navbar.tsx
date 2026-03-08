@@ -1,8 +1,10 @@
 import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
@@ -10,10 +12,18 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("avatar_url").eq("user_id", user.id).single().then(({ data }) => {
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+    });
+  }, [user]);
 
   return (
     <nav className="sticky top-0 z-40 glass border-b border-border/50">
@@ -64,12 +74,15 @@ const Navbar = () => {
               >
                 <Settings className="w-4 h-4" />
               </Button>
-              <div
-                className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground cursor-pointer"
+              <Avatar
+                className="w-8 h-8 cursor-pointer border border-primary/20"
                 onClick={() => navigate("/profile")}
               >
-                {user.email?.charAt(0).toUpperCase()}
-              </div>
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                  {user.email?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <Button variant="ghost" size="icon" className="rounded-xl" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>

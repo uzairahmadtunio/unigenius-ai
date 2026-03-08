@@ -28,6 +28,8 @@ const DocsGenPage = () => {
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [studentDept, setStudentDept] = useState("");
+  const [studentSection, setStudentSection] = useState("");
+  const [studentUniversity, setStudentUniversity] = useState("University of Larkana");
 
   const subjects = department ? getSubjects(department, semester) : [];
 
@@ -37,13 +39,16 @@ const DocsGenPage = () => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, roll_number, current_semester")
+        .select("display_name, roll_number, current_semester, section, university")
         .eq("user_id", user.id)
         .single();
       if (data) {
-        setStudentName(data.display_name || "");
-        setRollNumber((data as any).roll_number || "");
-        if (data.current_semester) setSemester(data.current_semester);
+        const p = data as any;
+        setStudentName(p.display_name || "");
+        setRollNumber(p.roll_number || "");
+        setStudentSection(p.section || "");
+        setStudentUniversity(p.university || "University of Larkana");
+        if (p.current_semester) setSemester(p.current_semester);
       }
     };
     fetchProfile();
@@ -74,6 +79,8 @@ const DocsGenPage = () => {
             name: studentName || "",
             rollNumber: rollNumber || "",
             department: studentDept || "",
+            section: studentSection || "",
+            university: studentUniversity || "University of Larkana",
           },
         }),
       });
