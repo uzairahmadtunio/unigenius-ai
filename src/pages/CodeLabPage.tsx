@@ -7,6 +7,7 @@ import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
 import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
+import ThinkingAnimation from "@/components/ThinkingAnimation";
 import CodeDiffView from "@/components/CodeDiffView";
 
 const defaultCode: Record<string, { lang: string; code: string }> = {
@@ -273,6 +274,8 @@ const CodeLabPage = () => {
               </div>
               <p className="text-muted-foreground whitespace-pre-wrap">{analysis}</p>
             </div>
+          ) : isAnalyzing ? (
+            <ThinkingAnimation message="UniGenius code analyze kar raha hai..." />
           ) : (
             <div className="flex flex-col items-center justify-center text-center gap-3 py-8">
               <Code className="w-10 h-10 text-muted-foreground/30" />

@@ -12,6 +12,7 @@ import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
+import ThinkingAnimation from "@/components/ThinkingAnimation";
 
 import { usePro } from "@/hooks/use-pro";
 import ProPaywall from "@/components/ProPaywall";
@@ -274,7 +275,9 @@ const DocsGenPage = () => {
 
         {/* Preview */}
         <div className="lg:col-span-2 glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "700px" }}>
-          {content ? (
+          {isGenerating && !content ? (
+            <ThinkingAnimation message="UniGenius document generate kar raha hai..." />
+          ) : content ? (
             <div className="flex gap-3">
               <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-primary-foreground" />
