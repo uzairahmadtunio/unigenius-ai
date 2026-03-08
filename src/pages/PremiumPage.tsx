@@ -92,7 +92,7 @@ const PremiumPage = () => {
 
   if (!user) {
     return (
-      <PageShell title="Premium" icon={Crown}>
+      <PageShell title="Premium" icon={<Crown className="w-5 h-5" />}>
         <div className="text-center py-16">
           <Crown className="w-12 h-12 text-amber-500 mx-auto mb-4" />
           <p className="text-muted-foreground mb-4">Please sign in to upgrade to Premium</p>
