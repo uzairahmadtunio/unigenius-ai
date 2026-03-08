@@ -23,6 +23,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
