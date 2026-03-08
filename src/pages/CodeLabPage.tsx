@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Code, Sparkles, Loader2, Bot, ImagePlus, X, Copy, Check, RotateCcw } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
+import { lintCppCode } from "@/lib/cpp-linter";
+import CodeLintWarnings from "@/components/CodeLintWarnings";
 
 const defaultCode: Record<string, { lang: string; code: string }> = {
   se: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
