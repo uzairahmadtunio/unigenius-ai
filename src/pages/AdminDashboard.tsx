@@ -1052,6 +1052,14 @@ const PaymentsTab = () => {
                       <span className="capitalize">{r.payment_method}</span>
                       <span>•</span>
                       <span>PKR {r.amount}</span>
+                      {r.promo_code && (
+                        <>
+                          <span>•</span>
+                          <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/30">
+                            {r.promo_code} ({r.discount_percent}% off)
+                          </Badge>
+                        </>
+                      )}
                       <span>•</span>
                       <span>{new Date(r.created_at).toLocaleDateString("en-PK", { dateStyle: "medium" })}</span>
                     </div>
