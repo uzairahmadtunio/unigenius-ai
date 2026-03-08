@@ -11,6 +11,9 @@ import DepartmentSelector from "@/components/DepartmentSelector";
 import GlobalSearch from "@/components/GlobalSearch";
 import AttendanceAlert from "@/components/AttendanceAlert";
 import CareerReadinessWidget from "@/components/CareerReadinessWidget";
+import NoticeBoard from "@/components/NoticeBoard";
+import ExamCountdown from "@/components/ExamCountdown";
+import VivaReminder from "@/components/VivaReminder";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const SPLASH_KEY = "unigenius-splash-shown";
