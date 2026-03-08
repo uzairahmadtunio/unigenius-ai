@@ -193,6 +193,81 @@ export type Database = {
         }
         Relationships: []
       }
+      flashcard_sets: {
+        Row: {
+          cards: Json
+          created_at: string
+          id: string
+          semester: number
+          source_type: string
+          subject: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          cards?: Json
+          created_at?: string
+          id?: string
+          semester: number
+          source_type?: string
+          subject: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          cards?: Json
+          created_at?: string
+          id?: string
+          semester?: number
+          source_type?: string
+          subject?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      past_papers: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_url: string
+          id: string
+          paper_type: string
+          semester: number
+          subject: string
+          title: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          paper_type?: string
+          semester: number
+          subject: string
+          title: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          paper_type?: string
+          semester?: number
+          subject?: string
+          title?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
