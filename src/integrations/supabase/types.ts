@@ -466,6 +466,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          reviewed_at: string | null
+          screenshot_url: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          reviewed_at?: string | null
+          screenshot_url: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          reviewed_at?: string | null
+          screenshot_url?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -475,6 +511,7 @@ export type Database = {
           github_url: string | null
           headline: string | null
           id: string
+          is_pro: boolean
           linkedin_url: string | null
           roll_number: string | null
           section: string | null
@@ -492,6 +529,7 @@ export type Database = {
           github_url?: string | null
           headline?: string | null
           id?: string
+          is_pro?: boolean
           linkedin_url?: string | null
           roll_number?: string | null
           section?: string | null
@@ -509,6 +547,7 @@ export type Database = {
           github_url?: string | null
           headline?: string | null
           id?: string
+          is_pro?: boolean
           linkedin_url?: string | null
           roll_number?: string | null
           section?: string | null
@@ -774,6 +813,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_get_payment_requests: {
+        Args: never
+        Returns: {
+          admin_note: string
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          reviewed_at: string
+          screenshot_url: string
+          status: string
+          user_avatar: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       admin_get_stats: {
         Args: never
         Returns: {
@@ -800,6 +856,10 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+      }
+      admin_handle_payment: {
+        Args: { _action: string; _note?: string; _request_id: string }
+        Returns: undefined
       }
       get_leaderboard_filtered: {
         Args: { time_filter?: string }
