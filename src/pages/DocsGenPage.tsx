@@ -39,13 +39,16 @@ const DocsGenPage = () => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, roll_number, current_semester")
+        .select("display_name, roll_number, current_semester, section, university")
         .eq("user_id", user.id)
         .single();
       if (data) {
-        setStudentName(data.display_name || "");
-        setRollNumber((data as any).roll_number || "");
-        if (data.current_semester) setSemester(data.current_semester);
+        const p = data as any;
+        setStudentName(p.display_name || "");
+        setRollNumber(p.roll_number || "");
+        setStudentSection(p.section || "");
+        setStudentUniversity(p.university || "University of Larkana");
+        if (p.current_semester) setSemester(p.current_semester);
       }
     };
     fetchProfile();
