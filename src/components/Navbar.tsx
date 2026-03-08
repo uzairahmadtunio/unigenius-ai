@@ -14,6 +14,8 @@ const Navbar = () => {
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notices, setNotices] = useState<any[]>([]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
