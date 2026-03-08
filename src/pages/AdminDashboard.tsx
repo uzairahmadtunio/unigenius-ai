@@ -258,7 +258,7 @@ const UsersTab = () => {
     if (error) {
       toast.error("Failed to delete user: " + error.message);
     } else {
-      toast.success(`User ${deleteTarget.display_name || deleteTarget.email} removed.`);
+      toast.success("User Account Terminated", { description: `${deleteTarget.display_name || deleteTarget.email} has been removed.` });
       fetchUsers();
     }
     setDeleteTarget(null);
@@ -384,10 +384,10 @@ const NoticesTab = () => {
 
     if (editId) {
       await supabase.from("university_notices").update({ title, content, category, priority } as any).eq("id", editId);
-      toast.success("Notice updated!");
+      toast.success("Notice Updated Successfully");
     } else {
       await supabase.from("university_notices").insert({ title, content, category, priority } as any);
-      toast.success("🎉 Official Notice Live!", { description: "Now visible to all students." });
+      toast.success("Notice Published Successfully", { description: "Now visible to all students." });
     }
 
     setSubmitting(false);
@@ -402,7 +402,7 @@ const NoticesTab = () => {
 
   const handleDelete = async (id: string) => {
     await supabase.from("university_notices").delete().eq("id", id);
-    toast.success("Notice deleted.");
+    toast.success("Notice Removed Successfully");
     fetchNotices();
   };
 
@@ -511,7 +511,7 @@ const GroupsTab = () => {
     if (error) {
       toast.error("Failed: " + error.message);
     } else {
-      toast.success(`Group "${deleteTarget.name}" deleted.`);
+      toast.success("Group Removed Successfully", { description: `"${deleteTarget.name}" has been deleted.` });
       fetchGroups();
     }
     setDeleteTarget(null);
@@ -606,7 +606,7 @@ const GlobalAlertsTab = () => {
     setSubmitting(true);
     await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("is_active", true);
     await (supabase.from("global_alerts" as any) as any).insert({ message, alert_type: alertType, is_active: true });
-    toast.success("🚨 Global Alert Live!", { description: "All users will see this banner." });
+    toast.success("Global Alert Published", { description: "All users will see this banner." });
     setMessage("");
     setSubmitting(false);
     fetchAlerts();
@@ -614,13 +614,13 @@ const GlobalAlertsTab = () => {
 
   const handleDeactivate = async (id: string) => {
     await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("id", id);
-    toast.success("Alert deactivated.");
+    toast.success("Alert Deactivated Successfully");
     fetchAlerts();
   };
 
   const handleDelete = async (id: string) => {
     await (supabase.from("global_alerts" as any) as any).delete().eq("id", id);
-    toast.success("Alert deleted.");
+    toast.success("Alert Removed Successfully");
     fetchAlerts();
   };
 
@@ -772,7 +772,7 @@ const SupportTab = () => {
     await (supabase.from("support_tickets" as any) as any)
       .update({ status: "closed", updated_at: new Date().toISOString() })
       .eq("id", ticketId);
-    toast.success("✅ Ticket marked as resolved!");
+    toast.success("Support Ticket Resolved");
     if (selectedTicket?.ticket_id === ticketId) {
       setSelectedTicket(null);
       setMessages([]);
@@ -987,7 +987,7 @@ const PaymentsTab = () => {
       _action: action,
       _note: note || null,
     });
-    toast.success(action === "approve" ? "✅ Payment approved! User is now Pro." : "❌ Payment rejected.");
+    toast.success(action === "approve" ? "Payment Request Approved — User upgraded to Pro." : "Payment Request Rejected");
     fetchRequests();
   };
 
@@ -1147,7 +1147,7 @@ const PromoManagerTab = () => {
   useEffect(() => { fetchCodes(); }, []);
 
   const handleCreate = async () => {
-    if (!newCode.trim()) { toast.error("Enter a code"); return; }
+    if (!newCode.trim()) { toast.error("Please enter a promo code"); return; }
     setCreating(true);
     const { error } = await (supabase.from("promo_codes" as any) as any).insert({
       code: newCode.trim().toUpperCase(),
@@ -1155,9 +1155,9 @@ const PromoManagerTab = () => {
       usage_limit: parseInt(newLimit),
     });
     if (error) {
-      toast.error(error.message.includes("unique") ? "Code already exists!" : error.message);
+      toast.error(error.message.includes("unique") ? "Promo code already exists" : error.message);
     } else {
-      toast.success("✅ Promo code created!");
+      toast.success("Promo Code Created Successfully");
       setNewCode(""); setShowCreate(false);
       fetchCodes();
     }
@@ -1166,13 +1166,13 @@ const PromoManagerTab = () => {
 
   const toggleActive = async (id: string, currentActive: boolean) => {
     await supabase.from("promo_codes" as any).update({ is_active: !currentActive } as any).eq("id", id);
-    toast.success(currentActive ? "Code deactivated" : "Code activated");
+    toast.success(currentActive ? "Promo Code Deactivated" : "Promo Code Activated");
     fetchCodes();
   };
 
   const deleteCode = async (id: string) => {
     await supabase.from("promo_codes" as any).delete().eq("id", id);
-    toast.success("Code deleted");
+    toast.success("Promo Code Deleted");
     fetchCodes();
   };
 

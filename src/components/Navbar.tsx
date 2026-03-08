@@ -160,7 +160,7 @@ const Navbar = () => {
                       size="icon"
                       className="rounded-xl"
                       onClick={() => {
-                        const msg = `Hey! Check out UniGenius AI – The ultimate all-in-one assistant for Software Engineering students. Fix C++ errors, generate lab manuals, and track your GPA easily. Join me here: ${window.location.origin} — Built by Uzair Ahmad`;
+                        const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
                       }}
                     >
