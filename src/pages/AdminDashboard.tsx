@@ -1155,9 +1155,9 @@ const PromoManagerTab = () => {
       usage_limit: parseInt(newLimit),
     });
     if (error) {
-      toast.error(error.message.includes("unique") ? "Code already exists!" : error.message);
+      toast.error(error.message.includes("unique") ? "Promo code already exists" : error.message);
     } else {
-      toast.success("✅ Promo code created!");
+      toast.success("Promo Code Created Successfully");
       setNewCode(""); setShowCreate(false);
       fetchCodes();
     }
