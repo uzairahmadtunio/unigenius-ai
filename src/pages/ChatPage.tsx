@@ -9,12 +9,14 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { Progress } from "@/components/ui/progress";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   fileNames?: string[];
+  fileThumbnails?: string[]; // base64 data URLs for image previews in chat
 }
 
 interface AttachedFile {
@@ -22,6 +24,8 @@ interface AttachedFile {
   type: string;
   dataUrl: string;
   file: File;
+  uploadProgress: number; // 0-100
+  thumbnailUrl?: string; // for image previews
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -50,13 +54,14 @@ const ChatPage = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
+        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 5 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
     },
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingFileIndex, setUploadingFileIndex] = useState(-1);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,9 +99,17 @@ const ChatPage = () => {
       }
       const reader = new FileReader();
       reader.onload = () => {
+        const dataUrl = reader.result as string;
         setAttachedFiles(prev => {
           if (prev.length >= MAX_FILES) return prev;
-          return [...prev, { name: f.name, type: f.type, dataUrl: reader.result as string, file: f }];
+          return [...prev, {
+            name: f.name,
+            type: f.type,
+            dataUrl,
+            file: f,
+            uploadProgress: 0,
+            thumbnailUrl: f.type.startsWith("image/") ? dataUrl : undefined,
+          }];
         });
       };
       reader.readAsDataURL(f);
@@ -109,22 +122,37 @@ const ChatPage = () => {
   const uploadToStorage = async (files: AttachedFile[]): Promise<string[]> => {
     const urls: string[] = [];
     const userId = user?.id || "anonymous";
-    for (const f of files) {
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      setUploadingFileIndex(i);
+
+      // Simulate progress start
+      setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 20 } : af));
+
       const ext = f.name.split(".").pop() || "bin";
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 50 } : af));
+
       const { error } = await supabase.storage.from("chat-uploads").upload(path, f.file, {
         contentType: f.type,
         upsert: false,
       });
+
       if (error) {
         console.error("Upload error:", error);
-        // Fallback: we'll use data URL directly
         urls.push("");
+        setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 100 } : af));
       } else {
+        setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 80 } : af));
         const { data: urlData } = supabase.storage.from("chat-uploads").getPublicUrl(path);
         urls.push(urlData.publicUrl);
+        setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 100 } : af));
       }
     }
+
+    setUploadingFileIndex(-1);
     return urls;
   };
 
@@ -189,11 +217,21 @@ const ChatPage = () => {
     if ((!msg && attachedFiles.length === 0) || isStreaming) return;
 
     const fileNames = attachedFiles.map(f => f.name);
+    const fileThumbnails = attachedFiles
+      .filter(f => f.type.startsWith("image/"))
+      .map(f => f.dataUrl);
+
     const displayContent = attachedFiles.length > 0
-      ? `${msg}\n\n📎 ${fileNames.join(", ")}`
+      ? `${msg}${msg ? "\n\n" : ""}📎 ${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""} attached`
       : msg;
 
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content: displayContent, fileNames };
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: displayContent,
+      fileNames,
+      fileThumbnails: fileThumbnails.length > 0 ? fileThumbnails : undefined,
+    };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
@@ -214,37 +252,42 @@ const ChatPage = () => {
         const parts: any[] = [];
         if (msg) parts.push({ type: "text", text: msg });
 
+        // Add batch context for multiple files
+        if (attachedFiles.length > 1) {
+          parts.push({
+            type: "text",
+            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together and provide a combined, comprehensive answer referencing each file.`,
+          });
+        }
+
         for (let i = 0; i < attachedFiles.length; i++) {
           const f = attachedFiles[i];
           if (f.type.startsWith("image/")) {
-            // Images: send as image_url for Gemini vision + OCR
             parts.push({
               type: "image_url",
               image_url: { url: f.dataUrl },
             });
             parts.push({
               type: "text",
-              text: `[Image: ${f.name}] — Please analyze this image. If it contains text, handwriting, code, or diagrams, extract and explain the content using OCR.`,
+              text: `[Image ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this image. If it contains text, handwriting, code, or diagrams, extract and explain the content using OCR.`,
             });
           } else if (f.type === "application/pdf") {
-            // PDFs: send base64 for server-side processing
             parts.push({
               type: "file",
               file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] },
             });
             parts.push({
               type: "text",
-              text: `[PDF: ${f.name}] — Read and analyze the full content of this PDF document. Summarize key points and answer any questions about it.`,
+              text: `[PDF ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this PDF document thoroughly.`,
             });
           } else {
-            // DOCX and other documents
             parts.push({
               type: "file",
               file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] },
             });
             parts.push({
               type: "text",
-              text: `[Document: ${f.name}] — Read and analyze this document. Extract its content and help answer questions about it.`,
+              text: `[Document ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this document.`,
             });
           }
         }
@@ -270,8 +313,8 @@ const ChatPage = () => {
   };
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith("image/")) return <ImageIcon className="w-3 h-3 text-primary" />;
-    return <FileText className="w-3 h-3 text-primary" />;
+    if (type.startsWith("image/")) return <ImageIcon className="w-3.5 h-3.5 text-primary" />;
+    return <FileText className="w-3.5 h-3.5 text-primary" />;
   };
 
   return (
@@ -284,7 +327,7 @@ const ChatPage = () => {
           </Button>
           <div>
             <h1 className="font-display font-bold text-lg text-foreground">AI Tutor Chat</h1>
-            <p className="text-xs text-muted-foreground">Your Senior SE Professor — supports file uploads & OCR</p>
+            <p className="text-xs text-muted-foreground">Your Senior SE Professor — supports up to 5 file uploads & OCR</p>
           </div>
         </div>
 
@@ -303,18 +346,50 @@ const ChatPage = () => {
                     <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
                 )}
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === "user"
-                      ? "gradient-primary text-primary-foreground"
-                      : "glass text-foreground"
-                  }`}
-                >
-                  {msg.role === "assistant" ? (
-                    <MarkdownMessage content={msg.content} />
-                  ) : (
-                    msg.content || "…"
+                <div className="max-w-[80%] space-y-2">
+                  {/* Image thumbnails in user messages */}
+                  {msg.role === "user" && msg.fileThumbnails && msg.fileThumbnails.length > 0 && (
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {msg.fileThumbnails.map((thumb, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="w-20 h-20 rounded-xl overflow-hidden border border-border/30"
+                        >
+                          <img src={thumb} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
+                        </motion.div>
+                      ))}
+                    </div>
                   )}
+                  {/* File name chips in user messages */}
+                  {msg.role === "user" && msg.fileNames && msg.fileNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-end">
+                      {msg.fileNames.map((name, i) => (
+                        <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
+                          {name.match(/\.(png|jpg|jpeg|webp|gif)$/i) ? (
+                            <ImageIcon className="w-2.5 h-2.5" />
+                          ) : (
+                            <FileText className="w-2.5 h-2.5" />
+                          )}
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div
+                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === "user"
+                        ? "gradient-primary text-primary-foreground"
+                        : "glass text-foreground"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
+                      <MarkdownMessage content={msg.content} />
+                    ) : (
+                      msg.content || "…"
+                    )}
+                  </div>
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
@@ -332,7 +407,12 @@ const ChatPage = () => {
               </div>
               <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
                 {isUploading ? (
-                  <span className="text-xs text-muted-foreground">Uploading files…</span>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      Uploading file {uploadingFileIndex + 1} of {attachedFiles.length}…
+                    </span>
+                    <Progress value={attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0} className="h-1.5 w-32" />
+                  </div>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
@@ -363,33 +443,77 @@ const ChatPage = () => {
           ))}
         </div>
 
-        {/* Attached files preview */}
+        {/* Attached files preview with thumbnails and progress */}
         <AnimatePresence>
           {attachedFiles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex flex-wrap gap-2 pb-2"
+              className="pb-2 space-y-2"
             >
-              {attachedFiles.map((f, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="glass rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs text-foreground border border-border/50"
-                >
-                  {getFileIcon(f.type)}
-                  <span className="max-w-[120px] truncate">{f.name}</span>
-                  <span className="text-muted-foreground">
-                    {(f.file.size / 1024).toFixed(0)}KB
-                  </span>
-                  <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    <X className="w-3 h-3" />
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {attachedFiles.length}/{MAX_FILES} files attached
+                </span>
+                {attachedFiles.length > 1 && (
+                  <button
+                    onClick={() => setAttachedFiles([])}
+                    className="text-[11px] text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    Clear all
                   </button>
-                </motion.div>
-              ))}
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {attachedFiles.map((f, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="glass rounded-xl overflow-hidden border border-border/50 relative group"
+                  >
+                    {/* Remove button */}
+                    <button
+                      onClick={() => removeFile(i)}
+                      className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+
+                    {f.thumbnailUrl ? (
+                      /* Image thumbnail */
+                      <div className="w-[88px]">
+                        <div className="w-full h-16 overflow-hidden">
+                          <img src={f.thumbnailUrl} alt={f.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="px-2 py-1.5 space-y-1">
+                          <p className="text-[10px] text-foreground truncate max-w-[72px]">{f.name}</p>
+                          <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
+                          {f.uploadProgress > 0 && f.uploadProgress < 100 && (
+                            <Progress value={f.uploadProgress} className="h-1" />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Document file */
+                      <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          {getFileIcon(f.type)}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
+                          <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
+                          {f.uploadProgress > 0 && f.uploadProgress < 100 && (
+                            <Progress value={f.uploadProgress} className="h-1" />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -409,7 +533,7 @@ const ChatPage = () => {
             size="icon"
             className="rounded-xl flex-shrink-0 relative"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isStreaming}
+            disabled={isStreaming || attachedFiles.length >= MAX_FILES}
           >
             <Paperclip className="w-4 h-4" />
             {attachedFiles.length > 0 && (
@@ -428,7 +552,13 @@ const ChatPage = () => {
                 handleSend();
               }
             }}
-            placeholder={user ? "Ask anything, or attach files for AI analysis…" : "Sign in for file uploads, or just ask..."}
+            placeholder={
+              attachedFiles.length > 0
+                ? `Add a message about your ${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""}...`
+                : user
+                ? "Ask anything, or attach files for AI analysis…"
+                : "Sign in for file uploads, or just ask..."
+            }
             className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[40px] max-h-[160px]"
             rows={1}
           />
