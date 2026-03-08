@@ -35,7 +35,7 @@ interface AttachedFile {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-const MAX_FILES = 5;
+const MAX_FILES = 20;
 const ALLOWED_TYPES = [
   "application/pdf",
   "image/png",
