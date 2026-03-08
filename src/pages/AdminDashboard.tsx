@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import {
   Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
   Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X,
-  Headset, Send, CheckCircle2, MessageCircle, CreditCard, Eye, XCircle
+  Headset, Send, CheckCircle2, MessageCircle, CreditCard, Eye, XCircle,
+  Tag, ToggleLeft, ToggleRight, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 const categories = ["general", "fee", "exam", "academic", "event"];
 const priorities = ["normal", "high", "urgent"];
 
-type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments";
+type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments" | "promos";
 
 const tabItems = [
   { id: "overview" as AdminTab, label: "Overview", icon: BarChart3 },
@@ -33,6 +34,7 @@ const tabItems = [
   { id: "alerts" as AdminTab, label: "Global Alerts", icon: Radio },
   { id: "support" as AdminTab, label: "Support Inbox", icon: Headset },
   { id: "payments" as AdminTab, label: "Payments", icon: CreditCard },
+  { id: "promos" as AdminTab, label: "Promo Manager", icon: Tag },
 ];
 
 const AdminDashboard = () => {
@@ -161,6 +163,7 @@ const AdminDashboard = () => {
           {activeTab === "alerts" && <GlobalAlertsTab />}
           {activeTab === "support" && <SupportTab />}
           {activeTab === "payments" && <PaymentsTab />}
+          {activeTab === "promos" && <PromoManagerTab />}
         </div>
       </main>
     </div>
@@ -1049,6 +1052,14 @@ const PaymentsTab = () => {
                       <span className="capitalize">{r.payment_method}</span>
                       <span>•</span>
                       <span>PKR {r.amount}</span>
+                      {r.promo_code && (
+                        <>
+                          <span>•</span>
+                          <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/30">
+                            {r.promo_code} ({r.discount_percent}% off)
+                          </Badge>
+                        </>
+                      )}
                       <span>•</span>
                       <span>{new Date(r.created_at).toLocaleDateString("en-PK", { dateStyle: "medium" })}</span>
                     </div>
@@ -1110,6 +1121,184 @@ const PaymentsTab = () => {
           )}
         </DialogContent>
       </Dialog>
+    </motion.div>
+  );
+};
+
+/* ===== PROMO MANAGER TAB ===== */
+const PromoManagerTab = () => {
+  const [codes, setCodes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newDiscount, setNewDiscount] = useState("50");
+  const [newLimit, setNewLimit] = useState("100");
+  const [creating, setCreating] = useState(false);
+
+  const fetchCodes = async () => {
+    const { data } = await supabase
+      .from("promo_codes" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setCodes(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchCodes(); }, []);
+
+  const handleCreate = async () => {
+    if (!newCode.trim()) { toast.error("Enter a code"); return; }
+    setCreating(true);
+    const { error } = await (supabase.from("promo_codes" as any) as any).insert({
+      code: newCode.trim().toUpperCase(),
+      discount_percent: parseInt(newDiscount),
+      usage_limit: parseInt(newLimit),
+    });
+    if (error) {
+      toast.error(error.message.includes("unique") ? "Code already exists!" : error.message);
+    } else {
+      toast.success("✅ Promo code created!");
+      setNewCode(""); setShowCreate(false);
+      fetchCodes();
+    }
+    setCreating(false);
+  };
+
+  const toggleActive = async (id: string, currentActive: boolean) => {
+    await supabase.from("promo_codes" as any).update({ is_active: !currentActive } as any).eq("id", id);
+    toast.success(currentActive ? "Code deactivated" : "Code activated");
+    fetchCodes();
+  };
+
+  const deleteCode = async (id: string) => {
+    await supabase.from("promo_codes" as any).delete().eq("id", id);
+    toast.success("Code deleted");
+    fetchCodes();
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">Promo Manager</h2>
+          <p className="text-xs text-muted-foreground">{codes.length} promo codes</p>
+        </div>
+        <Button className="rounded-xl gap-2" onClick={() => setShowCreate(true)}>
+          <Plus className="w-4 h-4" /> Create Code
+        </Button>
+      </div>
+
+      {/* Create dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Create Promo Code</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Code (e.g., WELCOME25)"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+              className="rounded-xl"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Discount %</label>
+                <Select value={newDiscount} onValueChange={setNewDiscount}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[10, 15, 20, 25, 30, 40, 50, 75, 100].map((d) => (
+                      <SelectItem key={d} value={String(d)}>{d}%</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Usage Limit</label>
+                <Input
+                  type="number"
+                  value={newLimit}
+                  onChange={(e) => setNewLimit(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+            <Button onClick={handleCreate} disabled={creating} className="w-full rounded-xl gap-2">
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Create Code
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Codes list */}
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading promo codes...</div>
+      ) : codes.length === 0 ? (
+        <Card className="border-border/30">
+          <CardContent className="p-8 text-center">
+            <Tag className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">No promo codes yet</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {codes.map((c: any) => (
+            <Card key={c.id} className={`border-border/30 ${c.is_active ? "" : "opacity-60"}`}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Tag className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono font-bold text-foreground text-sm">{c.code}</p>
+                    <Badge variant={c.is_active ? "default" : "secondary"} className="text-[9px]">
+                      {c.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
+                    <span>{c.discount_percent}% off</span>
+                    <span>•</span>
+                    <span>{c.used_count}/{c.usage_limit} used</span>
+                    <span>•</span>
+                    <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {/* Usage bar */}
+                  <div className="mt-1.5 h-1 rounded-full bg-muted/50 overflow-hidden w-32">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min((c.used_count / c.usage_limit) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-lg w-8 h-8"
+                    onClick={() => toggleActive(c.id, c.is_active)}
+                    title={c.is_active ? "Deactivate" : "Activate"}
+                  >
+                    {c.is_active ? (
+                      <ToggleRight className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-lg w-8 h-8 text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteCode(c.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

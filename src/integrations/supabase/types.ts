@@ -572,8 +572,10 @@ export type Database = {
           admin_note: string | null
           amount: number
           created_at: string
+          discount_percent: number | null
           id: string
           payment_method: string
+          promo_code: string | null
           reviewed_at: string | null
           screenshot_url: string
           status: string
@@ -583,8 +585,10 @@ export type Database = {
           admin_note?: string | null
           amount?: number
           created_at?: string
+          discount_percent?: number | null
           id?: string
           payment_method?: string
+          promo_code?: string | null
           reviewed_at?: string | null
           screenshot_url: string
           status?: string
@@ -594,8 +598,10 @@ export type Database = {
           admin_note?: string | null
           amount?: number
           created_at?: string
+          discount_percent?: number | null
           id?: string
           payment_method?: string
+          promo_code?: string | null
           reviewed_at?: string | null
           screenshot_url?: string
           status?: string
@@ -657,6 +663,36 @@ export type Database = {
           university?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          discount_percent: number
+          id: string
+          is_active: boolean
+          usage_limit: number
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          usage_limit?: number
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          usage_limit?: number
+          used_count?: number
         }
         Relationships: []
       }

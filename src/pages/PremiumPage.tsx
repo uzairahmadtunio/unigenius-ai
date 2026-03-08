@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Crown, Upload, CheckCircle2, Clock, XCircle, Smartphone, Copy, Check } from "lucide-react";
+import { Crown, Upload, CheckCircle2, Clock, XCircle, Smartphone, Copy, Check, Tag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,13 +21,19 @@ const PremiumPage = () => {
   const [copiedJazz, setCopiedJazz] = useState(false);
   const [copiedEasy, setCopiedEasy] = useState(false);
 
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_percent: number } | null>(null);
+
+  const basePrice = 300;
+  const finalPrice = appliedPromo ? Math.round(basePrice * (1 - appliedPromo.discount_percent / 100)) : basePrice;
+
   useEffect(() => {
     if (!user) return;
-    // Check pro status
     supabase.from("profiles").select("is_pro").eq("user_id", user.id).single().then(({ data }) => {
       if ((data as any)?.is_pro) setIsPro(true);
     });
-    // Check pending request
     supabase
       .from("payment_requests" as any)
       .select("*")
@@ -38,47 +45,83 @@ const PremiumPage = () => {
       });
   }, [user]);
 
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("promo_codes" as any)
+        .select("*")
+        .eq("code", promoCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      if (error || !data) {
+        toast.error("Invalid or expired promo code");
+        setAppliedPromo(null);
+        return;
+      }
+
+      const promo = data as any;
+      if (promo.used_count >= promo.usage_limit) {
+        toast.error("This promo code has reached its usage limit");
+        setAppliedPromo(null);
+        return;
+      }
+
+      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent });
+      toast.success("🎉 Mubarak! Uzair bhai ne aapko " + promo.discount_percent + "% discount de diya hai.", {
+        duration: 5000,
+      });
+    } catch {
+      toast.error("Failed to validate promo code");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user || !e.target.files?.[0]) return;
     const file = e.target.files[0];
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File too large (max 5MB)");
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { toast.error("File too large (max 5MB)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
 
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage.from("payment-screenshots").upload(path, file);
-    if (uploadErr) {
-      toast.error("Upload failed: " + uploadErr.message);
-      setUploading(false);
-      return;
-    }
+    if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setUploading(false); return; }
 
     const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
+
+    // Increment promo usage
+    if (appliedPromo) {
+      const { data: promoData } = await supabase
+        .from("promo_codes" as any)
+        .select("used_count")
+        .eq("code", appliedPromo.code)
+        .single();
+      await supabase
+        .from("promo_codes" as any)
+        .update({ used_count: ((promoData as any)?.used_count || 0) + 1 } as any)
+        .eq("code", appliedPromo.code);
+    }
 
     const { error: insertErr } = await (supabase.from("payment_requests" as any) as any).insert({
       user_id: user.id,
       screenshot_url: urlData.publicUrl,
       payment_method: paymentMethod,
-      amount: 300,
+      amount: finalPrice,
+      promo_code: appliedPromo?.code || null,
+      discount_percent: appliedPromo?.discount_percent || 0,
     });
 
     if (insertErr) {
       toast.error("Failed to submit: " + insertErr.message);
     } else {
       toast.success("🎉 Payment screenshot submitted!");
-      setPendingRequest({
-        status: "pending",
-        payment_method: paymentMethod,
-        created_at: new Date().toISOString(),
-      });
+      setPendingRequest({ status: "pending", payment_method: paymentMethod, created_at: new Date().toISOString() });
     }
     setUploading(false);
   };
@@ -111,9 +154,7 @@ const PremiumPage = () => {
           </div>
           <h2 className="text-2xl font-display font-bold text-foreground">You're a Pro! 🎉</h2>
           <p className="text-muted-foreground text-sm">All premium features are unlocked.</p>
-          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-sm px-4 py-1">
-            PRO Member
-          </Badge>
+          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-sm px-4 py-1">PRO Member</Badge>
         </motion.div>
       </PageShell>
     );
@@ -129,9 +170,23 @@ const PremiumPage = () => {
               <Crown className="w-7 h-7 text-white" />
             </div>
             <CardTitle className="font-display text-xl">UniGenius Pro</CardTitle>
-            <p className="text-3xl font-bold text-foreground mt-2">
-              300 <span className="text-sm font-normal text-muted-foreground">PKR / Month</span>
-            </p>
+            <div className="mt-2">
+              {appliedPromo ? (
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-foreground">
+                    <span className="line-through text-muted-foreground text-lg mr-2">300</span>
+                    {finalPrice} <span className="text-sm font-normal text-muted-foreground">PKR / Month</span>
+                  </p>
+                  <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs">
+                    {appliedPromo.discount_percent}% OFF with {appliedPromo.code}
+                  </Badge>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-foreground">
+                  300 <span className="text-sm font-normal text-muted-foreground">PKR / Month</span>
+                </p>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2 text-sm">
@@ -150,6 +205,52 @@ const PremiumPage = () => {
           </CardContent>
         </Card>
 
+        {/* Promo Code */}
+        <Card className="border-border/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Tag className="w-4 h-4 text-primary" />
+              <span className="text-sm font-display font-semibold text-foreground">Promo Code</span>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter promo code (e.g., UOL50)"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                className="rounded-xl flex-1"
+                disabled={!!appliedPromo}
+              />
+              {appliedPromo ? (
+                <Button
+                  variant="outline"
+                  className="rounded-xl text-xs text-destructive border-destructive/30"
+                  onClick={() => { setAppliedPromo(null); setPromoCode(""); }}
+                >
+                  Remove
+                </Button>
+              ) : (
+                <Button
+                  onClick={applyPromoCode}
+                  disabled={promoLoading || !promoCode.trim()}
+                  className="rounded-xl gap-1.5"
+                >
+                  {promoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  Apply
+                </Button>
+              )}
+            </div>
+            {appliedPromo && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xs text-emerald-500 mt-2 font-medium"
+              >
+                ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
+              </motion.p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Payment Methods */}
         <Card className="border-border/30">
           <CardHeader className="pb-2">
@@ -157,6 +258,9 @@ const PremiumPage = () => {
               <Smartphone className="w-4 h-4 text-primary" />
               Payment Methods
             </CardTitle>
+            {appliedPromo && (
+              <p className="text-xs text-muted-foreground">Send <strong className="text-foreground">{finalPrice} PKR</strong> to the selected account</p>
+            )}
           </CardHeader>
           <CardContent className="space-y-3">
             {/* JazzCash */}
@@ -172,11 +276,8 @@ const PremiumPage = () => {
                   <p className="text-xs text-muted-foreground">03064379361</p>
                   <p className="text-[10px] text-muted-foreground">Account: Uzair Ahmad</p>
                 </div>
-                <Button
-                  variant="ghost" size="sm"
-                  className="rounded-lg text-xs gap-1"
-                  onClick={(e) => { e.stopPropagation(); copyNumber("03064379361", "jazz"); }}
-                >
+                <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
+                  onClick={(e) => { e.stopPropagation(); copyNumber("03064379361", "jazz"); }}>
                   {copiedJazz ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {copiedJazz ? "Copied" : "Copy"}
                 </Button>
@@ -196,11 +297,8 @@ const PremiumPage = () => {
                   <p className="text-xs text-muted-foreground">03470326062</p>
                   <p className="text-[10px] text-muted-foreground">Account: Uzair Ahmad</p>
                 </div>
-                <Button
-                  variant="ghost" size="sm"
-                  className="rounded-lg text-xs gap-1"
-                  onClick={(e) => { e.stopPropagation(); copyNumber("03470326062", "easy"); }}
-                >
+                <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
+                  onClick={(e) => { e.stopPropagation(); copyNumber("03470326062", "easy"); }}>
                   {copiedEasy ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {copiedEasy ? "Copied" : "Copy"}
                 </Button>
@@ -234,10 +332,7 @@ const PremiumPage = () => {
               <label className="cursor-pointer">
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
                 <Button asChild variant="outline" className="rounded-xl gap-2" disabled={uploading}>
-                  <span>
-                    <Upload className="w-4 h-4" />
-                    {uploading ? "Uploading..." : "Upload New Screenshot"}
-                  </span>
+                  <span><Upload className="w-4 h-4" />{uploading ? "Uploading..." : "Upload New Screenshot"}</span>
                 </Button>
               </label>
             </CardContent>
@@ -249,16 +344,13 @@ const PremiumPage = () => {
               <div>
                 <h3 className="font-display font-semibold text-foreground">Upload Payment Screenshot</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Send 300 PKR to the selected account and upload a screenshot of the transaction
+                  Send {finalPrice} PKR to the selected account and upload a screenshot of the transaction
                 </p>
               </div>
               <label className="cursor-pointer inline-block">
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
                 <Button asChild className="rounded-xl gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0">
-                  <span>
-                    <Upload className="w-4 h-4" />
-                    {uploading ? "Uploading..." : "Upload Screenshot"}
-                  </span>
+                  <span><Upload className="w-4 h-4" />{uploading ? "Uploading..." : "Upload Screenshot"}</span>
                 </Button>
               </label>
             </CardContent>
