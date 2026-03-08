@@ -671,8 +671,8 @@ Start by greeting the student and asking your first viva question.`
                       </div>
                     ) : (
                       <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          {getFileIcon(f.type)}
+                        <div className={`w-9 h-9 rounded-lg ${FILE_CATEGORY_STYLES[getFileCategory(f.type)].bgColor} flex items-center justify-center flex-shrink-0`}>
+                          <FileIcon fileName={f.name} mimeType={f.type} size="sm" />
                         </div>
                         <div className="min-w-0 space-y-0.5">
                           <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
