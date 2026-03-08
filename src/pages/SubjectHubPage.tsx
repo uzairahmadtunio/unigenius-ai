@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks,
-  FileQuestion, ArrowLeft, Mic, Paperclip, X, FileText, Image as ImageIcon, Upload,
+  FileQuestion, ArrowLeft, Mic, Paperclip, X, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
