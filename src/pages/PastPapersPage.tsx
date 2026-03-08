@@ -27,7 +27,15 @@ interface PastPaper {
 
 const PastPapersPage = () => {
   const { user } = useAuth();
-  const { department, semester } = useDepartment();
+  const { department } = useDepartment();
+  const [semester, setSemester] = useState(1);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("current_semester").eq("user_id", user.id).single()
+      .then(({ data }) => { if (data?.current_semester) setSemester(data.current_semester); });
+  }, [user]);
+
   const subjects = getSubjects(department, semester);
 
   const [papers, setPapers] = useState<PastPaper[]>([]);
@@ -37,7 +45,6 @@ const PastPapersPage = () => {
   const [filterType, setFilterType] = useState("all");
   const [search, setSearch] = useState("");
 
-  // Upload form
   const [showUpload, setShowUpload] = useState(false);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadSubject, setUploadSubject] = useState("");

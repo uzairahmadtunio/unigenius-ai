@@ -25,7 +25,15 @@ interface FlashcardSet {
 
 const FlashcardsPage = () => {
   const { user } = useAuth();
-  const { department, semester } = useDepartment();
+  const { department } = useDepartment();
+  const [semester, setSemester] = useState(1);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("current_semester").eq("user_id", user.id).single()
+      .then(({ data }) => { if (data?.current_semester) setSemester(data.current_semester); });
+  }, [user]);
+
   const subjects = getSubjects(department, semester);
 
   const [sets, setSets] = useState<FlashcardSet[]>([]);
@@ -60,7 +68,6 @@ const FlashcardsPage = () => {
       const text = await file.text();
       setUploadedContent(text);
     } else {
-      // For PDFs/images, we'll send a note that material was uploaded
       setUploadedContent(`[Material uploaded: ${file.name}] - Generate flashcards based on typical ${selectedSubject} curriculum content.`);
     }
   };
@@ -77,7 +84,6 @@ const FlashcardsPage = () => {
       const cards: Flashcard[] = data?.cards || [];
       if (cards.length === 0) { toast.error("No flashcards generated"); return; }
 
-      // Save to DB
       const { data: saved, error: saveErr } = await supabase.from("flashcard_sets").insert({
         user_id: user.id,
         subject: selectedSubject,
@@ -138,23 +144,20 @@ const FlashcardsPage = () => {
             <span className="text-sm text-muted-foreground">{cardIndex + 1} / {activeSet.cards.length}</span>
           </div>
 
-          {/* Card */}
-          <div className="perspective-1000 cursor-pointer" onClick={() => setFlipped(!flipped)} style={{ perspective: "1000px" }}>
+          <div className="cursor-pointer" onClick={() => setFlipped(!flipped)} style={{ perspective: "1000px" }}>
             <motion.div
               animate={{ rotateY: flipped ? 180 : 0 }}
               transition={{ duration: 0.5 }}
               style={{ transformStyle: "preserve-3d" }}
               className="relative w-full h-64"
             >
-              {/* Front */}
-              <div className="absolute inset-0 glass rounded-2xl border border-border/30 p-8 flex items-center justify-center backface-hidden" style={{ backfaceVisibility: "hidden" }}>
+              <div className="absolute inset-0 glass rounded-2xl border border-border/30 p-8 flex items-center justify-center" style={{ backfaceVisibility: "hidden" }}>
                 <div className="text-center space-y-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Question</p>
                   <p className="font-display font-semibold text-lg text-foreground">{card?.front}</p>
                   <p className="text-xs text-muted-foreground mt-4">Tap to reveal</p>
                 </div>
               </div>
-              {/* Back */}
               <div className="absolute inset-0 glass rounded-2xl border border-primary/30 bg-primary/5 p-8 flex items-center justify-center" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
                 <div className="text-center space-y-2">
                   <p className="text-xs text-primary uppercase tracking-wider">Answer</p>
@@ -164,7 +167,6 @@ const FlashcardsPage = () => {
             </motion.div>
           </div>
 
-          {/* Navigation */}
           <div className="flex items-center justify-center gap-4">
             <Button variant="outline" size="icon" className="rounded-xl" onClick={prevCard}>
               <ChevronLeft className="w-4 h-4" />
@@ -188,7 +190,6 @@ const FlashcardsPage = () => {
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><BookOpen className="w-5 h-5 text-primary-foreground" /></div>}
     >
       <div className="space-y-6">
-        {/* Generator */}
         <div className="glass rounded-2xl p-6 border border-border/30 space-y-4">
           <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Generate Flashcards
@@ -216,7 +217,6 @@ const FlashcardsPage = () => {
           </Button>
         </div>
 
-        {/* Existing sets */}
         {loading ? (
           <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
         ) : sets.length === 0 ? (

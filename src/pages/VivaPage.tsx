@@ -8,6 +8,7 @@ import MarkdownMessage from "@/components/MarkdownMessage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDepartment } from "@/contexts/DepartmentContext";
 import { getSubjects } from "@/data/subjects";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Message {
@@ -19,7 +20,15 @@ const VIVA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/viva-session
 
 const VivaPage = () => {
   const { user } = useAuth();
-  const { department, semester } = useDepartment();
+  const { department } = useDepartment();
+  const [semester, setSemester] = useState(1);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("current_semester").eq("user_id", user.id).single()
+      .then(({ data }) => { if (data?.current_semester) setSemester(data.current_semester); });
+  }, [user]);
+
   const subjects = getSubjects(department, semester);
 
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -122,7 +131,6 @@ const VivaPage = () => {
     setInput("");
   };
 
-  // Speech recognition
   const toggleListening = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
       toast.error("Speech recognition not supported in this browser");
@@ -147,7 +155,6 @@ const VivaPage = () => {
         transcript += event.results[i][0].transcript;
       }
       setInput(prev => {
-        // Replace interim with final
         if (event.results[event.results.length - 1].isFinal) {
           return prev + transcript + " ";
         }
@@ -163,7 +170,6 @@ const VivaPage = () => {
     setIsListening(true);
   };
 
-  // Text-to-speech for AI responses
   const speakText = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text.replace(/[#*_`]/g, ""));
     utterance.rate = 0.9;
@@ -231,7 +237,6 @@ const VivaPage = () => {
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-primary-foreground" /></div>}
     >
       <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-220px)]">
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto space-y-4 pb-4 pr-1">
           <AnimatePresence>
             {messages.map((msg, i) => (
@@ -274,7 +279,6 @@ const VivaPage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div className="glass rounded-2xl border border-border/30 p-3 flex items-center gap-2">
           <Button
             variant="ghost"
