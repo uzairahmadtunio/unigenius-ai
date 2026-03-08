@@ -9,9 +9,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { subject, department } = await req.json();
+    const { subject, department, count = 30 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const numQuestions = Math.min(Math.max(count, 5), 30);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -20,15 +22,23 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: `You are a university exam question generator for ${department} students. Generate exactly 5 multiple choice questions about "${subject}". Each question must have 4 options (A, B, C, D) and one correct answer.`,
+            content: `You are a university exam question generator for ${department} students. Generate exactly ${numQuestions} diverse multiple choice questions about "${subject}". 
+
+Questions must:
+- Cover different topics within the subject
+- Range from basic to advanced difficulty
+- Include conceptual, applied, and analytical questions
+- Each have 4 options (A, B, C, D), one correct answer, and a brief explanation of why the correct answer is right
+
+Make questions university-level and exam-relevant.`,
           },
           {
             role: "user",
-            content: `Generate 5 MCQs for the subject "${subject}".`,
+            content: `Generate ${numQuestions} diverse MCQs for the subject "${subject}" covering all important topics.`,
           },
         ],
         tools: [
@@ -36,7 +46,7 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "return_mcqs",
-              description: "Return 5 MCQs with options and correct answers.",
+              description: `Return ${numQuestions} MCQs with options, correct answers, and explanations.`,
               parameters: {
                 type: "object",
                 properties: {
@@ -58,8 +68,9 @@ serve(async (req) => {
                           additionalProperties: false,
                         },
                         correct: { type: "string", enum: ["A", "B", "C", "D"] },
+                        explanation: { type: "string" },
                       },
-                      required: ["question", "options", "correct"],
+                      required: ["question", "options", "correct", "explanation"],
                       additionalProperties: false,
                     },
                   },
