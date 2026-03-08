@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
   Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X,
-  Headset, Send, CheckCircle2, MessageCircle
+  Headset, Send, CheckCircle2, MessageCircle, CreditCard, Eye, XCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
