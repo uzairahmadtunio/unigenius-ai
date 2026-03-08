@@ -49,6 +49,9 @@ const App = () => (
                 <Route path="/code-lab" element={<CodeLabPage />} />
                 <Route path="/docs-gen" element={<DocsGenPage />} />
                 <Route path="/exam-prep" element={<ExamPrepPage />} />
+                <Route path="/viva-prep" element={<VivaPage />} />
+                <Route path="/past-papers" element={<PastPapersPage />} />
+                <Route path="/flashcards" element={<FlashcardsPage />} />
                 <Route path="/career" element={<CareerPage />} />
                 <Route path="/subject/:subjectId" element={<SubjectHubPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
