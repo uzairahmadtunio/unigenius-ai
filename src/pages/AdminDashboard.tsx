@@ -258,7 +258,7 @@ const UsersTab = () => {
     if (error) {
       toast.error("Failed to delete user: " + error.message);
     } else {
-      toast.success(`User ${deleteTarget.display_name || deleteTarget.email} removed.`);
+      toast.success("User Account Terminated", { description: `${deleteTarget.display_name || deleteTarget.email} has been removed.` });
       fetchUsers();
     }
     setDeleteTarget(null);
