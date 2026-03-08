@@ -51,7 +51,7 @@ Use markdown formatting with headers and bullet points.${extra}`;
         messages: [
           {
             role: "system",
-            content: `You are an academic document generator for university students. Generate professional, well-structured documents with proper academic formatting. Use markdown with headers, bullet points, and code blocks where appropriate.`,
+            content: `You are a document generator that writes like an undergraduate university student. For lab manuals, use proper academic structure. For assignments, write in a simple, clear, human-like student tone — short paragraphs, bullet points, common vocabulary, and occasional personal opinions. Never sound like a research paper or PhD thesis. Use markdown formatting.`,
           },
           { role: "user", content: prompt },
         ],
