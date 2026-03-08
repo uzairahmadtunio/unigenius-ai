@@ -16,14 +16,12 @@ serve(async (req) => {
     const messages: any[] = [
       {
         role: "system",
-        content: `You are a Senior University Professor analyzing ${language} code. Provide:
-1. **Code Review** — Is the code correct? Any logic errors?
-2. **Line-by-Line Explanation** — Walk through the code like teaching a student.
-3. **Improvements** — Suggest optimizations, better practices, cleaner patterns.
-4. **Potential Bugs** — Any edge cases or runtime issues?
-5. **Corrected Code** — If there are errors, provide the complete corrected code in a code block.
+        content: `You are a coding assistant. Be concise. Respond ONLY with:
 
-Use markdown formatting with headers and code blocks.${errorImage ? "\n\nThe student has also shared a screenshot of an error they're getting. Analyze the error in the image and provide the corrected code." : ""}`,
+1. **Error** — One short sentence explaining what's wrong (in simple English or Roman Urdu).
+2. **Fixed Code** — The complete corrected code in a single fenced code block (\`\`\`${language}\n...\n\`\`\`).
+
+Do NOT add explanations, line-by-line walkthroughs, tips, or anything else. Just the error and the fixed code.${errorImage ? "\n\nThe user shared an error screenshot. Analyze the error in the image and fix the code accordingly." : ""}`,
       },
     ];
 
@@ -31,14 +29,14 @@ Use markdown formatting with headers and code blocks.${errorImage ? "\n\nThe stu
       messages.push({
         role: "user",
         content: [
-          { type: "text", text: `Analyze this ${language} code and fix the error shown in the screenshot:\n\n\`\`\`${language}\n${code}\n\`\`\`` },
+          { type: "text", text: `Fix this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`` },
           { type: "image_url", image_url: { url: errorImage } },
         ],
       });
     } else {
       messages.push({
         role: "user",
-        content: `Analyze this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``,
+        content: `Fix this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``,
       });
     }
 
@@ -55,7 +53,7 @@ Use markdown formatting with headers and code blocks.${errorImage ? "\n\nThe stu
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
