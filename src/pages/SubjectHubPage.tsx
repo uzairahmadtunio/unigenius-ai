@@ -359,11 +359,26 @@ Start by greeting the student and asking your first viva question.`
     setIsStreaming(true);
 
     try {
-      // Upload to storage
+      let storageUrls: string[] = [];
       if (attachedFiles.length > 0 && user) {
         setIsUploading(true);
-        await uploadToStorage(attachedFiles);
+        storageUrls = await uploadToStorage(attachedFiles);
         setIsUploading(false);
+      }
+
+      // Ensure we have a chat session
+      let chatId = activeChatId;
+      if (!chatId && user) {
+        chatId = await createChatSession();
+        if (chatId) {
+          setActiveChatId(chatId);
+          setSidebarRefresh(prev => prev + 1);
+        }
+      }
+
+      // Save user message to DB
+      if (chatId && user) {
+        await saveMessage(chatId, "user", displayContent, fileNames, storageUrls);
       }
 
       // Build multimodal API content
@@ -413,7 +428,19 @@ Start by greeting the student and asking your first viva question.`
             ? { role: m.role, content: apiContent }
             : { role: m.role, content: m.content }
         );
-      await streamChat(apiMessages);
+      const assistantContent = await streamChat(apiMessages);
+
+      // Save assistant message to DB
+      if (chatId && user && assistantContent) {
+        await saveMessage(chatId, "assistant", assistantContent);
+      }
+
+      // Generate title after first exchange
+      const userMsgCount = newMessages.filter(m => m.role === "user").length;
+      if (chatId && userMsgCount >= 1 && !titleGenerated) {
+        const allMsgs = [...newMessages, { id: "temp", role: "assistant" as const, content: assistantContent }];
+        generateTitle(chatId, allMsgs);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to get response");
     } finally {
@@ -472,7 +499,17 @@ Start by greeting the student and asking your first viva question.`
           </div>
         </div>
       )}
-      <div className="flex-1 container mx-auto max-w-3xl px-4 py-4 flex flex-col">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Subject-specific Chat Sidebar */}
+        <ChatSidebar
+          activeChatId={activeChatId}
+          onSelectChat={loadChat}
+          onNewChat={handleNewChat}
+          refreshTrigger={sidebarRefresh}
+          subject={subjectId || null}
+        />
+
+        <div className="flex-1 flex flex-col max-w-3xl mx-auto px-4 py-4 w-full">
         {/* Header */}
         <div className="flex items-center gap-3 mb-3">
           <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate("/")}>
