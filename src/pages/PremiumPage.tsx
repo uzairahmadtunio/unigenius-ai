@@ -104,7 +104,7 @@ const PremiumPage = () => {
 
   if (isPro) {
     return (
-      <PageShell title="Premium" icon={Crown}>
+      <PageShell title="Premium" icon={<Crown className="w-5 h-5" />}>
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 space-y-4">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto">
             <Crown className="w-10 h-10 text-white" />
