@@ -98,7 +98,31 @@ const ChatPage = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // TTS Read Aloud
+  // Get best available neural/natural voice
+  const getBestVoice = useCallback((gender: "female" | "male"): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    const enVoices = voices.filter(v => v.lang.startsWith("en"));
+    // Priority: Google > Microsoft Natural > any English
+    const priority = ["Google", "Natural", "Neural", "Premium", "Enhanced"];
+    const femaleHints = ["Female", "Zira", "Jenny", "Aria", "Sara"];
+    const maleHints = ["Male", "David", "Guy", "Mark", "Roger"];
+    const genderHints = gender === "female" ? femaleHints : maleHints;
+
+    // Try to find a neural voice matching gender
+    for (const p of priority) {
+      const match = enVoices.find(v => v.name.includes(p) && genderHints.some(h => v.name.includes(h)));
+      if (match) return match;
+    }
+    // Try any neural voice
+    for (const p of priority) {
+      const match = enVoices.find(v => v.name.includes(p));
+      if (match) return match;
+    }
+    // Fallback to first English voice
+    return enVoices[0] || voices[0] || null;
+  }, []);
+
+  // TTS Read Aloud with neural voice
   const handleReadAloud = useCallback((msgId: string, text: string) => {
     if (speakingMsgId === msgId) {
       window.speechSynthesis.cancel();
@@ -106,16 +130,18 @@ const ChatPage = () => {
       return;
     }
     window.speechSynthesis.cancel();
-    // Strip markdown for cleaner reading
     const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[*#_`~>|]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").trim();
     const utterance = new SpeechSynthesisUtterance(clean);
+    const voice = getBestVoice(voiceGender);
+    if (voice) utterance.voice = voice;
     utterance.lang = "en-US";
-    utterance.rate = 1;
+    utterance.rate = 0.95;
+    utterance.pitch = voiceGender === "male" ? 0.85 : 1.05;
     utterance.onend = () => setSpeakingMsgId(null);
     utterance.onerror = () => setSpeakingMsgId(null);
     setSpeakingMsgId(msgId);
     window.speechSynthesis.speak(utterance);
-  }, [speakingMsgId]);
+  }, [speakingMsgId, voiceGender, getBestVoice]);
 
   // Cleanup TTS on unmount
   useEffect(() => {
