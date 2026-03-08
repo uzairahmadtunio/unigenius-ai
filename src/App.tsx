@@ -79,6 +79,7 @@ const App = () => (
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <MobileBottomNav />
             </BrowserRouter>
           </DarkModeInit>
         </DepartmentProvider>
