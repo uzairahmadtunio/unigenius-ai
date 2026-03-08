@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
