@@ -2,7 +2,7 @@ import { Linkedin, Github, MessageCircle, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const SHARE_MESSAGE = `Assalam-o-Alaikum! UniGenius AI use karo, ye Software Engineering students ke liye best assistant hai. C++ errors fix karo aur lab manuals banao! Join here: ${window.location.origin} - Built by Uzair Ahmad`;
+const SHARE_MESSAGE = `Hey! Check out UniGenius AI – The ultimate all-in-one assistant for Software Engineering students. Fix C++ errors, generate lab manuals, and track your GPA easily. Join me here: ${window.location.origin} — Built by Uzair Ahmad`;
 
 const Footer = () => {
   const handleShare = () => {
@@ -12,7 +12,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t border-border/50 py-6 pb-[110px] md:pb-6 text-center px-4">
+    <footer className="border-t border-border/50 py-6 pb-32 md:pb-6 text-center px-4">
       <div className="flex flex-col items-center gap-3">
         <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
           <span className="text-xs md:text-sm text-muted-foreground">© 2026 UniGenius AI</span>
@@ -40,7 +40,7 @@ const Footer = () => {
             <Github className="w-4 h-4" />
           </a>
           <a
-            href="https://wa.me/923064379361?text=Assalam-o-Alaikum%20Uzair%20bhai,%20UniGenius%20AI%20ke%20bare%20mein%20help%20chahye.."
+            href="https://wa.me/923064379361?text=Hi%20Uzair,%20I%20need%20help%20with%20UniGenius%20AI."
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-[#25D366] hover:text-[#25D366]/80 transition-colors hover:drop-shadow-[0_0_6px_rgba(37,211,102,0.5)]"

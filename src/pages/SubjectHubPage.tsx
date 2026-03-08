@@ -82,7 +82,7 @@ Start by greeting the student and asking your first viva question.`
     : `You are now the specialized tutor for "${subjectName}" in Semester ${semester} of a ${deptName} program. Help the user with topics, assignments, lab tasks, viva questions, and exam preparation specifically related to ${subjectName}. Provide clear explanations, code examples (if applicable), and exam tips. Be encouraging and use markdown formatting. When the user uploads files (images, PDFs, documents), analyze them thoroughly — extract text via OCR from images, read PDF content, and discuss findings in the context of ${subjectName}.`;
 
   const getWelcome = () => mode === "viva"
-    ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Aaj hum "${subjectName}" ke important concepts cover karenge.\n\nTayyar ho? Shuru karte hain...\n\n*Pehla sawal aa raha hai...*`
+    ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! 👋 I'm your viva examiner. Today we'll cover the key concepts of "${subjectName}".\n\nReady? Let's begin...\n\n*Your first question is coming up...*`
     : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation & Practice MCQs\n• 📎 **Upload files** — images, PDFs, DOCX (up to 20 at once)\n• 🔍 **OCR** — extract text from photos & diagrams\n\nWhat would you like to study today?`;
 
   const [messages, setMessages] = useState<Message[]>([
@@ -229,7 +229,7 @@ Start by greeting the student and asking your first viva question.`
     setActiveChatId(null);
     setTitleGenerated(false);
     setMessages([{ id: "welcome-" + newMode, role: "assistant", content: newMode === "viva"
-      ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Tayyar ho? Shuru karte hain...`
+      ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! 👋 I'm your viva examiner. Ready? Let's begin...`
       : getWelcome()
     }]);
     setIsStreaming(false);

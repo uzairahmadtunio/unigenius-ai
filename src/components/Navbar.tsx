@@ -105,18 +105,20 @@ const Navbar = () => {
 
           {/* Bell Notification */}
           {user && (
-            <Popover onOpenChange={async (open) => {
+            <Popover onOpenChange={(open) => {
               if (open && unreadCount > 0 && user) {
-                // Mark all unread notices as read
-                const inserts = notices.map((n: any) => ({
+                // Clear badge immediately
+                const toMark = [...notices];
+                setUnreadCount(0);
+                setNotices([]);
+                // Mark as read in background
+                const inserts = toMark.map((n: any) => ({
                   user_id: user.id,
                   notice_id: n.id,
                 }));
                 if (inserts.length > 0) {
-                  await supabase.from("user_notice_reads").insert(inserts as any);
+                  supabase.from("user_notice_reads").insert(inserts as any);
                 }
-                setUnreadCount(0);
-                setNotices([]);
               }
             }}>
               <PopoverTrigger asChild>
@@ -158,7 +160,7 @@ const Navbar = () => {
                       size="icon"
                       className="rounded-xl"
                       onClick={() => {
-                        const msg = `Assalam-o-Alaikum! UniGenius AI use karo, ye Software Engineering students ke liye best assistant hai. C++ errors fix karo aur lab manuals banao! Join here: ${window.location.origin} - Built by Uzair Ahmad`;
+                        const msg = `Hey! Check out UniGenius AI – The ultimate all-in-one assistant for Software Engineering students. Fix C++ errors, generate lab manuals, and track your GPA easily. Join me here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
                       }}
                     >
