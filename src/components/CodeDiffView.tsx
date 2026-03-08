@@ -39,7 +39,7 @@ const CodeDiffView = ({ originalCode, fixedCode, errorMsg, language, copied, onC
       )}
 
       {/* Split diff view */}
-      <div className="grid grid-cols-2 gap-0 rounded-xl overflow-hidden border border-border/30">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-xl overflow-hidden border border-border/30">
         {/* Left: Original */}
         <div className="bg-[#1e1e1e] border-r border-border/20">
           <div className="flex items-center justify-between px-3 py-2 border-b border-border/20 bg-[#252526]">
