@@ -20,6 +20,8 @@ import SubjectHubPage from "./pages/SubjectHubPage";
 import ProfilePage from "./pages/ProfilePage";
 import AttendancePage from "./pages/AttendancePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import GroupsPage from "./pages/GroupsPage";
+import GroupDetailPage from "./pages/GroupDetailPage";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
