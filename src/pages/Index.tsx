@@ -51,7 +51,7 @@ const Index = () => {
       <AttendanceAlert />
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8 space-y-8">
+      <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-10 py-6 md:py-8 space-y-6 md:space-y-8 pb-24 md:pb-8">
         {/* Hero */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground">
@@ -88,7 +88,7 @@ const Index = () => {
         </motion.section>
 
         {/* Exam Countdown + Career Readiness */}
-        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
           <ExamCountdown semester={semester} />
           <CareerReadinessWidget />
         </motion.section>

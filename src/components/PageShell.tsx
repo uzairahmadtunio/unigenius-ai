@@ -19,7 +19,7 @@ const PageShell = ({ title, subtitle, icon, children }: PageShellProps) => {
   return (
     <div className="min-h-screen flex flex-col gradient-hero">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-6 space-y-6">
+      <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
