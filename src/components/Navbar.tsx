@@ -1,4 +1,4 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
