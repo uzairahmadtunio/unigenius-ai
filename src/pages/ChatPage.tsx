@@ -465,7 +465,7 @@ const ChatPage = () => {
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
                 {attachedFiles.map((f, i) => (
                   <motion.div
                     key={i}
