@@ -1,16 +1,28 @@
-import { Linkedin, Github, MessageCircle } from "lucide-react";
+import { Linkedin, Github, MessageCircle, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-const Footer = () => (
-  <footer className="border-t border-border/50 py-6 pb-32 md:pb-6 text-center px-4">
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
-        <span className="text-xs md:text-sm text-muted-foreground">© 2026 UniGenius AI</span>
-        <span className="hidden sm:inline text-muted-foreground mx-2">|</span>
-        <span className="text-xs md:text-sm text-muted-foreground">
-          Built by <span className="font-semibold text-foreground">Uzair Ahmad</span>
-        </span>
-        <span className="hidden sm:inline text-muted-foreground mx-2">|</span>
-        <div className="flex items-center gap-3 mt-1.5 sm:mt-0">
+const SHARE_MESSAGE = `Assalam-o-Alaikum! UniGenius AI use karo, ye Software Engineering students ke liye best assistant hai. C++ errors fix karo aur lab manuals banao! Join here: ${window.location.origin} - Built by Uzair Ahmad`;
+
+const Footer = () => {
+  const handleShare = () => {
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(SHARE_MESSAGE)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    toast.success("Share link opened!");
+  };
+
+  return (
+    <footer className="border-t border-border/50 py-6 pb-[110px] md:pb-6 text-center px-4">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
+          <span className="text-xs md:text-sm text-muted-foreground">© 2026 UniGenius AI</span>
+          <span className="hidden sm:inline text-muted-foreground mx-2">|</span>
+          <span className="text-xs md:text-sm text-muted-foreground">
+            Built by <span className="font-semibold text-foreground">Uzair Ahmad</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
           <a
             href="https://www.linkedin.com/in/uzair-ahmad-tunio/"
             target="_blank"
@@ -36,11 +48,20 @@ const Footer = () => (
             <MessageCircle className="w-4 h-4" />
             <span className="text-[10px] font-medium">Support</span>
           </a>
+          <Button
+            size="sm"
+            onClick={handleShare}
+            className="h-7 px-3 text-[10px] font-semibold rounded-full gradient-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.6)] transition-shadow"
+          >
+            <Share2 className="w-3 h-3 mr-1" />
+            Invite Friends
+          </Button>
         </div>
+
+        <p className="text-[10px] text-muted-foreground">All Rights Reserved</p>
       </div>
-      <p className="text-[10px] text-muted-foreground">All Rights Reserved</p>
-    </div>
-  </footer>
-);
+    </footer>
+  );
+};
 
 export default Footer;
