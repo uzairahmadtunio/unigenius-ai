@@ -54,7 +54,7 @@ const ChatPage = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 5 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
+        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 20 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
     },
   ]);
   const [input, setInput] = useState("");
