@@ -384,10 +384,10 @@ const NoticesTab = () => {
 
     if (editId) {
       await supabase.from("university_notices").update({ title, content, category, priority } as any).eq("id", editId);
-      toast.success("Notice updated!");
+      toast.success("Notice Updated Successfully");
     } else {
       await supabase.from("university_notices").insert({ title, content, category, priority } as any);
-      toast.success("🎉 Official Notice Live!", { description: "Now visible to all students." });
+      toast.success("Notice Published Successfully", { description: "Now visible to all students." });
     }
 
     setSubmitting(false);
