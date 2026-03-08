@@ -550,9 +550,7 @@ Start by greeting the student and asking your first viva question.`
                     <div className="flex flex-wrap gap-1.5 justify-end">
                       {msg.fileNames.map((name, i) => (
                         <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                          {name.match(/\.(png|jpg|jpeg|webp|gif)$/i)
-                            ? <ImageIcon className="w-2.5 h-2.5" />
-                            : <FileText className="w-2.5 h-2.5" />}
+                          <FileIcon fileName={name} size="xs" />
                           {name}
                         </span>
                       ))}
