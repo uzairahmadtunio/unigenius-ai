@@ -29,7 +29,7 @@ interface AttachedFile {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-const MAX_FILES = 5;
+const MAX_FILES = 20;
 const ALLOWED_TYPES = [
   "application/pdf",
   "image/png",
@@ -54,7 +54,7 @@ const ChatPage = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 5 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
+        "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 20 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -84,7 +84,7 @@ const ChatPage = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (attachedFiles.length + files.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} files allowed`);
+      toast.error("Maximum 20 files allowed per message for best AI analysis.");
       e.target.value = "";
       return;
     }
@@ -256,7 +256,7 @@ const ChatPage = () => {
         if (attachedFiles.length > 1) {
           parts.push({
             type: "text",
-            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together and provide a combined, comprehensive answer referencing each file.`,
+            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together. Provide a structured response: first give an overview summary, then address each file individually (e.g., "**File 1: ${attachedFiles[0]?.name}** — ..."), and finally provide a combined conclusion or solution.`,
           });
         }
 
@@ -406,13 +406,13 @@ const ChatPage = () => {
                 <Bot className="w-4 h-4 text-primary-foreground" />
               </div>
               <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
-                {isUploading ? (
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">
-                      Uploading file {uploadingFileIndex + 1} of {attachedFiles.length}…
-                    </span>
-                    <Progress value={attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0} className="h-1.5 w-32" />
-                  </div>
+                 {isUploading ? (
+                   <div className="space-y-1">
+                     <span className="text-xs text-muted-foreground">
+                       Uploading {uploadingFileIndex + 1}/{attachedFiles.length} — {Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)}%
+                     </span>
+                     <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
+                   </div>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
@@ -465,7 +465,7 @@ const ChatPage = () => {
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
                 {attachedFiles.map((f, i) => (
                   <motion.div
                     key={i}

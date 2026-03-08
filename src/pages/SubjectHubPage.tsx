@@ -35,7 +35,7 @@ interface AttachedFile {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-const MAX_FILES = 5;
+const MAX_FILES = 20;
 const ALLOWED_TYPES = [
   "application/pdf",
   "image/png",
@@ -81,7 +81,7 @@ Start by greeting the student and asking your first viva question.`
 
   const getWelcome = () => mode === "viva"
     ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Aaj hum "${subjectName}" ke important concepts cover karenge.\n\nTayyar ho? Shuru karte hain...\n\n*Pehla sawal aa raha hai...*`
-    : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation & Practice MCQs\n• 📎 **Upload files** — images, PDFs, DOCX (up to 5 at once)\n• 🔍 **OCR** — extract text from photos & diagrams\n\nWhat would you like to study today?`;
+    : `Assalam-o-Alaikum! 👋 Welcome to the **${subjectName}** Study Hub.\n\nI'm your specialized tutor for this subject. I can help you with:\n\n• Understanding key concepts\n• Solving assignments & lab tasks\n• Preparing for midterms & finals\n• Viva preparation & Practice MCQs\n• 📎 **Upload files** — images, PDFs, DOCX (up to 20 at once)\n• 🔍 **OCR** — extract text from photos & diagrams\n\nWhat would you like to study today?`;
 
   const [messages, setMessages] = useState<Message[]>([
     { id: "welcome", role: "assistant", content: getWelcome() },
@@ -122,7 +122,7 @@ Start by greeting the student and asking your first viva question.`
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (attachedFiles.length + files.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} files allowed`);
+      toast.error("Maximum 20 files allowed per message for best AI analysis.");
       e.target.value = "";
       return;
     }
@@ -275,7 +275,7 @@ Start by greeting the student and asking your first viva question.`
         if (attachedFiles.length > 1) {
           parts.push({
             type: "text",
-            text: `The student has uploaded ${attachedFiles.length} files for "${subjectName}". Analyze ALL files together and provide a combined answer.`,
+            text: `The student has uploaded ${attachedFiles.length} files for "${subjectName}". Analyze ALL files together. Provide a structured response: first an overview summary, then address each file individually (e.g., "**File 1: ${attachedFiles[0]?.name}** — ..."), and finally a combined conclusion.`,
           });
         }
 
@@ -467,12 +467,12 @@ Start by greeting the student and asking your first viva question.`
                 <Bot className="w-4 h-4 text-primary-foreground" />
               </div>
               <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
-                {isUploading ? (
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">
-                      Uploading file {uploadingFileIndex + 1} of {attachedFiles.length}…
-                    </span>
-                    <Progress value={attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0} className="h-1.5 w-32" />
+                 {isUploading ? (
+                   <div className="space-y-1">
+                     <span className="text-xs text-muted-foreground">
+                       Uploading {uploadingFileIndex + 1}/{attachedFiles.length} — {Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)}%
+                     </span>
+                     <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
                   </div>
                 ) : (
                   <>
@@ -523,7 +523,7 @@ Start by greeting the student and asking your first viva question.`
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
                 {attachedFiles.map((f, i) => (
                   <motion.div
                     key={i}
