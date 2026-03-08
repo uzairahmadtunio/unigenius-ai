@@ -351,7 +351,7 @@ const ChatPage = () => {
           </div>
 
           {/* Scrollable messages area */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0" ref={scrollContainerRef} onScroll={handleScroll}>
             <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
               <AnimatePresence>
                 {messages.map((msg) => (
