@@ -171,7 +171,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-xl"
+                      className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
                       onClick={() => {
                         const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
@@ -186,13 +186,13 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-xl"
+                className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
                 onClick={() => navigate("/profile")}
               >
                 <Settings className="w-4 h-4" />
               </Button>
               <Avatar
-                className="w-8 h-8 cursor-pointer border border-primary/20"
+                className={`w-8 h-8 cursor-pointer border border-primary/20 ${showMenu ? "hidden sm:flex" : ""}`}
                 onClick={() => navigate("/profile")}
               >
                 <AvatarImage src={avatarUrl} />
@@ -200,7 +200,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   {user.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button variant="ghost" size="icon" className="rounded-xl" onClick={signOut}>
+              <Button variant="ghost" size="icon" className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`} onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
