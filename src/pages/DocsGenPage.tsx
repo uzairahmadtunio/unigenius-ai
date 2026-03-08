@@ -297,6 +297,7 @@ const DocsGenPage = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
     </PageShell>
   );
