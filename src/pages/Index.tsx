@@ -106,6 +106,10 @@ const Index = () => {
           <h2 className="font-display font-bold text-lg text-foreground">Semester {semester} Subjects</h2>
           <SubjectGrid semester={semester} />
         </motion.section>
+        {/* Feedback */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex justify-end">
+          <FeedbackWidget />
+        </motion.section>
       </main>
 
       <Footer />
