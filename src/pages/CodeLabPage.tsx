@@ -47,9 +47,18 @@ const CodeLabPage = () => {
 
   const analyzeCode = async (imageData?: string) => {
     if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
+
+    // If C++ and lint found errors and no image, show lint results instead of calling AI
+    if (language === "cpp" && lintErrors.length > 0 && !imageData) {
+      setLintDismissed(false);
+      toast.info("Client-side errors detected! Fix these first, or dismiss to use AI.");
+      return;
+    }
+
     setIsAnalyzing(true);
     setAnalysis("");
     setFetchError(false);
+    setLintDismissed(false);
 
     try {
       const body: any = { code, language };
