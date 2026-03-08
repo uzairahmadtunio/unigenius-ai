@@ -1147,7 +1147,7 @@ const PromoManagerTab = () => {
   useEffect(() => { fetchCodes(); }, []);
 
   const handleCreate = async () => {
-    if (!newCode.trim()) { toast.error("Enter a code"); return; }
+    if (!newCode.trim()) { toast.error("Please enter a promo code"); return; }
     setCreating(true);
     const { error } = await (supabase.from("promo_codes" as any) as any).insert({
       code: newCode.trim().toUpperCase(),
