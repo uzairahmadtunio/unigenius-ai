@@ -511,7 +511,7 @@ const GroupsTab = () => {
     if (error) {
       toast.error("Failed: " + error.message);
     } else {
-      toast.success(`Group "${deleteTarget.name}" deleted.`);
+      toast.success("Group Removed Successfully", { description: `"${deleteTarget.name}" has been deleted.` });
       fetchGroups();
     }
     setDeleteTarget(null);
