@@ -772,7 +772,7 @@ const SupportTab = () => {
     await (supabase.from("support_tickets" as any) as any)
       .update({ status: "closed", updated_at: new Date().toISOString() })
       .eq("id", ticketId);
-    toast.success("✅ Ticket marked as resolved!");
+    toast.success("Support Ticket Resolved");
     if (selectedTicket?.ticket_id === ticketId) {
       setSelectedTicket(null);
       setMessages([]);
