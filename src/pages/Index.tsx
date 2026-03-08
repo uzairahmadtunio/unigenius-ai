@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import SemesterSelector from "@/components/SemesterSelector";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
