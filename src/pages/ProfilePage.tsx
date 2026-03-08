@@ -199,6 +199,8 @@ const ProfilePage = () => {
       if (error) throw error;
       toast.success("Profile saved successfully!");
       setIsEditing(false);
+      // Check if profile is now 100% complete for Profile Pro badge
+      checkProfileBadge(user.id);
     } catch (err: any) {
       toast.error(err.message || "Save failed");
     } finally { setIsSaving(false); }
