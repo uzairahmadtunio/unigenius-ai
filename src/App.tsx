@@ -22,6 +22,7 @@ import AttendancePage from "./pages/AttendancePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
+import PublicProfilePage from "./pages/PublicProfilePage";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
