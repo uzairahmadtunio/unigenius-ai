@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, FileText, Image as ImageIcon, Upload } from "lucide-react";
+import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ import MarkdownMessage from "@/components/MarkdownMessage";
 import { Progress } from "@/components/ui/progress";
 import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
+import { ACCEPT_EXTENSIONS, isFileAllowed, getFileCategory, FILE_CATEGORY_STYLES, buildFileContentParts, DROP_ZONE_TEXT } from "@/lib/file-types";
+import FileIcon from "@/components/FileIcon";
 
 interface Message {
   id: string;
@@ -33,20 +35,12 @@ interface AttachedFile {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const TITLE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-title`;
 const MAX_FILES = 20;
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
 
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, images, DOCX (up to 20 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
+    "Assalam-o-Alaikum! 👋 I'm your **Senior SE Professor AI**. I can help you with:\n\n• Solving assignments & lab tasks\n• Debugging C++ code\n• Math & Discrete logic\n• Viva preparation\n• Generating study notes\n• **Analyzing uploaded files** — PDFs, Images, Word, PPT, Audio, Video (up to 20 at once)\n• **OCR** — extracting text from photos & diagrams\n\nWhat would you like to learn today?",
 };
 
 const smartButtons = [
@@ -88,48 +82,28 @@ const ChatPage = () => {
 
   useEffect(() => { autoResize(); }, [input, autoResize]);
 
-  // Create a new chat session
   const createChatSession = async (subject?: string | null): Promise<string | null> => {
     if (!user) return null;
     const insertData: any = { user_id: user.id, title: "New Chat" };
     if (subject) insertData.subject = subject;
-    const { data, error } = await supabase
-      .from("chat_sessions")
-      .insert(insertData)
-      .select("id")
-      .single();
+    const { data, error } = await supabase.from("chat_sessions").insert(insertData).select("id").single();
     if (error) { console.error("Failed to create chat session:", error); return null; }
     return data.id;
   };
 
-  // Save a message to the database
   const saveMessage = async (chatId: string, role: string, content: string, fileNames?: string[], fileUrls?: string[]) => {
     if (!user) return;
-    await supabase.from("chat_messages").insert({
-      chat_id: chatId,
-      user_id: user.id,
-      role,
-      content,
-      file_names: fileNames || [],
-      file_urls: fileUrls || [],
-    });
-    // Touch the session's updated_at
+    await supabase.from("chat_messages").insert({ chat_id: chatId, user_id: user.id, role, content, file_names: fileNames || [], file_urls: fileUrls || [] });
     await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", chatId);
   };
 
-  // Auto-generate title after a couple messages
   const generateTitle = async (chatId: string, msgs: Message[]) => {
     if (!user || titleGenerated) return;
     try {
       const resp = await fetch(TITLE_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          messages: msgs.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })),
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({ messages: msgs.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })) }),
       });
       const { title } = await resp.json();
       if (title && title !== "New Chat") {
@@ -137,37 +111,24 @@ const ChatPage = () => {
         setTitleGenerated(true);
         setSidebarRefresh(prev => prev + 1);
       }
-    } catch (e) {
-      console.error("Title generation error:", e);
-    }
+    } catch (e) { console.error("Title generation error:", e); }
   };
 
-  // Load a previous chat
   const loadChat = async (chatId: string) => {
     if (!user) return;
     setActiveChatId(chatId);
-    setTitleGenerated(true); // existing chat already has a title
-    const { data, error } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true });
+    setTitleGenerated(true);
+    const { data, error } = await supabase.from("chat_messages").select("*").eq("chat_id", chatId).order("created_at", { ascending: true });
     if (error) { toast.error("Failed to load chat"); return; }
     const loadedMessages: Message[] = [
       WELCOME_MESSAGE,
-      ...(data || []).map((m: any) => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        fileNames: m.file_names?.length > 0 ? m.file_names : undefined,
-      })),
+      ...(data || []).map((m: any) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content, fileNames: m.file_names?.length > 0 ? m.file_names : undefined })),
     ];
     setMessages(loadedMessages);
     setAttachedFiles([]);
     setInput("");
   };
 
-  // Start a new chat
   const handleNewChat = () => {
     setActiveChatId(null);
     setMessages([WELCOME_MESSAGE]);
@@ -179,15 +140,13 @@ const ChatPage = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (attachedFiles.length + files.length > MAX_FILES) {
-      toast.error("Maximum 20 files allowed per message for best AI analysis.");
+      toast.error("Maximum 20 files allowed per message.");
       e.target.value = "";
       return;
     }
     for (const f of files) {
       if (f.size > 20 * 1024 * 1024) { toast.error(`File too large: ${f.name} (max 20MB)`); continue; }
-      if (!ALLOWED_TYPES.some(t => f.type === t || f.type.startsWith(t.split("/")[0] + "/"))) {
-        toast.error(`Unsupported file: ${f.name}`); continue;
-      }
+      if (!isFileAllowed(f)) { toast.error(`Unsupported file: ${f.name}`); continue; }
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
@@ -214,16 +173,13 @@ const ChatPage = () => {
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 50 } : af));
       const { error } = await supabase.storage.from("chat-uploads").upload(path, f.file, { contentType: f.type, upsert: false });
-      if (error) {
-        console.error("Upload error:", error);
-        urls.push("");
-        setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 100 } : af));
-      } else {
+      if (error) { console.error("Upload error:", error); urls.push(""); }
+      else {
         setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 80 } : af));
         const { data: urlData } = supabase.storage.from("chat-uploads").getPublicUrl(path);
         urls.push(urlData.publicUrl);
-        setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 100 } : af));
       }
+      setAttachedFiles(prev => prev.map((af, idx) => idx === i ? { ...af, uploadProgress: 100 } : af));
     }
     setUploadingFileIndex(-1);
     return urls;
@@ -232,16 +188,10 @@ const ChatPage = () => {
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
     const resp = await fetch(CHAT_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
       body: JSON.stringify({ messages: allMessages }),
     });
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error: ${resp.status}`);
-    }
+    if (!resp.ok) { const errorData = await resp.json().catch(() => ({})); throw new Error(errorData.error || `Error: ${resp.status}`); }
     if (!resp.body) throw new Error("No stream body");
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -271,10 +221,7 @@ const ChatPage = () => {
             const snapshot = assistantSoFar;
             setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m)));
           }
-        } catch {
-          textBuffer = line + "\n" + textBuffer;
-          break;
-        }
+        } catch { textBuffer = line + "\n" + textBuffer; break; }
       }
     }
     return assistantSoFar;
@@ -290,82 +237,44 @@ const ChatPage = () => {
       ? `${msg}${msg ? "\n\n" : ""}📎 ${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""} attached`
       : msg;
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: displayContent,
-      fileNames,
-      fileThumbnails: fileThumbnails.length > 0 ? fileThumbnails : undefined,
-    };
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: displayContent, fileNames, fileThumbnails: fileThumbnails.length > 0 ? fileThumbnails : undefined };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setIsStreaming(true);
 
-    // Ensure we have a chat session
     let chatId = activeChatId;
     if (!chatId && user) {
       chatId = await createChatSession();
-      if (chatId) {
-        setActiveChatId(chatId);
-        setSidebarRefresh(prev => prev + 1);
-      }
+      if (chatId) { setActiveChatId(chatId); setSidebarRefresh(prev => prev + 1); }
     }
 
     try {
       let storageUrls: string[] = [];
-      if (attachedFiles.length > 0 && user) {
-        setIsUploading(true);
-        storageUrls = await uploadToStorage(attachedFiles);
-        setIsUploading(false);
-      }
+      if (attachedFiles.length > 0 && user) { setIsUploading(true); storageUrls = await uploadToStorage(attachedFiles); setIsUploading(false); }
 
-      // Save user message to DB
-      if (chatId && user) {
-        await saveMessage(chatId, "user", displayContent, fileNames, storageUrls);
-      }
+      if (chatId && user) { await saveMessage(chatId, "user", displayContent, fileNames, storageUrls); }
 
-      // Build API content
       let apiContent: string | any[];
       if (attachedFiles.length > 0) {
         const parts: any[] = [];
         if (msg) parts.push({ type: "text", text: msg });
         if (attachedFiles.length > 1) {
-          parts.push({
-            type: "text",
-            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together. Provide a structured response addressing each file.`,
-          });
+          parts.push({ type: "text", text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together. Provide a structured response addressing each file.` });
         }
         for (let i = 0; i < attachedFiles.length; i++) {
-          const f = attachedFiles[i];
-          if (f.type.startsWith("image/")) {
-            parts.push({ type: "image_url", image_url: { url: f.dataUrl } });
-            parts.push({ type: "text", text: `[Image ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this image. If it contains text, handwriting, code, or diagrams, extract and explain.` });
-          } else if (f.type === "application/pdf") {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({ type: "text", text: `[PDF ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this PDF document thoroughly.` });
-          } else {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({ type: "text", text: `[Document ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this document.` });
-          }
+          parts.push(...buildFileContentParts(attachedFiles[i], i, attachedFiles.length));
         }
         apiContent = parts;
       } else {
         apiContent = msg;
       }
 
-      const apiMessages = newMessages
-        .filter((m) => m.id !== "welcome")
-        .map((m, i, arr) => i === arr.length - 1 ? { role: m.role, content: apiContent } : { role: m.role, content: m.content });
-      
+      const apiMessages = newMessages.filter((m) => m.id !== "welcome").map((m, i, arr) => i === arr.length - 1 ? { role: m.role, content: apiContent } : { role: m.role, content: m.content });
       const assistantContent = await streamChat(apiMessages);
 
-      // Save assistant message to DB
-      if (chatId && user && assistantContent) {
-        await saveMessage(chatId, "assistant", assistantContent);
-      }
+      if (chatId && user && assistantContent) { await saveMessage(chatId, "assistant", assistantContent); }
 
-      // Generate title after 2nd user message (first exchange complete)
       const userMsgCount = newMessages.filter(m => m.role === "user").length;
       if (chatId && userMsgCount >= 1 && !titleGenerated) {
         const allMsgs = [...newMessages, { id: "temp", role: "assistant" as const, content: assistantContent }];
@@ -379,11 +288,6 @@ const ChatPage = () => {
     }
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith("image/")) return <ImageIcon className="w-3.5 h-3.5 text-primary" />;
-    return <FileText className="w-3.5 h-3.5 text-primary" />;
-  };
-
   return (
     <div className="min-h-screen flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       <Navbar />
@@ -392,21 +296,13 @@ const ChatPage = () => {
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
             <Upload className="w-10 h-10 text-primary" />
             <p className="font-display font-semibold text-foreground">Drop files here</p>
-            <p className="text-xs text-muted-foreground">PDF, Images, DOCX — up to {MAX_FILES} files</p>
+            <p className="text-xs text-muted-foreground">{DROP_ZONE_TEXT} — up to {MAX_FILES} files</p>
           </div>
         </div>
       )}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <ChatSidebar
-          activeChatId={activeChatId}
-          onSelectChat={loadChat}
-          onNewChat={handleNewChat}
-          refreshTrigger={sidebarRefresh}
-          subject={null}
-        />
+        <ChatSidebar activeChatId={activeChatId} onSelectChat={loadChat} onNewChat={handleNewChat} refreshTrigger={sidebarRefresh} subject={null} />
 
-        {/* Main chat area */}
         <div className="flex-1 flex flex-col max-w-3xl mx-auto px-4 py-4 w-full">
           <div className="flex items-center gap-3 mb-4">
             <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate("/")}>
@@ -414,7 +310,7 @@ const ChatPage = () => {
             </Button>
             <div>
               <h1 className="font-display font-bold text-lg text-foreground">AI Tutor Chat</h1>
-              <p className="text-xs text-muted-foreground">Your Senior SE Professor — supports file uploads & OCR</p>
+              <p className="text-xs text-muted-foreground">Supports PDFs, Images, Word, PPT, Audio & Video uploads</p>
             </div>
           </div>
 
@@ -422,12 +318,7 @@ const ChatPage = () => {
           <div className="flex-1 overflow-y-auto space-y-4 pb-4">
             <AnimatePresence>
               {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
-                >
+                <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
                   {msg.role === "assistant" && (
                     <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1">
                       <Bot className="w-4 h-4 text-primary-foreground" />
@@ -447,7 +338,7 @@ const ChatPage = () => {
                       <div className="flex flex-wrap gap-1.5 justify-end">
                         {msg.fileNames.map((name, i) => (
                           <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                            {name.match(/\.(png|jpg|jpeg|webp|gif)$/i) ? <ImageIcon className="w-2.5 h-2.5" /> : <FileText className="w-2.5 h-2.5" />}
+                            <FileIcon fileName={name} size="xs" />
                             {name}
                           </span>
                         ))}
@@ -474,9 +365,7 @@ const ChatPage = () => {
                 <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
                   {isUploading ? (
                     <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">
-                        Uploading {uploadingFileIndex + 1}/{attachedFiles.length}
-                      </span>
+                      <span className="text-xs text-muted-foreground">Uploading {uploadingFileIndex + 1}/{attachedFiles.length}</span>
                       <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
                     </div>
                   ) : (
@@ -513,32 +402,38 @@ const ChatPage = () => {
                   )}
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
-                  {attachedFiles.map((f, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="glass rounded-xl overflow-hidden border border-border/50 relative group">
-                      <button onClick={() => removeFile(i)} className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-all opacity-0 group-hover:opacity-100">
-                        <X className="w-3 h-3" />
-                      </button>
-                      {f.thumbnailUrl ? (
-                        <div className="w-[88px]">
-                          <div className="w-full h-16 overflow-hidden"><img src={f.thumbnailUrl} alt={f.name} className="w-full h-full object-cover" /></div>
-                          <div className="px-2 py-1.5 space-y-1">
-                            <p className="text-[10px] text-foreground truncate max-w-[72px]">{f.name}</p>
-                            <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
-                            {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                  {attachedFiles.map((f, i) => {
+                    const cat = getFileCategory(f.type);
+                    const style = FILE_CATEGORY_STYLES[cat];
+                    return (
+                      <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="glass rounded-xl overflow-hidden border border-border/50 relative group">
+                        <button onClick={() => removeFile(i)} className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-all opacity-0 group-hover:opacity-100">
+                          <X className="w-3 h-3" />
+                        </button>
+                        {f.thumbnailUrl ? (
+                          <div className="w-[88px]">
+                            <div className="w-full h-16 overflow-hidden"><img src={f.thumbnailUrl} alt={f.name} className="w-full h-full object-cover" /></div>
+                            <div className="px-2 py-1.5 space-y-1">
+                              <p className="text-[10px] text-foreground truncate max-w-[72px]">{f.name}</p>
+                              <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
+                              {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
-                          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">{getFileIcon(f.type)}</div>
-                          <div className="min-w-0 space-y-0.5">
-                            <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
-                            <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
-                            {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                        ) : (
+                          <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
+                            <div className={`w-9 h-9 rounded-lg ${style.bgColor} flex items-center justify-center flex-shrink-0`}>
+                              <FileIcon fileName={f.name} mimeType={f.type} size="sm" />
+                            </div>
+                            <div className="min-w-0 space-y-0.5">
+                              <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
+                              <p className="text-[9px] text-muted-foreground">{style.label} • {(f.file.size / 1024).toFixed(0)}KB</p>
+                              {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
@@ -546,7 +441,7 @@ const ChatPage = () => {
 
           {/* Input */}
           <div className="glass rounded-2xl p-2 flex gap-2 items-end">
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx" className="hidden" />
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept={ACCEPT_EXTENSIONS} className="hidden" />
             <Button variant="ghost" size="icon" className="rounded-xl flex-shrink-0 relative" onClick={() => fileInputRef.current?.click()} disabled={isStreaming || attachedFiles.length >= MAX_FILES}>
               <Paperclip className="w-4 h-4" />
               {attachedFiles.length > 0 && (
