@@ -204,22 +204,7 @@ const ProfilePage = () => {
     } finally { setIsSaving(false); }
   };
 
-  const addCourse = () => setCourses([...courses, { grade: "A", credits: 3 }]);
-  const removeCourse = (i: number) => setCourses(courses.filter((_, idx) => idx !== i));
-  const updateCourse = (i: number, field: keyof CourseGrade, value: string | number) => {
-    const updated = [...courses];
-    updated[i] = { ...updated[i], [field]: value };
-    setCourses(updated);
-  };
-
-  const gpa = (() => {
-    let totalPoints = 0, totalCredits = 0;
-    for (const c of courses) {
-      totalPoints += (gradePoints[c.grade] ?? 0) * c.credits;
-      totalCredits += c.credits;
-    }
-    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
-  })();
+  const gpa = "—";
 
   const memberSince = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
