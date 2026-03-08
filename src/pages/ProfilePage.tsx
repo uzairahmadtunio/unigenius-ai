@@ -507,38 +507,9 @@ const ProfilePage = () => {
               )}
             </motion.div>
 
-            {/* GPA Calculator */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-foreground text-sm">GPA Calculator (4.0 Scale)</h3>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {courses.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Select value={c.grade} onValueChange={(v) => updateCourse(i, "grade", v)}>
-                      <SelectTrigger className="rounded-lg w-24"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(gradePoints).map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={String(c.credits)} onValueChange={(v) => updateCourse(i, "credits", Number(v))}>
-                      <SelectTrigger className="rounded-lg w-24"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4].map((cr) => <SelectItem key={cr} value={String(cr)}>{cr} CH</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="sm" onClick={() => removeCourse(i)} className="text-xs text-destructive">✕</Button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={addCourse} className="rounded-xl text-xs">+ Add Course</Button>
-                <div className="ml-auto text-right">
-                  <p className="text-xs text-muted-foreground">Semester GPA</p>
-                  <p className="text-2xl font-bold gradient-text">{gpa}</p>
-                </div>
-              </div>
+            {/* Smart GPA Calculator */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2">
+              <SmartGPACalculator department={department} userId={user?.id} currentSemester={profile.current_semester} />
             </motion.div>
 
             {/* Quiz History */}
