@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,9 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 
   const fetchSessions = async () => {
@@ -41,6 +44,13 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
 
   useEffect(() => { fetchSessions(); }, [user, refreshTrigger]);
 
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
   const deleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
     const { error } = await supabase.from("chat_sessions").delete().eq("id", chatId);
@@ -48,6 +58,21 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
     setSessions(prev => prev.filter(s => s.id !== chatId));
     if (activeChatId === chatId) onNewChat();
     toast.success("Chat deleted");
+  };
+
+  const startEditing = (e: React.MouseEvent, session: ChatSession) => {
+    e.stopPropagation();
+    setEditingId(session.id);
+    setEditValue(session.title);
+  };
+
+  const saveTitle = async (chatId: string) => {
+    const trimmed = editValue.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    setSessions(prev => prev.map(s => s.id === chatId ? { ...s, title: trimmed } : s));
+    setEditingId(null);
+    const { error } = await supabase.from("chat_sessions").update({ title: trimmed }).eq("id", chatId);
+    if (error) toast.error("Failed to rename chat");
   };
 
   if (collapsed) {
@@ -116,18 +141,50 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
             >
               <MessageSquare className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{session.title}</p>
+                {editingId === session.id ? (
+                  <input
+                    ref={editInputRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); saveTitle(session.id); }
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    onBlur={() => saveTitle(session.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs font-medium w-full bg-background/60 border border-border/50 rounded-md px-1.5 py-0.5 outline-none focus:border-primary/50 text-foreground"
+                  />
+                ) : (
+                  <p className="text-xs font-medium truncate">{session.title}</p>
+                )}
                 <p className="text-[10px] opacity-60 flex items-center gap-1 mt-0.5">
                   <Clock className="w-2.5 h-2.5" />
                   {formatDistanceToNow(new Date(session.updated_at), { addSuffix: true })}
                 </p>
               </div>
-              <button
-                onClick={(e) => deleteChat(e, session.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-destructive/20 hover:text-destructive flex-shrink-0"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+              <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                {editingId === session.id ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); saveTitle(session.id); }}
+                    className="p-1 rounded-lg hover:bg-primary/20 hover:text-primary"
+                  >
+                    <Check className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => startEditing(e, session)}
+                    className="p-1 rounded-lg hover:bg-muted hover:text-foreground"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => deleteChat(e, session.id)}
+                  className="p-1 rounded-lg hover:bg-destructive/20 hover:text-destructive"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
             </motion.button>
           ))}
         </AnimatePresence>
