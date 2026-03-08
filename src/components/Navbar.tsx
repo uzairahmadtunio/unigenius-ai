@@ -111,7 +111,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
             variant="ghost"
             size="icon"
             onClick={() => setIsDark(!isDark)}
-            className="rounded-xl"
+            className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
