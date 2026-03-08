@@ -15,6 +15,7 @@ import CareerReadinessWidget from "@/components/CareerReadinessWidget";
 import NoticeBoard from "@/components/NoticeBoard";
 import ExamCountdown from "@/components/ExamCountdown";
 import VivaReminder from "@/components/VivaReminder";
+import DailyStreakWidget from "@/components/DailyStreakWidget";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const SPLASH_KEY = "unigenius-splash-shown";
