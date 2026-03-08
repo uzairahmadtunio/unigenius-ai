@@ -37,21 +37,35 @@ const BADGE_DEFS = [
   { id: "cv_master", name: "CV Master", icon: "📄", desc: "Score 80+ on CV review" },
 ];
 
+type TimeFilter = "all" | "month" | "week";
+
+const TIME_FILTERS: { id: TimeFilter; label: string; icon: typeof Trophy }[] = [
+  { id: "all", label: "All Time", icon: Trophy },
+  { id: "month", label: "This Month", icon: CalendarDays },
+  { id: "week", label: "This Week", icon: Clock },
+];
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
 
-  const fetchLeaderboard = async () => {
-    const { data, error } = await supabase
-      .from("leaderboard" as any)
-      .select("*")
-      .order("total_points", { ascending: false })
-      .limit(50);
-
-    if (!error && data) {
-      setEntries(data as unknown as LeaderboardEntry[]);
+  const fetchLeaderboard = async (filter: TimeFilter) => {
+    setLoading(true);
+    if (filter === "all") {
+      const { data, error } = await supabase
+        .from("leaderboard" as any)
+        .select("*")
+        .order("total_points", { ascending: false })
+        .limit(50);
+      if (!error && data) setEntries(data as unknown as LeaderboardEntry[]);
+    } else {
+      const { data, error } = await supabase.rpc("get_leaderboard_filtered" as any, {
+        time_filter: filter,
+      });
+      if (!error && data) setEntries(data as unknown as LeaderboardEntry[]);
     }
     setLoading(false);
   };
