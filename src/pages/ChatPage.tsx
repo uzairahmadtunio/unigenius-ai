@@ -403,6 +403,7 @@ const ChatPage = () => {
           onSelectChat={loadChat}
           onNewChat={handleNewChat}
           refreshTrigger={sidebarRefresh}
+          subject={null}
         />
 
         {/* Main chat area */}
