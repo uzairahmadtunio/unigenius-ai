@@ -15,29 +15,44 @@ serve(async (req) => {
 
     const count = Math.min(Math.max(slideCount || 8, 3), 20);
 
-    const prompt = `Create a professional presentation on the topic: "${topic}"
+    const prompt = `Create a university-level presentation on: "${topic}"
 
-Generate exactly ${count} slides. For EACH slide, output in this EXACT JSON format (output ONLY the JSON array, no markdown, no code fences):
+Generate exactly ${count} slides following this STRICT structure:
 
+SLIDE 1 (Title Slide):
+- title: The main topic name (short, bold)
+- subtitle: "Presented by: [Generic Student Names]"  
+- bullets: [] (EMPTY array - no bullets on title slide)
+- This is ONLY a title card
+
+SLIDES 2 to ${count - 1} (Content Slides):
+- title: One clear, bold heading (ALL CAPS preferred, max 6 words)
+- bullets: EXACTLY 3-4 short bullet points (each bullet MAX 12 words, NO paragraphs, NO long sentences)
+- Each bullet must be a concise fact or point, not a paragraph
+
+SLIDE ${count} (Closing Slide):
+- title: "THANK YOU"
+- bullets: ["Any Questions?"] or similar short closing
+
+OUTPUT FORMAT — JSON array only, no markdown:
 [
   {
-    "title": "Slide title here",
-    "bullets": ["Point 1", "Point 2", "Point 3", "Point 4"],
-    "imageSuggestion": "Describe a relevant, high-quality image for this slide",
-    "icon": "one-word-lucide-icon-name",
-    "speakerNotes": "2-3 sentence script for the presenter explaining what to say while presenting this slide"
+    "title": "TOPIC NAME HERE",
+    "subtitle": "Presented by: Name1, Name2",
+    "bullets": [],
+    "imageSuggestion": "A relevant image description",
+    "icon": "lucide-icon-name",
+    "speakerNotes": "1-2 sentence script for presenter"
   }
 ]
 
-Rules:
-- First slide should be a title/intro slide
-- Last slide should be a summary/conclusion or Q&A slide
-- Each slide should have 3-5 bullet points in professional English
-- Image suggestions should be descriptive and specific (e.g., "A modern computer lab with students coding on laptops")
-- Keep bullet points concise and informative
-- Make content educational and well-structured
-- icon must be a valid Lucide icon name in kebab-case (e.g., "book-open", "code", "graduation-cap", "brain", "lightbulb", "users", "target", "trophy", "chart-bar", "layers")
-- speakerNotes should be a natural speech script (2-3 sentences) telling the presenter exactly what to say for this slide`;
+CRITICAL RULES:
+- MAXIMUM 4 bullet points per slide. NEVER exceed 4.
+- Each bullet point must be SHORT (under 12 words). No paragraphs.
+- Title slide has NO bullets, only title + subtitle
+- Last slide is always "THANK YOU"
+- icon: valid Lucide kebab-case name (book-open, code, brain, lightbulb, users, target, trophy, layers, ear, eye, message-circle, pen-tool, graduation-cap)
+- subtitle field is optional, only used for title slide`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -50,7 +65,17 @@ Rules:
         messages: [
           {
             role: "system",
-            content: "You are a professional presentation designer. Generate slide content as a valid JSON array. Output ONLY raw JSON — no markdown code fences, no explanatory text. Each slide object has: title (string), bullets (string array of 3-5 items), imageSuggestion (string), icon (string - valid Lucide icon name in kebab-case), speakerNotes (string - 2-3 sentence presenter script).",
+            content: `You are a strict presentation designer. You create clean, minimal slides like Gamma.app or professional university presentations.
+
+ABSOLUTE RULES:
+1. Each slide has MAX 4 bullet points. NEVER more.
+2. Each bullet is under 12 words. NO long sentences or paragraphs.
+3. First slide = title only (empty bullets array, include subtitle field).
+4. Last slide = "THANK YOU" with minimal content.
+5. Headings are bold and concise (max 6 words, prefer ALL CAPS).
+6. Output ONLY valid JSON array. No markdown, no code fences.
+
+Each object: title (string), subtitle (string, optional), bullets (string[]), imageSuggestion (string), icon (string), speakerNotes (string).`,
           },
           { role: "user", content: prompt },
         ],
@@ -85,10 +110,11 @@ Rules:
       throw new Error("Failed to parse AI response");
     }
 
-    // Ensure each slide has the new fields with defaults
+    // Enforce max 4 bullets and trim long ones
     slides = slides.map((s: any) => ({
       title: s.title || "Untitled Slide",
-      bullets: Array.isArray(s.bullets) ? s.bullets : [],
+      subtitle: s.subtitle || "",
+      bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 4),
       imageSuggestion: s.imageSuggestion || "",
       icon: s.icon || "presentation",
       speakerNotes: s.speakerNotes || "",
