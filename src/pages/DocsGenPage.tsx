@@ -28,6 +28,8 @@ const DocsGenPage = () => {
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [studentDept, setStudentDept] = useState("");
+  const [studentSection, setStudentSection] = useState("");
+  const [studentUniversity, setStudentUniversity] = useState("University of Larkana");
 
   const subjects = department ? getSubjects(department, semester) : [];
 
