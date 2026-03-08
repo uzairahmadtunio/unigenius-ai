@@ -275,7 +275,7 @@ Start by greeting the student and asking your first viva question.`
         if (attachedFiles.length > 1) {
           parts.push({
             type: "text",
-            text: `The student has uploaded ${attachedFiles.length} files for "${subjectName}". Analyze ALL files together and provide a combined answer.`,
+            text: `The student has uploaded ${attachedFiles.length} files for "${subjectName}". Analyze ALL files together. Provide a structured response: first an overview summary, then address each file individually (e.g., "**File 1: ${attachedFiles[0]?.name}** — ..."), and finally a combined conclusion.`,
           });
         }
 
