@@ -94,16 +94,7 @@ const highlightSyntax = (code: string, lang?: string) => {
 
 const CodeBlock = ({ language, code }: { language?: string; code: string }) => {
   const lang = language?.replace(/^language-/, "") || "";
-  const highlighted = highlightSyntax(code, lang);
-
-  const colorMap = {
-    keyword: "text-[#569cd6]",
-    string: "text-[#ce9178]",
-    comment: "text-[#6a9955]",
-    number: "text-[#b5cea8]",
-    preprocessor: "text-[#c586c0]",
-    plain: "text-[#d4d4d4]",
-  };
+  const lines = code.split("\n");
 
   return (
     <div className="rounded-xl overflow-hidden my-2.5 border border-white/5">
@@ -112,20 +103,41 @@ const CodeBlock = ({ language, code }: { language?: string; code: string }) => {
         <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">{lang || "code"}</span>
         <CopyButton text={code} />
       </div>
-      {/* Code area */}
-      <pre className="bg-[#1a1a2e] p-3 overflow-x-auto scrollbar-none">
-        <code className="text-xs font-mono leading-relaxed">
-          {typeof highlighted === "string" ? (
-            <span className="text-[#d4d4d4]">{highlighted}</span>
-          ) : (
-            highlighted.map((part, i) => (
-              <span key={i} className={colorMap[part.type]}>{part.text}</span>
-            ))
-          )}
-        </code>
-      </pre>
+      {/* Code area with line numbers */}
+      <div className="bg-[#1a1a2e] overflow-x-auto scrollbar-none">
+        <table className="w-full border-collapse">
+          <tbody>
+            {lines.map((line, i) => {
+              const highlighted = highlightSyntax(line, lang);
+              return (
+                <tr key={i} className="leading-relaxed">
+                  <td className="px-3 py-0 text-right select-none text-[10px] font-mono text-gray-600 w-8 align-top" style={{ minWidth: "2rem" }}>{i + 1}</td>
+                  <td className="px-2 py-0 text-xs font-mono whitespace-pre">
+                    {typeof highlighted === "string" ? (
+                      <span className="text-[#d4d4d4]">{highlighted}</span>
+                    ) : (
+                      highlighted.map((part, j) => (
+                        <span key={j} className={colorMap[part.type]}>{part.text}</span>
+                      ))
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+};
+
+const colorMap: Record<string, string> = {
+  keyword: "text-[#569cd6]",
+  string: "text-[#ce9178]",
+  comment: "text-[#6a9955]",
+  number: "text-[#b5cea8]",
+  preprocessor: "text-[#c586c0]",
+  plain: "text-[#d4d4d4]",
 };
 
 const MarkdownMessage = ({ content }: MarkdownMessageProps) => {
