@@ -89,11 +89,13 @@ const ChatPage = () => {
   useEffect(() => { autoResize(); }, [input, autoResize]);
 
   // Create a new chat session
-  const createChatSession = async (): Promise<string | null> => {
+  const createChatSession = async (subject?: string | null): Promise<string | null> => {
     if (!user) return null;
+    const insertData: any = { user_id: user.id, title: "New Chat" };
+    if (subject) insertData.subject = subject;
     const { data, error } = await supabase
       .from("chat_sessions")
-      .insert({ user_id: user.id, title: "New Chat" })
+      .insert(insertData)
       .select("id")
       .single();
     if (error) { console.error("Failed to create chat session:", error); return null; }
