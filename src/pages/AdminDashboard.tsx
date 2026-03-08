@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, Plus, Trash2, Edit2, Megaphone } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import {
+  Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
+  Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useAdmin } from "@/hooks/use-admin";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,11 +22,312 @@ import { supabase } from "@/integrations/supabase/client";
 const categories = ["general", "fee", "exam", "academic", "event"];
 const priorities = ["normal", "high", "urgent"];
 
+type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts";
+
+const tabItems = [
+  { id: "overview" as AdminTab, label: "Overview", icon: BarChart3 },
+  { id: "users" as AdminTab, label: "Users", icon: Users },
+  { id: "notices" as AdminTab, label: "Notices", icon: Megaphone },
+  { id: "groups" as AdminTab, label: "Groups", icon: FolderOpen },
+  { id: "alerts" as AdminTab, label: "Global Alerts", icon: Radio },
+];
+
 const AdminDashboard = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
 
+  useEffect(() => {
+    if (!authLoading && !adminLoading && (!user || !isAdmin)) {
+      navigate("/");
+    }
+  }, [authLoading, adminLoading, user, isAdmin, navigate]);
+
+  if (authLoading || adminLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0 hidden md:flex">
+        <div className="p-5 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-sm font-display font-bold text-foreground">Admin Panel</h1>
+              <p className="text-[10px] text-muted-foreground">God Mode • UoL</p>
+            </div>
+          </div>
+        </div>
+        <nav className="flex-1 p-3 space-y-1">
+          {tabItems.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                activeTab === tab.id
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-border">
+          <Button variant="ghost" size="sm" className="w-full rounded-xl text-xs" onClick={() => navigate("/")}>
+            ← Back to App
+          </Button>
+        </div>
+      </aside>
+
+      {/* Mobile tab bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-border bg-card flex">
+        {tabItems.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors ${
+              activeTab === tab.id ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+          {/* Mobile header */}
+          <div className="md:hidden flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              <h1 className="text-lg font-display font-bold text-foreground">Admin</h1>
+            </div>
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => navigate("/")}>
+              ← App
+            </Button>
+          </div>
+
+          {activeTab === "overview" && <OverviewTab />}
+          {activeTab === "users" && <UsersTab />}
+          {activeTab === "notices" && <NoticesTab />}
+          {activeTab === "groups" && <GroupsTab />}
+          {activeTab === "alerts" && <GlobalAlertsTab />}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+/* ===== OVERVIEW TAB ===== */
+const OverviewTab = () => {
+  const [stats, setStats] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.rpc("admin_get_stats").then(({ data }) => {
+      if (data && data.length > 0) setStats(data[0]);
+    });
+  }, []);
+
+  const statCards = stats
+    ? [
+        { label: "Total Users", value: stats.total_users, icon: Users, color: "text-blue-400" },
+        { label: "Total Groups", value: stats.total_groups, icon: FolderOpen, color: "text-emerald-400" },
+        { label: "Files Uploaded", value: stats.total_files, icon: BarChart3, color: "text-amber-400" },
+        { label: "Notices Posted", value: stats.total_notices, icon: Megaphone, color: "text-purple-400" },
+        { label: "Quizzes Taken", value: stats.total_quizzes, icon: Shield, color: "text-rose-400" },
+      ]
+    : [];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div>
+        <h2 className="text-xl font-display font-bold text-foreground">System Overview</h2>
+        <p className="text-xs text-muted-foreground">University of Larkana — UniGenius AI Platform</p>
+      </div>
+
+      {stats ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {statCards.map((s) => (
+            <Card key={s.label} className="border-border/30 bg-card">
+              <CardContent className="p-4 text-center">
+                <s.icon className={`w-6 h-6 mx-auto mb-2 ${s.color}`} />
+                <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading statistics...</div>
+      )}
+
+      {/* Activity bar chart placeholder */}
+      <Card className="border-border/30 bg-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display">Platform Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-2 h-32">
+            {[65, 40, 85, 55, 70, 90, 45].map((h, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div
+                  className="w-full rounded-t-md bg-primary/60 transition-all"
+                  style={{ height: `${h}%` }}
+                />
+                <span className="text-[9px] text-muted-foreground">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+/* ===== USERS TAB ===== */
+const UsersTab = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUsers = async () => {
+    const { data } = await supabase.rpc("admin_get_all_users");
+    setUsers(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.rpc("admin_delete_user", { _target_user_id: deleteTarget.user_id });
+    if (error) {
+      toast.error("Failed to delete user: " + error.message);
+    } else {
+      toast.success(`User ${deleteTarget.display_name || deleteTarget.email} removed.`);
+      fetchUsers();
+    }
+    setDeleteTarget(null);
+  };
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase();
+    return (
+      (u.display_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.roll_number || "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">User Management</h2>
+          <p className="text-xs text-muted-foreground">{users.length} registered students</p>
+        </div>
+      </div>
+
+      <div className="relative">
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search by name, email, or roll number..."
+          className="pl-9 rounded-xl"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading users...</div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((u) => (
+            <Card key={u.user_id} className="border-border/30 bg-card">
+              <CardContent className="p-3 flex items-center gap-3">
+                <Avatar className="w-9 h-9 border border-border">
+                  <AvatarImage src={u.avatar_url} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                    {(u.display_name || u.email || "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{u.display_name || "No Name"}</p>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span className="truncate">{u.email}</span>
+                    {u.roll_number && (
+                      <>
+                        <span>•</span>
+                        <span>{u.roll_number}</span>
+                      </>
+                    )}
+                    {u.current_semester && (
+                      <>
+                        <span>•</span>
+                        <span>Sem {u.current_semester}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-lg w-8 h-8 text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteTarget(u)}
+                >
+                  <UserX className="w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">No users found.</p>
+          )}
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Delete User
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete{" "}
+              <strong>{deleteTarget?.display_name || deleteTarget?.email}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" className="rounded-xl" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl" onClick={handleDelete}>Delete Permanently</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
+  );
+};
+
+/* ===== NOTICES TAB ===== */
+const NoticesTab = () => {
   const [notices, setNotices] = useState<any[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -33,31 +337,19 @@ const AdminDashboard = () => {
   const [priority, setPriority] = useState("normal");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !adminLoading && (!user || !isAdmin)) {
-      navigate("/");
-    }
-  }, [authLoading, adminLoading, user, isAdmin, navigate]);
-
   const fetchNotices = async () => {
     const { data } = await supabase
-      .from("university_notices" as any)
+      .from("university_notices")
       .select("*")
       .order("created_at", { ascending: false });
     setNotices(data || []);
   };
 
-  useEffect(() => {
-    if (isAdmin) fetchNotices();
-  }, [isAdmin]);
+  useEffect(() => { fetchNotices(); }, []);
 
   const resetForm = () => {
-    setTitle("");
-    setContent("");
-    setCategory("general");
-    setPriority("normal");
-    setEditId(null);
-    setFormOpen(false);
+    setTitle(""); setContent(""); setCategory("general"); setPriority("normal");
+    setEditId(null); setFormOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,16 +358,11 @@ const AdminDashboard = () => {
     setSubmitting(true);
 
     if (editId) {
-      await (supabase.from("university_notices" as any) as any)
-        .update({ title, content, category, priority })
-        .eq("id", editId);
-      toast.success("Notice updated successfully!");
+      await supabase.from("university_notices").update({ title, content, category, priority } as any).eq("id", editId);
+      toast.success("Notice updated!");
     } else {
-      await (supabase.from("university_notices" as any) as any)
-        .insert({ title, content, category, priority });
-      toast.success("🎉 Official Notice Live!", {
-        description: "Your notice is now visible to all students.",
-      });
+      await supabase.from("university_notices").insert({ title, content, category, priority } as any);
+      toast.success("🎉 Official Notice Live!", { description: "Now visible to all students." });
     }
 
     setSubmitting(false);
@@ -83,158 +370,319 @@ const AdminDashboard = () => {
     fetchNotices();
   };
 
-  const handleEdit = (notice: any) => {
-    setEditId(notice.id);
-    setTitle(notice.title);
-    setContent(notice.content);
-    setCategory(notice.category);
-    setPriority(notice.priority);
-    setFormOpen(true);
+  const handleEdit = (n: any) => {
+    setEditId(n.id); setTitle(n.title); setContent(n.content);
+    setCategory(n.category); setPriority(n.priority); setFormOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    await (supabase.from("university_notices" as any) as any).delete().eq("id", id);
+    await supabase.from("university_notices").delete().eq("id", id);
     toast.success("Notice deleted.");
     fetchNotices();
   };
 
-  if (authLoading || adminLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+  const priorityColor: Record<string, string> = { urgent: "destructive", high: "secondary", normal: "outline" };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">Notice Board Manager</h2>
+          <p className="text-xs text-muted-foreground">{notices.length} notices posted</p>
+        </div>
+        <Button className="rounded-xl gap-2" onClick={() => setFormOpen(true)}>
+          <Plus className="w-4 h-4" /> New Notice
+        </Button>
       </div>
-    );
-  }
 
-  if (!isAdmin) return null;
+      {/* Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) resetForm(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">{editId ? "Edit Notice" : "Post New Notice"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input placeholder="Notice Title" value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
+            <Textarea placeholder="Notice message..." value={content} onChange={(e) => setContent(e.target.value)} required className="rounded-xl min-h-[100px]" />
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {priorities.map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full rounded-xl" disabled={submitting}>
+              {submitting ? "Posting..." : editId ? "Update Notice" : "🚀 Publish Notice"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-  const priorityColor: Record<string, string> = {
-    urgent: "destructive",
-    high: "secondary",
-    normal: "outline",
+      {/* Notices list */}
+      <div className="space-y-2">
+        {notices.length === 0 ? (
+          <Card className="border-border/30 bg-card">
+            <CardContent className="p-8 text-center">
+              <Megaphone className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">No notices yet. Post your first one!</p>
+            </CardContent>
+          </Card>
+        ) : (
+          notices.map((n: any, i: number) => (
+            <motion.div key={n.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+              <Card className="border-border/30 bg-card">
+                <CardContent className="p-3 flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="font-semibold text-sm text-foreground">{n.title}</p>
+                      <Badge variant={priorityColor[n.priority] as any} className="text-[9px] capitalize">{n.priority}</Badge>
+                      <Badge variant="outline" className="text-[9px] capitalize">{n.category}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{n.content}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      {new Date(n.created_at).toLocaleDateString("en-PK", { dateStyle: "medium" })}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="rounded-lg w-7 h-7" onClick={() => handleEdit(n)}>
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="rounded-lg w-7 h-7 text-destructive" onClick={() => handleDelete(n.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+/* ===== GROUPS TAB ===== */
+const GroupsTab = () => {
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
+  const fetchGroups = async () => {
+    const { data } = await supabase.rpc("admin_get_all_groups");
+    setGroups(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchGroups(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.rpc("admin_delete_group", { _group_id: deleteTarget.group_id });
+    if (error) {
+      toast.error("Failed: " + error.message);
+    } else {
+      toast.success(`Group "${deleteTarget.name}" deleted.`);
+      fetchGroups();
+    }
+    setDeleteTarget(null);
   };
 
   return (
-    <div className="min-h-screen flex flex-col gradient-hero">
-      <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 space-y-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-display font-bold text-foreground">Admin Dashboard</h1>
-              <p className="text-xs text-muted-foreground">Manage University of Larkana notices</p>
-            </div>
-          </div>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div>
+        <h2 className="text-xl font-display font-bold text-foreground">Group & Project Control</h2>
+        <p className="text-xs text-muted-foreground">{groups.length} groups created</p>
+      </div>
 
-          <Dialog open={formOpen} onOpenChange={(o) => { if (!o) resetForm(); else setFormOpen(true); }}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl gap-2" onClick={() => setFormOpen(true)}>
-                <Plus className="w-4 h-4" /> Post Notice
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="font-display">{editId ? "Edit Notice" : "Post New Notice"}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  placeholder="Notice Title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className="rounded-xl"
-                />
-                <Textarea
-                  placeholder="Notice message..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  className="rounded-xl min-h-[100px]"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={priority} onValueChange={setPriority}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {priorities.map((p) => (
-                        <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading groups...</div>
+      ) : groups.length === 0 ? (
+        <Card className="border-border/30 bg-card">
+          <CardContent className="p-8 text-center">
+            <FolderOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">No groups created yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {groups.map((g: any) => (
+            <Card key={g.group_id} className="border-border/30 bg-card">
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground">{g.name}</p>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
+                    <span>Owner: {g.owner_name}</span>
+                    <span>•</span>
+                    <span>{g.member_count} members</span>
+                    <span>•</span>
+                    <span>{g.file_count} files</span>
+                  </div>
+                  {g.description && <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{g.description}</p>}
                 </div>
-                <Button type="submit" className="w-full rounded-xl" disabled={submitting}>
-                  {submitting ? "Posting..." : editId ? "Update Notice" : "🚀 Publish Notice"}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-lg w-8 h-8 text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteTarget(g)}
+                >
+                  <Trash2 className="w-4 h-4" />
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </motion.div>
-
-        {/* Notices List */}
-        <div className="space-y-3">
-          {notices.length === 0 ? (
-            <Card className="glass border-border/30">
-              <CardContent className="p-8 text-center">
-                <Megaphone className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">No notices posted yet. Click "Post Notice" to create one.</p>
               </CardContent>
             </Card>
-          ) : (
-            notices.map((notice: any, i: number) => (
-              <motion.div
-                key={notice.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <Card className="glass border-border/30">
-                  <CardContent className="p-4 flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold text-sm text-foreground">{notice.title}</p>
-                        <Badge variant={priorityColor[notice.priority] as any} className="text-[10px] capitalize">
-                          {notice.priority}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {notice.category}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{notice.content}</p>
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        {new Date(notice.created_at).toLocaleDateString("en-PK", { dateStyle: "medium" })}
-                      </p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="rounded-lg w-8 h-8" onClick={() => handleEdit(notice)}>
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="rounded-lg w-8 h-8 text-destructive" onClick={() => handleDelete(notice.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))
-          )}
+          ))}
         </div>
-      </main>
-      <Footer />
-    </div>
+      )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Delete Group
+            </DialogTitle>
+            <DialogDescription>
+              Delete <strong>{deleteTarget?.name}</strong>? All messages, files, and members will be removed permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" className="rounded-xl" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl" onClick={handleDelete}>Delete Group</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
+  );
+};
+
+/* ===== GLOBAL ALERTS TAB ===== */
+const GlobalAlertsTab = () => {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [message, setMessage] = useState("");
+  const [alertType, setAlertType] = useState("info");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchAlerts = async () => {
+    const { data } = await supabase
+      .from("global_alerts" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setAlerts(data || []);
+  };
+
+  useEffect(() => { fetchAlerts(); }, []);
+
+  const handlePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setSubmitting(true);
+
+    // Deactivate existing active alerts first
+    await (supabase.from("global_alerts" as any) as any)
+      .update({ is_active: false })
+      .eq("is_active", true);
+
+    await (supabase.from("global_alerts" as any) as any)
+      .insert({ message, alert_type: alertType, is_active: true });
+
+    toast.success("🚨 Global Alert Live!", { description: "All users will see this banner." });
+    setMessage("");
+    setSubmitting(false);
+    fetchAlerts();
+  };
+
+  const handleDeactivate = async (id: string) => {
+    await (supabase.from("global_alerts" as any) as any)
+      .update({ is_active: false })
+      .eq("id", id);
+    toast.success("Alert deactivated.");
+    fetchAlerts();
+  };
+
+  const handleDelete = async (id: string) => {
+    await (supabase.from("global_alerts" as any) as any)
+      .delete()
+      .eq("id", id);
+    toast.success("Alert deleted.");
+    fetchAlerts();
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div>
+        <h2 className="text-xl font-display font-bold text-foreground">Global Broadcast</h2>
+        <p className="text-xs text-muted-foreground">Send a banner message to every user's screen</p>
+      </div>
+
+      <Card className="border-border/30 bg-card">
+        <CardContent className="p-4">
+          <form onSubmit={handlePost} className="space-y-3">
+            <Textarea
+              placeholder='e.g. "Server Maintenance at 10 PM tonight"'
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              required
+              className="rounded-xl min-h-[80px]"
+            />
+            <div className="flex items-center gap-3">
+              <Select value={alertType} onValueChange={setAlertType}>
+                <SelectTrigger className="rounded-xl w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="info">ℹ️ Info</SelectItem>
+                  <SelectItem value="warning">⚠️ Warning</SelectItem>
+                  <SelectItem value="critical">🚨 Critical</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="submit" className="rounded-xl flex-1" disabled={submitting}>
+                {submitting ? "Broadcasting..." : "📡 Broadcast to All Users"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">Alert History</h3>
+        {alerts.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No alerts sent yet.</p>
+        ) : (
+          alerts.map((a: any) => (
+            <Card key={a.id} className={`border-border/30 ${a.is_active ? "border-l-4 border-l-primary bg-primary/5" : "bg-card"}`}>
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-foreground">{a.message}</p>
+                    {a.is_active && <Badge className="text-[9px]">LIVE</Badge>}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {new Date(a.created_at).toLocaleString("en-PK")} • {a.alert_type}
+                  </p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  {a.is_active && (
+                    <Button variant="ghost" size="sm" className="rounded-lg text-xs" onClick={() => handleDeactivate(a.id)}>
+                      Deactivate
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" className="rounded-lg w-7 h-7 text-destructive" onClick={() => handleDelete(a.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </motion.div>
   );
 };
 
