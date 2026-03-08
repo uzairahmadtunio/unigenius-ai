@@ -16,8 +16,57 @@ serve(async (req) => {
     const extra = additionalNotes ? `\n\nAdditional instructions from student: ${additionalNotes}` : "";
     const docType = type === "lab" ? "Lab Manual" : "Assignment";
     const prompt = type === "lab"
-      ? `Generate a complete ${docType} for the subject "${subject}" on the experiment/topic "${topic}". Structure it EXACTLY with these sections:\n\n1. **Title Page** (Subject, Experiment Name, Date)\n2. **Objective** (Clear, concise aim)\n3. **Apparatus / Software Required** (List all tools)\n4. **Theory** (Detailed theoretical background, 300+ words)\n5. **Algorithm** (Step-by-step pseudocode)\n6. **Procedure** (Detailed step-by-step lab procedure)\n7. **Code** (Complete working code with inline comments)\n8. **Output / Results** (Expected output, screenshots description)\n9. **Conclusion** (What was learned)\n\nUse proper academic formatting with markdown.${extra}`
-      : `Generate a complete ${docType} for the subject "${subject}" on the topic "${topic}".
+      ? `Generate a complete Lab Manual for the subject "${subject}" on the topic "${topic}" in the EXACT style of the University of Larkano lab manuals.
+
+FORMAT — follow this EXACTLY:
+
+Start with this header block (use markdown):
+
+# UNIVERSITY OF LARKANO
+## Department of Software Engineering
+### Subject: ${subject}
+---
+
+**Student Information:**
+| Field | Details |
+|-------|---------|
+| **Name** | Uzair Ahmad Tunio |
+| **Roll No** | 14 |
+| **Department** | Software Engineering |
+| **Semester** | (Current Semester) |
+
+---
+
+Then for EACH task in the lab, follow this structure:
+
+## Task [Number]
+**Problem Statement:** Write a clear, simple one-line problem (e.g., "Write a program to calculate the area of a circle.")
+
+**Objective:** One-line goal of this task.
+
+**Code:**
+\`\`\`cpp
+#include <iostream>
+using namespace std;
+// ... beginner-friendly C++ code with simple comments
+\`\`\`
+
+**Result/Output:**
+\`\`\`
+(Show the exact expected console output here)
+\`\`\`
+
+---
+
+IMPORTANT RULES:
+- Generate 3-5 tasks per lab unless the topic only needs fewer.
+- Keep code beginner-friendly. Use standard headers like #include <iostream> and using namespace std;
+- Use simple variable names and straightforward logic.
+- Avoid complex AI explanations. Write like a student: "This program takes input from the user..." or "The output will be..."
+- If a flowchart is needed, describe it in simple numbered steps (not ASCII art).
+- Bold all headings: **Task**, **Code**, **Result**, **Objective**.
+- End with a ## Conclusion section summarizing what was learned in 3-4 simple sentences.${extra}`
+      : `Generate a complete Assignment for the subject "${subject}" on the topic "${topic}".
 
 IMPORTANT TONE & STYLE RULES — follow these strictly:
 - Write as an undergraduate student, NOT a professor or researcher.
@@ -51,7 +100,9 @@ Use markdown formatting with headers and bullet points.${extra}`;
         messages: [
           {
             role: "system",
-            content: `You are a document generator that writes like an undergraduate university student. For lab manuals, use proper academic structure. For assignments, write in a simple, clear, human-like student tone — short paragraphs, bullet points, common vocabulary, and occasional personal opinions. Never sound like a research paper or PhD thesis. Use markdown formatting.`,
+            content: type === "lab"
+              ? `You are a lab manual generator for the University of Larkano, Department of Software Engineering. Generate lab manuals in the exact university format with header, student info table, and task-based structure. Each task must have: Problem Statement, Objective, C++ Code (beginner-level), and Result/Output. Write like a student — simple language, no complex jargon. Always end with a Conclusion. Use markdown formatting.`
+              : `You are a document generator that writes like an undergraduate university student. Write in a simple, clear, human-like student tone — short paragraphs, bullet points, common vocabulary, and occasional personal opinions. Never sound like a research paper or PhD thesis. Use markdown formatting.`,
           },
           { role: "user", content: prompt },
         ],
