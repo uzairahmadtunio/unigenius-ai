@@ -45,6 +45,7 @@ const App = () => (
           <DarkModeInit>
             <Toaster />
             <Sonner />
+            <GlobalAlertBanner />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
