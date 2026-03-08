@@ -66,8 +66,13 @@ const Index = () => {
           <GlobalSearch />
         </motion.section>
 
-        {/* Quick Actions */}
+        {/* Career Readiness */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <CareerReadinessWidget />
+        </motion.section>
+
+        {/* Quick Actions */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <QuickActions />
         </motion.section>
 
