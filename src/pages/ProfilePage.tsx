@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Trophy, Calculator, Camera, Save, Edit2, Calendar, Loader2, Github, Linkedin, BadgeCheck, X, Plus, Eye, EyeOff, Award, BookOpen, TrendingUp } from "lucide-react";
+import { User, Trophy, Camera, Save, Edit2, Calendar, Loader2, Github, Linkedin, BadgeCheck, X, Plus, Eye, EyeOff, Award, BookOpen, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
 import { checkProfileBadge } from "@/lib/career-points";
+import SmartGPACalculator from "@/components/SmartGPACalculator";
 
 interface QuizResult {
   id: string;
@@ -53,9 +54,6 @@ interface ProfileData {
   skills: string[];
   show_on_leaderboard: boolean;
 }
-
-const gradePoints: Record<string, number> = { "A+": 4.0, A: 4.0, "A-": 3.67, "B+": 3.33, B: 3.0, "B-": 2.67, "C+": 2.33, C: 2.0, "C-": 1.67, D: 1.0, F: 0.0 };
-interface CourseGrade { grade: string; credits: number }
 
 const departments = [
   { value: "se", label: "Software Engineering" },
@@ -102,7 +100,6 @@ const ProfilePage = () => {
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
   const [attendancePercent, setAttendancePercent] = useState(0);
-  const [courses, setCourses] = useState<CourseGrade[]>([{ grade: "A", credits: 3 }]);
   const [newSkill, setNewSkill] = useState("");
 
   const [profile, setProfile] = useState<ProfileData>({
@@ -206,22 +203,7 @@ const ProfilePage = () => {
     } finally { setIsSaving(false); }
   };
 
-  const addCourse = () => setCourses([...courses, { grade: "A", credits: 3 }]);
-  const removeCourse = (i: number) => setCourses(courses.filter((_, idx) => idx !== i));
-  const updateCourse = (i: number, field: keyof CourseGrade, value: string | number) => {
-    const updated = [...courses];
-    updated[i] = { ...updated[i], [field]: value };
-    setCourses(updated);
-  };
-
-  const gpa = (() => {
-    let totalPoints = 0, totalCredits = 0;
-    for (const c of courses) {
-      totalPoints += (gradePoints[c.grade] ?? 0) * c.credits;
-      totalCredits += c.credits;
-    }
-    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
-  })();
+  const gpa = "—";
 
   const memberSince = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -525,38 +507,9 @@ const ProfilePage = () => {
               )}
             </motion.div>
 
-            {/* GPA Calculator */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-foreground text-sm">GPA Calculator (4.0 Scale)</h3>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {courses.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Select value={c.grade} onValueChange={(v) => updateCourse(i, "grade", v)}>
-                      <SelectTrigger className="rounded-lg w-24"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(gradePoints).map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={String(c.credits)} onValueChange={(v) => updateCourse(i, "credits", Number(v))}>
-                      <SelectTrigger className="rounded-lg w-24"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4].map((cr) => <SelectItem key={cr} value={String(cr)}>{cr} CH</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="sm" onClick={() => removeCourse(i)} className="text-xs text-destructive">✕</Button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={addCourse} className="rounded-xl text-xs">+ Add Course</Button>
-                <div className="ml-auto text-right">
-                  <p className="text-xs text-muted-foreground">Semester GPA</p>
-                  <p className="text-2xl font-bold gradient-text">{gpa}</p>
-                </div>
-              </div>
+            {/* Smart GPA Calculator */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2">
+              <SmartGPACalculator department={department} userId={user?.id} currentSemester={profile.current_semester} />
             </motion.div>
 
             {/* Quiz History */}
