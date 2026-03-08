@@ -962,4 +962,156 @@ const SupportTab = () => {
   );
 };
 
+/* ===== PAYMENTS TAB ===== */
+const PaymentsTab = () => {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const fetchRequests = async () => {
+    const { data } = await supabase.rpc("admin_get_payment_requests" as any);
+    setRequests(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchRequests(); }, []);
+
+  const handleAction = async (id: string, action: "approve" | "reject") => {
+    const note = action === "reject" ? prompt("Rejection reason (optional):") : null;
+    await supabase.rpc("admin_handle_payment" as any, {
+      _request_id: id,
+      _action: action,
+      _note: note || null,
+    });
+    toast.success(action === "approve" ? "✅ Payment approved! User is now Pro." : "❌ Payment rejected.");
+    fetchRequests();
+  };
+
+  const filtered = requests.filter((r: any) => {
+    if (filter === "all") return true;
+    return r.status === filter;
+  });
+
+  const pendingCount = requests.filter((r: any) => r.status === "pending").length;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">Payment Approvals</h2>
+          <p className="text-xs text-muted-foreground">{pendingCount} pending requests</p>
+        </div>
+        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <SelectTrigger className="rounded-xl w-32"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading payment requests...</div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-border/30 bg-card">
+          <CardContent className="p-8 text-center">
+            <CreditCard className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">No {filter !== "all" ? filter : ""} payment requests</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((r: any) => (
+            <Card key={r.id} className={`border-border/30 ${r.status === "pending" ? "border-l-4 border-l-amber-500" : ""}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="w-10 h-10 border border-border">
+                    <AvatarImage src={r.user_avatar} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {(r.user_name || "?").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-sm text-foreground">{r.user_name}</p>
+                      <Badge
+                        variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "secondary"}
+                        className="text-[9px]"
+                      >
+                        {r.status}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">{r.user_email}</p>
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                      <span className="capitalize">{r.payment_method}</span>
+                      <span>•</span>
+                      <span>PKR {r.amount}</span>
+                      <span>•</span>
+                      <span>{new Date(r.created_at).toLocaleDateString("en-PK", { dateStyle: "medium" })}</span>
+                    </div>
+                    {r.admin_note && (
+                      <p className="text-[10px] text-muted-foreground/70 mt-1 italic">Note: {r.admin_note}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-lg w-8 h-8"
+                      onClick={() => setPreviewUrl(r.screenshot_url)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    {r.status === "pending" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg text-xs gap-1 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                          onClick={() => handleAction(r.id, "approve")}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => handleAction(r.id, "reject")}
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Screenshot Preview Dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={(o) => !o && setPreviewUrl(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Payment Screenshot</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Payment screenshot"
+              className="w-full rounded-xl border border-border"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </motion.div>
+  );
+};
+
 export default AdminDashboard;
