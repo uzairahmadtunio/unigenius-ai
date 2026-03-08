@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Code, FileText, Mic, MicOff, Send, Bot, User,
   Play, CheckCircle, XCircle, Upload, FileUp, Award, Target,
-  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles, List, Zap
+  Lightbulb, ArrowRight, RefreshCw, Copy, Sparkles, List, Zap, TrendingUp
 } from "lucide-react";
+import SkillAnalyzer from "@/components/SkillAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
