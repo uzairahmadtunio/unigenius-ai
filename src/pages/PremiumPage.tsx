@@ -120,7 +120,7 @@ const PremiumPage = () => {
   }
 
   return (
-    <PageShell title="Premium" icon={Crown}>
+    <PageShell title="Premium" icon={<Crown className="w-5 h-5" />}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto space-y-6">
         {/* Price Card */}
         <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
