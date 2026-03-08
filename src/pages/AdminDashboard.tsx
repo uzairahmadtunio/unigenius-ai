@@ -620,7 +620,7 @@ const GlobalAlertsTab = () => {
 
   const handleDelete = async (id: string) => {
     await (supabase.from("global_alerts" as any) as any).delete().eq("id", id);
-    toast.success("Alert deleted.");
+    toast.success("Alert Removed Successfully");
     fetchAlerts();
   };
 
