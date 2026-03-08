@@ -17,7 +17,28 @@ serve(async (req) => {
     const docType = type === "lab" ? "Lab Manual" : "Assignment";
     const prompt = type === "lab"
       ? `Generate a complete ${docType} for the subject "${subject}" on the experiment/topic "${topic}". Structure it EXACTLY with these sections:\n\n1. **Title Page** (Subject, Experiment Name, Date)\n2. **Objective** (Clear, concise aim)\n3. **Apparatus / Software Required** (List all tools)\n4. **Theory** (Detailed theoretical background, 300+ words)\n5. **Algorithm** (Step-by-step pseudocode)\n6. **Procedure** (Detailed step-by-step lab procedure)\n7. **Code** (Complete working code with inline comments)\n8. **Output / Results** (Expected output, screenshots description)\n9. **Conclusion** (What was learned)\n\nUse proper academic formatting with markdown.${extra}`
-      : `Generate a complete ${docType} document for the subject "${subject}" on the topic "${topic}". Structure it with:\n\n1. **Title Page** (Subject, Assignment Title, Student Info placeholder)\n2. **Table of Contents**\n3. **Introduction** (Context and importance)\n4. **Literature Review / Background** (Detailed, 400+ words)\n5. **Main Content** (In-depth analysis with subheadings)\n6. **Examples & Illustrations** (Practical examples)\n7. **Practice Questions** (5 questions for self-assessment)\n8. **Summary / Conclusion**\n9. **References** (APA format placeholders)\n\nUse high-detail academic formatting with proper markdown. Make it submission-ready.${extra}`;
+      : `Generate a complete ${docType} for the subject "${subject}" on the topic "${topic}".
+
+IMPORTANT TONE & STYLE RULES — follow these strictly:
+- Write as an undergraduate student, NOT a professor or researcher.
+- Use simple, clear, everyday English. Avoid complex jargon or PhD-level theories.
+- Keep paragraphs short (3-4 sentences max). No long, winding sentences.
+- Use common words: say "Importance" not "Theoretical Underpinnings", say "Barriers" not "Cognitive Impediments", say "Types" not "Taxonomical Classifications".
+- Add a personal touch occasionally: phrases like "In my opinion,", "As a student, I think...", "From what I've learned...", "I believe that..." to make it sound human-written.
+- Use short bullet points and simple definitions (e.g., "Listening is more than just hearing sounds.").
+- Give practical, everyday examples that a student would think of.
+- If references are needed, keep them basic and standard (simple author-year format). Don't over-complicate citations.
+
+STRUCTURE:
+1. **Title Page** (Subject, Assignment Title, Student Info placeholder)
+2. **Table of Contents**
+3. **Introduction** (Brief context — why this topic matters, 3-4 sentences)
+4. **Main Content** (Use clear subheadings, short paragraphs, bullet points, and simple definitions. Include practical examples.)
+5. **Examples** (Real-world, everyday examples a student would use)
+6. **Summary / Conclusion** (Brief personal reflection, what was learned)
+7. **References** (Simple, standard format — keep it minimal)
+
+Use markdown formatting with headers and bullet points.${extra}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -30,7 +51,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an academic document generator for university students. Generate professional, well-structured documents with proper academic formatting. Use markdown with headers, bullet points, and code blocks where appropriate.`,
+            content: `You are a document generator that writes like an undergraduate university student. For lab manuals, use proper academic structure. For assignments, write in a simple, clear, human-like student tone — short paragraphs, bullet points, common vocabulary, and occasional personal opinions. Never sound like a research paper or PhD thesis. Use markdown formatting.`,
           },
           { role: "user", content: prompt },
         ],
