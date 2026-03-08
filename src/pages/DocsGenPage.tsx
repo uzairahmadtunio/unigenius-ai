@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Download, Loader2, Bot } from "lucide-react";
+import { FileText, Download, Loader2, Bot, FileDown, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import { getSubjects } from "@/data/subjects";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
+import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 
 const DocsGenPage = () => {
   const { department } = useDepartment();
@@ -20,11 +20,11 @@ const DocsGenPage = () => {
   const [docType, setDocType] = useState<"lab" | "assignment">("lab");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
+  const [teacherName, setTeacherName] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Dynamic student info from profile
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [studentDept, setStudentDept] = useState("");
@@ -33,7 +33,6 @@ const DocsGenPage = () => {
 
   const subjects = department ? getSubjects(department, semester) : [];
 
-  // Fetch profile data
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
@@ -123,33 +122,21 @@ const DocsGenPage = () => {
     }
   };
 
-  const exportPDF = () => {
+  const pdfOpts = {
+    subject, topic, teacherName, semester, docType: docType as "assignment" | "lab",
+    studentInfo: { name: studentName, rollNumber, department: studentDept, section: studentSection, university: studentUniversity },
+  };
+
+  const handlePDF = () => {
     if (!content) { toast.error("Generate a document first"); return; }
-    const doc = new jsPDF();
-    const title = `${docType === "lab" ? "Lab Manual" : "Assignment"} — ${subject}`;
-    doc.setFontSize(16);
-    doc.text(title, 20, 20);
-    doc.setFontSize(10);
-    doc.text(`Topic: ${topic}`, 20, 30);
-    doc.setFontSize(9);
+    generateProfessionalPDF(content, pdfOpts);
+    toast.success("Professional PDF downloaded!");
+  };
 
-    const plainText = content
-      .replace(/#{1,6}\s/g, "")
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/`{3}[\s\S]*?`{3}/g, (m) => m.replace(/`{3}\w*\n?/g, ""))
-      .replace(/`/g, "");
-
-    const lines = doc.splitTextToSize(plainText, 170);
-    let y = 40;
-    for (const line of lines) {
-      if (y > 280) { doc.addPage(); y = 20; }
-      doc.text(line, 20, y);
-      y += 5;
-    }
-
-    doc.save(`${subject.replace(/\s+/g, "_")}_${docType}.pdf`);
-    toast.success("PDF downloaded!");
+  const handleDOCX = () => {
+    if (!content) { toast.error("Generate a document first"); return; }
+    generateDOCX(content, pdfOpts);
+    toast.success("Word document downloaded!");
   };
 
   return (
@@ -211,27 +198,22 @@ const DocsGenPage = () => {
               />
             </div>
 
-            {/* Student Info Fields */}
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Teacher Name (optional)</label>
+              <Input
+                placeholder="e.g., Prof. Ahmed Ali"
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+
+            {/* Student Info */}
             <div className="space-y-2 border-t border-border/50 pt-4">
               <label className="text-xs text-muted-foreground font-medium">Student Information</label>
-              <Input
-                placeholder="Your Name"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                className="rounded-xl"
-              />
-              <Input
-                placeholder="Roll Number"
-                value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
-                className="rounded-xl"
-              />
-              <Input
-                placeholder="Department"
-                value={studentDept}
-                onChange={(e) => setStudentDept(e.target.value)}
-                className="rounded-xl"
-              />
+              <Input placeholder="Your Name" value={studentName} onChange={(e) => setStudentName(e.target.value)} className="rounded-xl" />
+              <Input placeholder="Roll Number" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} className="rounded-xl" />
+              <Input placeholder="Department" value={studentDept} onChange={(e) => setStudentDept(e.target.value)} className="rounded-xl" />
             </div>
 
             <div className="space-y-2">
@@ -255,9 +237,14 @@ const DocsGenPage = () => {
             </Button>
 
             {content && (
-              <Button onClick={exportPDF} variant="outline" className="w-full rounded-xl gap-2">
-                <Download className="w-4 h-4" /> Download as PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handlePDF} variant="outline" className="flex-1 rounded-xl gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10">
+                  <FileDown className="w-4 h-4" /> PDF
+                </Button>
+                <Button onClick={handleDOCX} variant="outline" className="flex-1 rounded-xl gap-2 text-blue-400 border-blue-500/30 hover:bg-blue-500/10">
+                  <File className="w-4 h-4" /> DOCX
+                </Button>
+              </div>
             )}
           </div>
 
@@ -268,9 +255,14 @@ const DocsGenPage = () => {
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {docType === "lab"
-                ? "Generates: University Header → Student Info → Tasks (Code + Output) → Conclusion"
-                : "Generates: Title → Introduction → Detailed Content → Examples → Summary → References"}
+                ? "Generates: Cover Page → TOC → Tasks (Code + Output) → Originality Report"
+                : "Generates: Cover Page → TOC → Content with Code Blocks → References → Originality Report"}
             </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {["Cover Page", "Table of Contents", "Page Numbers", "Code Formatting", "Originality Report"].map(f => (
+                <span key={f} className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{f}</span>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -281,7 +273,7 @@ const DocsGenPage = () => {
               <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="text-sm text-foreground leading-relaxed min-w-0">
+              <div className="text-sm text-foreground leading-relaxed min-w-0 flex-1">
                 <MarkdownMessage content={content} />
               </div>
             </div>
@@ -292,8 +284,8 @@ const DocsGenPage = () => {
                 <p className="font-display font-semibold text-foreground">Document Preview</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {docType === "lab"
-                    ? "Configure your lab manual with subject & experiment, then generate a complete document with University header, student info, and task-based code & output."
-                    : "Configure your assignment with subject & topic, then generate a professional document with detailed academic formatting."}
+                    ? "Configure your lab manual — generates a professional document with cover page, university header, student info, code blocks, and auto page numbering."
+                    : "Configure your assignment — generates a professional document with cover page, TOC, academic formatting, references, and originality report."}
                 </p>
               </div>
             </div>

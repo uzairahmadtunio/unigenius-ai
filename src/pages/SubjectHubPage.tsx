@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks,
-  FileQuestion, ArrowLeft, Mic, Paperclip, X, Upload,
+  FileQuestion, ArrowLeft, Mic, Paperclip, X, Upload, FileDown, File,
 } from "lucide-react";
+import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -92,7 +93,32 @@ Start by greeting the student and asking your first viva question.`
   const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
+  // Fetch profile for export
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("display_name, roll_number, section, university, current_semester")
+      .eq("user_id", user.id).single().then(({ data }) => { if (data) setProfileData(data); });
+  }, [user]);
+
+  const handleExport = (content: string, format: "pdf" | "docx") => {
+    const opts = {
+      subject: subjectName,
+      topic: content.slice(0, 60).replace(/[#*\n]/g, "").trim(),
+      semester,
+      docType: "assignment" as const,
+      studentInfo: {
+        name: profileData?.display_name || "",
+        rollNumber: profileData?.roll_number || "",
+        department: deptName,
+        section: profileData?.section || "",
+        university: profileData?.university || "University of Larkana",
+      },
+    };
+    if (format === "pdf") generateProfessionalPDF(content, opts);
+    else generateDOCX(content, opts);
+  };
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -569,6 +595,23 @@ Start by greeting the student and asking your first viva question.`
                       msg.content || "…"
                     )}
                   </div>
+                  {/* Export buttons for long AI responses */}
+                  {msg.role === "assistant" && msg.id !== "welcome" && msg.content.length > 300 && (
+                    <div className="flex gap-1.5 mt-1.5">
+                      <button
+                        onClick={() => handleExport(msg.content, "pdf")}
+                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                      >
+                        <FileDown className="w-3 h-3" /> PDF
+                      </button>
+                      <button
+                        onClick={() => handleExport(msg.content, "docx")}
+                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                      >
+                        <File className="w-3 h-3" /> DOCX
+                      </button>
+                    </div>
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
