@@ -5,7 +5,7 @@ import {
   Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
   Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X,
   Headset, Send, CheckCircle2, MessageCircle, CreditCard, Eye, XCircle,
-  Tag, ToggleLeft, ToggleRight, Loader2
+  Tag, ToggleLeft, ToggleRight, Loader2, MessageSquareHeart, Star, Bug, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
