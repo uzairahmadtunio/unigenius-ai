@@ -418,7 +418,7 @@ const ChatPage = () => {
                 {messages.map((msg) => (
                   <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
                     {msg.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1">
+                      <div className={`w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1 transition-all ${speakingMsgId === msg.id ? "animate-pulse shadow-lg shadow-primary/40 ring-2 ring-primary/30" : ""}`}>
                         <Bot className="w-4 h-4 text-primary-foreground" />
                       </div>
                     )}
