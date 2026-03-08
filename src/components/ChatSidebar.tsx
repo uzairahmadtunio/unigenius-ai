@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
+import { MessageSquare, Trash2, Plus, Clock, ChevronLeft, ChevronRight, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,9 +20,11 @@ interface ChatSidebarProps {
   onNewChat: () => void;
   refreshTrigger: number;
   subject?: string | null;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, subject }: ChatSidebarProps) => {
+const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, subject, mobileOpen, onMobileClose }: ChatSidebarProps) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -84,43 +86,35 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, su
     if (error) toast.error("Failed to rename chat");
   };
 
-  if (collapsed) {
-    return (
-      <div className="w-12 flex-shrink-0 flex flex-col items-center py-4 gap-2 glass border-r border-border/30">
-        <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setCollapsed(false)}>
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="rounded-xl" onClick={onNewChat}>
-          <Plus className="w-4 h-4" />
-        </Button>
-        <div className="w-6 h-px bg-border/50 my-1" />
-        {sessions.slice(0, 8).map(s => (
-          <button
-            key={s.id}
-            onClick={() => onSelectChat(s.id)}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-              activeChatId === s.id ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-          </button>
-        ))}
-      </div>
-    );
-  }
+  const handleSelectChat = (chatId: string) => {
+    onSelectChat(chatId);
+    onMobileClose?.();
+  };
 
-  return (
-    <div className="w-64 flex-shrink-0 flex flex-col glass border-r border-border/30 overflow-hidden">
+  const handleNewChat = () => {
+    onNewChat();
+    onMobileClose?.();
+  };
+
+  const sidebarContent = (
+    <>
       {/* Header */}
       <div className="p-3 flex items-center justify-between border-b border-border/30">
         <h3 className="font-display font-semibold text-sm text-foreground">Chat History</h3>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="rounded-lg h-7 w-7" onClick={onNewChat}>
+          <Button variant="ghost" size="icon" className="rounded-lg h-7 w-7" onClick={handleNewChat}>
             <Plus className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-lg h-7 w-7" onClick={() => setCollapsed(true)}>
+          {/* Desktop collapse button */}
+          <Button variant="ghost" size="icon" className="rounded-lg h-7 w-7 hidden md:flex" onClick={() => setCollapsed(true)}>
             <ChevronLeft className="w-3.5 h-3.5" />
           </Button>
+          {/* Mobile close button */}
+          {onMobileClose && (
+            <Button variant="ghost" size="icon" className="rounded-lg h-7 w-7 md:hidden" onClick={onMobileClose}>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -141,7 +135,7 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, su
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              onClick={() => onSelectChat(session.id)}
+              onClick={() => handleSelectChat(session.id)}
               className={`w-full text-left px-3 py-2.5 rounded-xl flex items-start gap-2 group transition-colors ${
                 activeChatId === session.id
                   ? "bg-primary/15 text-foreground"
@@ -201,7 +195,66 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger, su
           <p className="text-xs text-muted-foreground text-center py-4">No chats yet. Start a conversation!</p>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  // Desktop collapsed state
+  if (collapsed) {
+    return (
+      <div className="w-12 flex-shrink-0 hidden md:flex flex-col items-center py-4 gap-2 glass border-r border-border/30">
+        <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setCollapsed(false)}>
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="rounded-xl" onClick={handleNewChat}>
+          <Plus className="w-4 h-4" />
+        </Button>
+        <div className="w-6 h-px bg-border/50 my-1" />
+        {sessions.slice(0, 8).map(s => (
+          <button
+            key={s.id}
+            onClick={() => handleSelectChat(s.id)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              activeChatId === s.id ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div className="w-64 flex-shrink-0 hidden md:flex flex-col glass border-r border-border/30 overflow-hidden">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile drawer overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm md:hidden"
+              onClick={onMobileClose}
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col bg-card border-r border-border/50 md:hidden"
+            >
+              {sidebarContent}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
