@@ -125,7 +125,7 @@ Start by greeting the candidate and asking your first question.`
       const apiMessages = [
         {
           role: "system",
-          content: `You are a technical interviewer for SE roles. Candidate is in Semester ${semester}, topics: ${topics}. Ask ONE question at a time, give feedback on answers, increase difficulty gradually.`
+          content: `You are a technical interviewer for SE roles. Candidate is in Semester ${semester}, topics: ${topics}. Ask ONE question at a time, give feedback on answers, increase difficulty gradually. After 5-6 questions, give a final assessment with score out of 10. End with "INTERVIEW_COMPLETE" on its own line.`
         },
         ...newMsgs,
       ];
