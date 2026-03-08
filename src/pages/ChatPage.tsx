@@ -65,6 +65,7 @@ const ChatPage = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [voiceGender, setVoiceGender] = useState<"female" | "male">("female");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -97,7 +98,31 @@ const ChatPage = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // TTS Read Aloud
+  // Get best available neural/natural voice
+  const getBestVoice = useCallback((gender: "female" | "male"): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    const enVoices = voices.filter(v => v.lang.startsWith("en"));
+    // Priority: Google > Microsoft Natural > any English
+    const priority = ["Google", "Natural", "Neural", "Premium", "Enhanced"];
+    const femaleHints = ["Female", "Zira", "Jenny", "Aria", "Sara"];
+    const maleHints = ["Male", "David", "Guy", "Mark", "Roger"];
+    const genderHints = gender === "female" ? femaleHints : maleHints;
+
+    // Try to find a neural voice matching gender
+    for (const p of priority) {
+      const match = enVoices.find(v => v.name.includes(p) && genderHints.some(h => v.name.includes(h)));
+      if (match) return match;
+    }
+    // Try any neural voice
+    for (const p of priority) {
+      const match = enVoices.find(v => v.name.includes(p));
+      if (match) return match;
+    }
+    // Fallback to first English voice
+    return enVoices[0] || voices[0] || null;
+  }, []);
+
+  // TTS Read Aloud with neural voice
   const handleReadAloud = useCallback((msgId: string, text: string) => {
     if (speakingMsgId === msgId) {
       window.speechSynthesis.cancel();
@@ -105,20 +130,28 @@ const ChatPage = () => {
       return;
     }
     window.speechSynthesis.cancel();
-    // Strip markdown for cleaner reading
     const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[*#_`~>|]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").trim();
     const utterance = new SpeechSynthesisUtterance(clean);
+    const voice = getBestVoice(voiceGender);
+    if (voice) utterance.voice = voice;
     utterance.lang = "en-US";
-    utterance.rate = 1;
+    utterance.rate = 0.95;
+    utterance.pitch = voiceGender === "male" ? 0.85 : 1.05;
     utterance.onend = () => setSpeakingMsgId(null);
     utterance.onerror = () => setSpeakingMsgId(null);
     setSpeakingMsgId(msgId);
     window.speechSynthesis.speak(utterance);
-  }, [speakingMsgId]);
+  }, [speakingMsgId, voiceGender, getBestVoice]);
 
-  // Cleanup TTS on unmount
+  // Preload voices & cleanup TTS on unmount
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    window.speechSynthesis.getVoices(); // trigger async load
+    const onVoicesChanged = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener?.("voiceschanged", onVoicesChanged);
+    return () => {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.removeEventListener?.("voiceschanged", onVoicesChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -391,7 +424,7 @@ const ChatPage = () => {
                 {messages.map((msg) => (
                   <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
                     {msg.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1">
+                      <div className={`w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1 transition-all ${speakingMsgId === msg.id ? "animate-pulse shadow-lg shadow-primary/40 ring-2 ring-primary/30" : ""}`}>
                         <Bot className="w-4 h-4 text-primary-foreground" />
                       </div>
                     )}
@@ -419,17 +452,26 @@ const ChatPage = () => {
                         {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content || "…"}
                       </div>
                       {msg.role === "assistant" && msg.content && msg.id !== "welcome" && (
-                        <button
-                          onClick={() => handleReadAloud(msg.id, msg.content)}
-                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-1 ml-1"
-                          title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
-                        >
-                          {speakingMsgId === msg.id ? (
-                            <><Square className="w-3 h-3" /> Stop</>
-                          ) : (
-                            <><Volume2 className="w-3 h-3" /> Read Aloud</>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2 mt-1 ml-1">
+                          <button
+                            onClick={() => handleReadAloud(msg.id, msg.content)}
+                            className={`flex items-center gap-1 text-[10px] transition-colors ${speakingMsgId === msg.id ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                            title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
+                          >
+                            {speakingMsgId === msg.id ? (
+                              <><Square className="w-3 h-3" /> Stop</>
+                            ) : (
+                              <><Volume2 className="w-3 h-3" /> Read Aloud</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setVoiceGender(prev => prev === "female" ? "male" : "female")}
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md border border-border/50"
+                            title="Switch voice"
+                          >
+                            {voiceGender === "female" ? "♀ Female" : "♂ Male"}
+                          </button>
+                        </div>
                       )}
                     </div>
                     {msg.role === "user" && (
