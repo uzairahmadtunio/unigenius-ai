@@ -7,6 +7,7 @@ import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
 import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
+import CodeDiffView from "@/components/CodeDiffView";
 
 const defaultCode: Record<string, { lang: string; code: string }> = {
   se: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
@@ -26,6 +27,7 @@ const CodeLabPage = () => {
   const [copied, setCopied] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [lintDismissed, setLintDismissed] = useState(false);
+  const [snapshotCode, setSnapshotCode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lintErrors = useMemo(() => {
@@ -39,26 +41,23 @@ const CodeLabPage = () => {
   }, []);
 
   const extractError = useCallback((text: string) => {
-    // Get text before the code block
     const beforeCode = text.split(/```[\w]*\n/)[0].trim();
-    // Clean up markdown bold markers
     return beforeCode.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim();
   }, []);
 
   const analyzeCode = async (imageData?: string) => {
     if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
 
-    // If C++ and lint found errors and no image, show lint results instead of calling AI
+    // Non-blocking: show lint as notification only, don't block analyze
     if (language === "cpp" && lintErrors.length > 0 && !imageData) {
       setLintDismissed(false);
-      toast.info("Client-side errors detected! Fix these first, or dismiss to use AI.");
-      return;
+      toast.info(`${lintErrors.length} lint issue(s) detected — analyzing with AI anyway...`);
     }
 
+    setSnapshotCode(code);
     setIsAnalyzing(true);
     setAnalysis("");
     setFetchError(false);
-    setLintDismissed(false);
 
     try {
       const body: any = { code, language };
@@ -152,9 +151,9 @@ const CodeLabPage = () => {
   };
 
   const copyFixedCode = async () => {
-    const fixedCode = extractCode(analysis);
-    if (fixedCode) {
-      await navigator.clipboard.writeText(fixedCode);
+    const fixed = extractCode(analysis);
+    if (fixed) {
+      await navigator.clipboard.writeText(fixed);
     } else {
       await navigator.clipboard.writeText(analysis);
     }
@@ -172,10 +171,10 @@ const CodeLabPage = () => {
       subtitle={`${department ? departmentInfo[department].name : "SE"} IDE`}
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><Code className="w-5 h-5 text-primary-foreground" /></div>}
     >
-      <div className="grid lg:grid-cols-2 gap-4" onPaste={handlePaste}>
-        {/* Editor Panel */}
+      <div className="space-y-4" onPaste={handlePaste}>
+        {/* Editor + Controls */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex gap-2">
               {(["cpp", "python", "javascript"] as const).map((lang) => (
                 <Button
@@ -192,14 +191,28 @@ const CodeLabPage = () => {
                 </Button>
               ))}
             </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5" onClick={() => fileInputRef.current?.click()} title="Upload error screenshot">
+                <ImagePlus className="w-3.5 h-3.5" /> Screenshot
+              </Button>
+              <Button
+                onClick={() => analyzeCode(errorImage || undefined)}
+                disabled={isAnalyzing}
+                size="sm"
+                className="rounded-xl gradient-primary text-primary-foreground gap-1.5 text-xs px-4"
+              >
+                {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {isAnalyzing ? "Analyzing..." : "Analyze"}
+              </Button>
+            </div>
           </div>
 
-          {/* Instant Lint Warnings */}
+          {/* Non-blocking Lint Warnings */}
           {!lintDismissed && (
             <CodeLintWarnings errors={lintErrors} onDismiss={() => setLintDismissed(true)} />
           )}
 
-          <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "400px" }}>
+          <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "350px" }}>
             <Editor
               height="100%"
               language={language}
@@ -214,7 +227,7 @@ const CodeLabPage = () => {
 
           {errorImage && (
             <div className="glass rounded-xl p-3 flex items-center gap-3">
-              <img src={errorImage} alt="Error" className="w-16 h-16 rounded-lg object-cover" />
+              <img src={errorImage} alt="Error" className="w-12 h-12 rounded-lg object-cover" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground">Error image attached</p>
                 <p className="text-xs text-muted-foreground">Will be analyzed with your code</p>
@@ -224,30 +237,12 @@ const CodeLabPage = () => {
               </button>
             </div>
           )}
-
-          <div className="flex gap-2">
-            <Button
-              onClick={() => analyzeCode(errorImage || undefined)}
-              disabled={isAnalyzing}
-              className="flex-1 rounded-xl gradient-primary text-primary-foreground gap-2"
-            >
-              {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {isAnalyzing ? "Analyzing..." : "Analyze with UniGenius"}
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-xl" onClick={() => fileInputRef.current?.click()} title="Upload error screenshot">
-              <ImagePlus className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center">
-            💡 Tip: Paste (Ctrl+V) an error screenshot directly, or click 📷 to upload
-          </p>
         </div>
 
-        {/* Analysis Panel */}
-        <div className="glass rounded-2xl p-6 overflow-y-auto" style={{ maxHeight: "620px" }}>
+        {/* Analysis Result — Split Diff View */}
+        <div className="glass rounded-2xl p-4 overflow-y-auto" style={{ maxHeight: "450px" }}>
           {fetchError && !analysis ? (
-            <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12">
+            <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
               <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
                 <X className="w-6 h-6 text-destructive" />
               </div>
@@ -259,61 +254,32 @@ const CodeLabPage = () => {
                 <RotateCcw className="w-4 h-4" /> Retry
               </Button>
             </div>
+          ) : fixedCode ? (
+            <CodeDiffView
+              originalCode={snapshotCode}
+              fixedCode={fixedCode}
+              errorMsg={errorMsg}
+              language={language}
+              copied={copied}
+              onCopy={copyFixedCode}
+            />
           ) : analysis ? (
-            <div className="space-y-4">
-              {/* Error Message */}
-              {errorMsg && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">Error Found</span>
-                  </div>
-                  <p className="text-sm text-foreground bg-destructive/10 border border-destructive/20 rounded-xl p-3">
-                    {errorMsg}
-                  </p>
+            <div className="text-sm text-foreground leading-relaxed">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-              )}
-
-              {/* Fixed Code Block */}
-              {fixedCode && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">✅ Corrected Code</span>
-                    <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5" onClick={copyFixedCode}>
-                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      {copied ? "Copied!" : "Copy Code"}
-                    </Button>
-                  </div>
-                  <div className="bg-[#1e1e1e] rounded-xl overflow-hidden border border-border/30">
-                    <pre className="p-4 overflow-x-auto text-sm text-green-400 font-mono leading-relaxed">
-                      <code>{fixedCode}</code>
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Fallback if no code block extracted yet (streaming) */}
-              {!fixedCode && !errorMsg && (
-                <div className="text-sm text-foreground leading-relaxed">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">Analyzing...</span>
-                  </div>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{analysis}</p>
-                </div>
-              )}
+                <span className="text-xs font-medium text-muted-foreground">Analyzing...</span>
+              </div>
+              <p className="text-muted-foreground whitespace-pre-wrap">{analysis}</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12">
-              <Code className="w-12 h-12 text-muted-foreground/30" />
+            <div className="flex flex-col items-center justify-center text-center gap-3 py-8">
+              <Code className="w-10 h-10 text-muted-foreground/30" />
               <div>
                 <p className="font-display font-semibold text-foreground">AI Code Analysis</p>
-                <p className="text-sm text-muted-foreground mt-1">Write your code and click "Analyze" for instant error detection and corrected code.</p>
-                <p className="text-xs text-muted-foreground mt-2">📷 You can also paste or upload an error screenshot for instant debugging!</p>
+                <p className="text-sm text-muted-foreground mt-1">Write code and click "Analyze" for split-screen error detection.</p>
+                <p className="text-xs text-muted-foreground mt-2">📷 Paste or upload error screenshots for instant debugging!</p>
               </div>
             </div>
           )}
