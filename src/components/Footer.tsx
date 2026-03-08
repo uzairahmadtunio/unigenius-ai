@@ -2,7 +2,7 @@ import { Linkedin, Github, MessageCircle, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const SHARE_MESSAGE = `Hey! Check out UniGenius AI – The ultimate all-in-one assistant for Software Engineering students. Fix C++ errors, generate lab manuals, and track your GPA easily. Join me here: ${window.location.origin} — Built by Uzair Ahmad`;
+const SHARE_MESSAGE = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
 
 const Footer = () => {
   const handleShare = () => {
