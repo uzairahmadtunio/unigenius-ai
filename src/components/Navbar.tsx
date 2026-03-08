@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 const Navbar = () => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
