@@ -5,6 +5,7 @@ import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SemesterSelector from "@/components/SemesterSelector";
+import { InviteButton } from "@/components/InviteModal";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
