@@ -1,4 +1,4 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +56,14 @@ const Navbar = () => {
           </Button>
           {user ? (
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl"
+                onClick={() => navigate("/profile")}
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
               <div
                 className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground cursor-pointer"
                 onClick={() => navigate("/profile")}

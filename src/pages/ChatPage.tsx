@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft } from "lucide-react";
+import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,14 @@ interface Message {
   content: string;
 }
 
+interface AttachedFile {
+  name: string;
+  type: string;
+  dataUrl: string;
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const MAX_FILES = 5;
 
 const smartButtons = [
   { icon: Sparkles, label: "Explain Simply" },
@@ -37,7 +44,10 @@ const ChatPage = () => {
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -45,7 +55,40 @@ const ChatPage = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const streamChat = async (allMessages: { role: string; content: string }[]) => {
+  const autoResize = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+  }, []);
+
+  useEffect(() => { autoResize(); }, [input, autoResize]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (attachedFiles.length + files.length > MAX_FILES) {
+      toast.error(`Maximum ${MAX_FILES} files allowed`);
+      return;
+    }
+    const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    for (const f of files) {
+      if (!allowed.some(t => f.type.startsWith(t.split("/")[0]) || f.type === t)) {
+        toast.error(`Unsupported file: ${f.name}`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAttachedFiles(prev => [...prev, { name: f.name, type: f.type, dataUrl: reader.result as string }]);
+      };
+      reader.readAsDataURL(f);
+    }
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number) => setAttachedFiles(prev => prev.filter((_, i) => i !== idx));
+
+  const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
@@ -59,7 +102,6 @@ const ChatPage = () => {
       const errorData = await resp.json().catch(() => ({}));
       throw new Error(errorData.error || `Error: ${resp.status}`);
     }
-
     if (!resp.body) throw new Error("No stream body");
 
     const reader = resp.body.getReader();
@@ -67,7 +109,6 @@ const ChatPage = () => {
     let textBuffer = "";
     let assistantSoFar = "";
 
-    // Add empty assistant message
     const assistantId = Date.now().toString();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
@@ -105,23 +146,50 @@ const ChatPage = () => {
 
   const handleSend = async (text?: string) => {
     const msg = text || input.trim();
-    if (!msg || isStreaming) return;
+    if ((!msg && attachedFiles.length === 0) || isStreaming) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content: msg };
+    const displayContent = attachedFiles.length > 0
+      ? `${msg}\n\n📎 ${attachedFiles.map(f => f.name).join(", ")}`
+      : msg;
+
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: displayContent };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setIsStreaming(true);
 
     try {
+      // Build API content - if files attached, include as multimodal
+      let apiContent: string | any[];
+      if (attachedFiles.length > 0) {
+        const parts: any[] = [];
+        if (msg) parts.push({ type: "text", text: msg });
+        for (const f of attachedFiles) {
+          if (f.type.startsWith("image/")) {
+            parts.push({ type: "image_url", image_url: { url: f.dataUrl } });
+          } else {
+            // For PDFs/docs, extract text hint
+            parts.push({ type: "text", text: `[Attached file: ${f.name}]\n(File content provided as base64 data)` });
+          }
+        }
+        apiContent = parts;
+      } else {
+        apiContent = msg;
+      }
+
       const apiMessages = newMessages
         .filter((m) => m.id !== "welcome")
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m, i, arr) =>
+          i === arr.length - 1
+            ? { role: m.role, content: apiContent }
+            : { role: m.role, content: m.content }
+        );
       await streamChat(apiMessages);
     } catch (err: any) {
       toast.error(err.message || "Failed to get response");
     } finally {
       setIsStreaming(false);
+      setAttachedFiles([]);
     }
   };
 
@@ -208,20 +276,59 @@ const ChatPage = () => {
           ))}
         </div>
 
+        {/* Attached files preview */}
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 pb-2">
+            {attachedFiles.map((f, i) => (
+              <div key={i} className="glass rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs text-foreground">
+                <FileText className="w-3 h-3 text-primary" />
+                <span className="max-w-[120px] truncate">{f.name}</span>
+                <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
-        <div className="glass rounded-2xl p-2 flex gap-2">
+        <div className="glass rounded-2xl p-2 flex gap-2 items-end">
           <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx"
+            className="hidden"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-xl flex-shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming}
+          >
+            <Paperclip className="w-4 h-4" />
+          </Button>
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={user ? "Ask anything about your SE courses..." : "Sign in for personalized experience, or just ask..."}
-            className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={user ? "Ask anything about your courses..." : "Sign in for personalized experience, or just ask..."}
+            className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[40px] max-h-[160px]"
+            rows={1}
           />
           <Button
             size="icon"
-            className="rounded-xl gradient-primary"
+            className="rounded-xl gradient-primary flex-shrink-0"
             onClick={() => handleSend()}
-            disabled={!input.trim() || isStreaming}
+            disabled={(!input.trim() && attachedFiles.length === 0) || isStreaming}
           >
             <Send className="w-4 h-4" />
           </Button>
