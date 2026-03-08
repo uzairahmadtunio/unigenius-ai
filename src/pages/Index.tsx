@@ -5,7 +5,6 @@ import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SemesterSelector from "@/components/SemesterSelector";
-import { InviteButton } from "@/components/InviteModal";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
@@ -51,7 +50,7 @@ const Index = () => {
       <AttendanceAlert />
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-10 py-6 md:py-8 space-y-6 md:space-y-8 pb-24 md:pb-8">
+      <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-10 py-6 md:py-8 space-y-4 md:space-y-6 pb-24 md:pb-8">
         {/* Hero */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground">
@@ -64,9 +63,6 @@ const Index = () => {
           <p className="text-muted-foreground max-w-lg mx-auto text-sm">
             Your intelligent companion for {deptInfo.fullName} — from assignments to career prep.
           </p>
-          <div className="pt-1">
-            <InviteButton variant="outline" />
-          </div>
         </motion.section>
 
         {/* Daily Streak */}

@@ -1,8 +1,9 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/use-admin";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
@@ -148,7 +149,25 @@ const Navbar = () => {
             </Popover>
           )}
           {user ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-xl"
+                      onClick={() => {
+                        const msg = `Assalam-o-Alaikum! UniGenius AI use karo, ye Software Engineering students ke liye best assistant hai. C++ errors fix karo aur lab manuals banao! Join here: ${window.location.origin} - Built by Uzair Ahmad`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p className="text-xs">Invite Friends</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 variant="ghost"
                 size="icon"
