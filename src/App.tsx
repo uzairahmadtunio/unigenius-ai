@@ -23,6 +23,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/groups/:groupId" element={<GroupDetailPage />} />
                 <Route path="/u/:rollNumber" element={<PublicProfilePage />} />
+                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

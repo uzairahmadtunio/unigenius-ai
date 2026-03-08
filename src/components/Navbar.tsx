@@ -1,9 +1,10 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/use-admin";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 const Navbar = () => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -69,6 +71,17 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl text-xs gap-1.5 hidden sm:flex text-primary"
+              onClick={() => navigate("/admin")}
+            >
+              <Shield className="w-3 h-3" />
+              Admin
+            </Button>
+          )}
           {department && (
             <Button
               variant="ghost"
