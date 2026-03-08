@@ -16,6 +16,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { useFileDrop } from "@/hooks/use-file-drop";
 
 interface Message {
   id: string;
