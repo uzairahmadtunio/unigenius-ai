@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { Trophy, Medal, Crown, Star, Flame, Target, Award, Code, Briefcase, FileText } from "lucide-react";
+import { Trophy, Medal, Crown, Star, Flame, Target, Award, Code, Briefcase, FileText, Calendar, CalendarDays, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PageShell from "@/components/PageShell";
@@ -37,21 +37,35 @@ const BADGE_DEFS = [
   { id: "cv_master", name: "CV Master", icon: "📄", desc: "Score 80+ on CV review" },
 ];
 
+type TimeFilter = "all" | "month" | "week";
+
+const TIME_FILTERS: { id: TimeFilter; label: string; icon: typeof Trophy }[] = [
+  { id: "all", label: "All Time", icon: Trophy },
+  { id: "month", label: "This Month", icon: CalendarDays },
+  { id: "week", label: "This Week", icon: Clock },
+];
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
 
-  const fetchLeaderboard = async () => {
-    const { data, error } = await supabase
-      .from("leaderboard" as any)
-      .select("*")
-      .order("total_points", { ascending: false })
-      .limit(50);
-
-    if (!error && data) {
-      setEntries(data as unknown as LeaderboardEntry[]);
+  const fetchLeaderboard = async (filter: TimeFilter) => {
+    setLoading(true);
+    if (filter === "all") {
+      const { data, error } = await supabase
+        .from("leaderboard" as any)
+        .select("*")
+        .order("total_points", { ascending: false })
+        .limit(50);
+      if (!error && data) setEntries(data as unknown as LeaderboardEntry[]);
+    } else {
+      const { data, error } = await supabase.rpc("get_leaderboard_filtered" as any, {
+        time_filter: filter,
+      });
+      if (!error && data) setEntries(data as unknown as LeaderboardEntry[]);
     }
     setLoading(false);
   };
@@ -66,17 +80,17 @@ const LeaderboardPage = () => {
   };
 
   useEffect(() => {
-    fetchLeaderboard();
+    fetchLeaderboard(timeFilter);
     fetchBadges();
 
     const channel = supabase
       .channel("leaderboard-updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_results" }, () => fetchLeaderboard())
-      .on("postgres_changes", { event: "*", schema: "public", table: "career_activity" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_results" }, () => fetchLeaderboard(timeFilter))
+      .on("postgres_changes", { event: "*", schema: "public", table: "career_activity" }, () => fetchLeaderboard(timeFilter))
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [timeFilter]);
 
   useEffect(() => { fetchBadges(); }, [user]);
 
@@ -125,6 +139,26 @@ const LeaderboardPage = () => {
             </div>
           </motion.div>
         )}
+
+        {/* Time Filter */}
+        <div className="flex gap-2">
+          {TIME_FILTERS.map((filter) => (
+            <motion.button
+              key={filter.id}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setTimeFilter(filter.id)}
+              className={`flex-1 glass rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 text-sm font-display font-semibold transition-all ${
+                timeFilter === filter.id
+                  ? "ring-2 ring-primary shadow-elevated text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <filter.icon className="w-4 h-4" />
+              {filter.label}
+            </motion.button>
+          ))}
+        </div>
 
         {/* Badges Section */}
         {user && (

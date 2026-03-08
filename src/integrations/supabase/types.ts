@@ -234,7 +234,21 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_leaderboard_filtered: {
+        Args: { time_filter?: string }
+        Returns: {
+          avatar_url: string
+          avg_percentage: number
+          best_cv_score: number
+          display_name: string
+          dsa_solved: number
+          interviews_done: number
+          perfect_scores: number
+          quizzes_taken: number
+          total_points: number
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
