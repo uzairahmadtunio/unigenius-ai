@@ -290,8 +290,11 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+    <div className="h-dvh flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+      {/* Sticky Navbar */}
       <Navbar onMenuToggle={() => setMobileSidebarOpen(prev => !prev)} showMenu />
+
+      {/* Drag overlay */}
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
@@ -301,7 +304,9 @@ const ChatPage = () => {
           </div>
         </div>
       )}
-      <div className="flex-1 flex overflow-hidden">
+
+      {/* Main content area */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <ChatSidebar
           activeChatId={activeChatId}
           onSelectChat={loadChat}
@@ -312,167 +317,178 @@ const ChatPage = () => {
           onMobileClose={() => setMobileSidebarOpen(false)}
         />
 
-        <div className="flex-1 flex flex-col max-w-3xl mx-auto px-4 py-4 w-full">
-          <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate("/")}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="font-display font-bold text-lg text-foreground">AI Tutor Chat</h1>
-              <p className="text-xs text-muted-foreground">Supports PDFs, Images, Word, PPT, Audio & Video uploads</p>
+        {/* Chat column: sticky header + scrollable messages + fixed input */}
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          {/* Sticky chat header */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30 px-4 py-2.5">
+            <div className="max-w-3xl mx-auto flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="rounded-xl flex-shrink-0" onClick={() => navigate("/")}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="font-display font-bold text-base text-foreground truncate">AI Tutor Chat</h1>
+                <p className="text-[11px] text-muted-foreground hidden sm:block">PDFs, Images, Word, PPT, Audio & Video</p>
+              </div>
             </div>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 pb-4">
-            <AnimatePresence>
-              {messages.map((msg) => (
-                <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-                  {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
-                  <div className="max-w-[80%] space-y-2">
-                    {msg.role === "user" && msg.fileThumbnails && msg.fileThumbnails.length > 0 && (
-                      <div className="flex flex-wrap gap-2 justify-end">
-                        {msg.fileThumbnails.map((thumb, i) => (
-                          <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="w-20 h-20 rounded-xl overflow-hidden border border-border/30">
-                            <img src={thumb} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
-                          </motion.div>
-                        ))}
+          {/* Scrollable messages area */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
+              <AnimatePresence>
+                {messages.map((msg) => (
+                  <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+                    {msg.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 mt-1">
+                        <Bot className="w-4 h-4 text-primary-foreground" />
                       </div>
                     )}
-                    {msg.role === "user" && msg.fileNames && msg.fileNames.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 justify-end">
-                        {msg.fileNames.map((name, i) => (
-                          <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                            <FileIcon fileName={name} size="xs" />
-                            {name}
-                          </span>
-                        ))}
+                    <div className="max-w-[80%] space-y-2">
+                      {msg.role === "user" && msg.fileThumbnails && msg.fileThumbnails.length > 0 && (
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          {msg.fileThumbnails.map((thumb, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="w-20 h-20 rounded-xl overflow-hidden border border-border/30">
+                              <img src={thumb} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                      {msg.role === "user" && msg.fileNames && msg.fileNames.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 justify-end">
+                          {msg.fileNames.map((name, i) => (
+                            <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
+                              <FileIcon fileName={name} size="xs" />
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user" ? "gradient-primary text-primary-foreground" : "glass text-foreground"}`}>
+                        {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content || "…"}
+                      </div>
+                    </div>
+                    {msg.role === "user" && (
+                      <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+                        <User className="w-4 h-4 text-muted-foreground" />
                       </div>
                     )}
-                    <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user" ? "gradient-primary text-primary-foreground" : "glass text-foreground"}`}>
-                      {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content || "…"}
-                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {isStreaming && messages[messages.length - 1]?.role === "user" && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+                  <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
-                  {msg.role === "user" && (
-                    <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 mt-1">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  )}
+                  <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
+                    {isUploading ? (
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Uploading {uploadingFileIndex + 1}/{attachedFiles.length}</span>
+                        <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
+                      </div>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse [animation-delay:0.2s]" />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse [animation-delay:0.4s]" />
+                      </>
+                    )}
+                  </div>
                 </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isStreaming && messages[messages.length - 1]?.role === "user" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
-                  {isUploading ? (
-                    <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">Uploading {uploadingFileIndex + 1}/{attachedFiles.length}</span>
-                      <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
-                    </div>
-                  ) : (
-                    <>
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse [animation-delay:0.2s]" />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse [animation-delay:0.4s]" />
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Smart Buttons */}
-          <div className="flex flex-wrap gap-2 pb-3">
-            {smartButtons.map((btn) => (
-              <Button key={btn.label} variant="outline" size="sm" className="rounded-xl text-xs gap-1.5" onClick={() => handleSend(btn.label)} disabled={isStreaming}>
-                <btn.icon className="w-3 h-3" />
-                {btn.label}
-              </Button>
-            ))}
-          </div>
-
-          {/* Attached files preview */}
-          <AnimatePresence>
-            {attachedFiles.length > 0 && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pb-2 space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-muted-foreground font-medium">{attachedFiles.length}/{MAX_FILES} files attached</span>
-                  {attachedFiles.length > 1 && (
-                    <button onClick={() => setAttachedFiles([])} className="text-[11px] text-destructive hover:text-destructive/80 transition-colors">Clear all</button>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
-                  {attachedFiles.map((f, i) => {
-                    const cat = getFileCategory(f.type);
-                    const style = FILE_CATEGORY_STYLES[cat];
-                    return (
-                      <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="glass rounded-xl overflow-hidden border border-border/50 relative group">
-                        <button onClick={() => removeFile(i)} className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-all opacity-0 group-hover:opacity-100">
-                          <X className="w-3 h-3" />
-                        </button>
-                        {f.thumbnailUrl ? (
-                          <div className="w-[88px]">
-                            <div className="w-full h-16 overflow-hidden"><img src={f.thumbnailUrl} alt={f.name} className="w-full h-full object-cover" /></div>
-                            <div className="px-2 py-1.5 space-y-1">
-                              <p className="text-[10px] text-foreground truncate max-w-[72px]">{f.name}</p>
-                              <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
-                              {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
-                            <div className={`w-9 h-9 rounded-lg ${style.bgColor} flex items-center justify-center flex-shrink-0`}>
-                              <FileIcon fileName={f.name} mimeType={f.type} size="sm" />
-                            </div>
-                            <div className="min-w-0 space-y-0.5">
-                              <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
-                              <p className="text-[9px] text-muted-foreground">{style.label} • {(f.file.size / 1024).toFixed(0)}KB</p>
-                              {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
-                            </div>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Input */}
-          <div className="glass rounded-2xl p-2 flex gap-2 items-end">
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept={ACCEPT_EXTENSIONS} className="hidden" />
-            <Button variant="ghost" size="icon" className="rounded-xl flex-shrink-0 relative" onClick={() => fileInputRef.current?.click()} disabled={isStreaming || attachedFiles.length >= MAX_FILES}>
-              <Paperclip className="w-4 h-4" />
-              {attachedFiles.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">{attachedFiles.length}</span>
               )}
-            </Button>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={attachedFiles.length > 0 ? `Add a message about your ${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""}...` : user ? "Ask anything, or attach files for AI analysis…" : "Sign in for file uploads, or just ask..."}
-              className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[40px] max-h-[160px]"
-              rows={1}
-            />
-            <Button size="icon" className="rounded-xl gradient-primary flex-shrink-0" onClick={() => handleSend()} disabled={(!input.trim() && attachedFiles.length === 0) || isStreaming}>
-              <Send className="w-4 h-4" />
-            </Button>
+              <div ref={bottomRef} />
+            </div>
+          </div>
+
+          {/* Fixed bottom input area */}
+          <div className="border-t border-border/30 bg-background/80 backdrop-blur-md px-4 py-3">
+            <div className="max-w-3xl mx-auto space-y-2">
+              {/* Smart Buttons */}
+              <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                {smartButtons.map((btn) => (
+                  <Button key={btn.label} variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 flex-shrink-0" onClick={() => handleSend(btn.label)} disabled={isStreaming}>
+                    <btn.icon className="w-3 h-3" />
+                    <span className="hidden sm:inline">{btn.label}</span>
+                    <span className="sm:hidden">{btn.label.split(" ").slice(0, 2).join(" ")}</span>
+                  </Button>
+                ))}
+              </div>
+
+              {/* Attached files preview */}
+              <AnimatePresence>
+                {attachedFiles.length > 0 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[11px] text-muted-foreground font-medium">{attachedFiles.length}/{MAX_FILES} files attached</span>
+                      {attachedFiles.length > 1 && (
+                        <button onClick={() => setAttachedFiles([])} className="text-[11px] text-destructive hover:text-destructive/80 transition-colors">Clear all</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[120px] overflow-y-auto">
+                      {attachedFiles.map((f, i) => {
+                        const cat = getFileCategory(f.type);
+                        const style = FILE_CATEGORY_STYLES[cat];
+                        return (
+                          <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="glass rounded-xl overflow-hidden border border-border/50 relative group">
+                            <button onClick={() => removeFile(i)} className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-all opacity-0 group-hover:opacity-100">
+                              <X className="w-3 h-3" />
+                            </button>
+                            {f.thumbnailUrl ? (
+                              <div className="w-[88px]">
+                                <div className="w-full h-16 overflow-hidden"><img src={f.thumbnailUrl} alt={f.name} className="w-full h-full object-cover" /></div>
+                                <div className="px-2 py-1.5 space-y-1">
+                                  <p className="text-[10px] text-foreground truncate max-w-[72px]">{f.name}</p>
+                                  <p className="text-[9px] text-muted-foreground">{(f.file.size / 1024).toFixed(0)}KB</p>
+                                  {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
+                                <div className={`w-9 h-9 rounded-lg ${style.bgColor} flex items-center justify-center flex-shrink-0`}>
+                                  <FileIcon fileName={f.name} mimeType={f.type} size="sm" />
+                                </div>
+                                <div className="min-w-0 space-y-0.5">
+                                  <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
+                                  <p className="text-[9px] text-muted-foreground">{style.label} • {(f.file.size / 1024).toFixed(0)}KB</p>
+                                  {f.uploadProgress > 0 && f.uploadProgress < 100 && <Progress value={f.uploadProgress} className="h-1" />}
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Text input */}
+              <div className="glass rounded-2xl p-2 flex gap-2 items-end">
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept={ACCEPT_EXTENSIONS} className="hidden" />
+                <Button variant="ghost" size="icon" className="rounded-xl flex-shrink-0 relative" onClick={() => fileInputRef.current?.click()} disabled={isStreaming || attachedFiles.length >= MAX_FILES}>
+                  <Paperclip className="w-4 h-4" />
+                  {attachedFiles.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">{attachedFiles.length}</span>
+                  )}
+                </Button>
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  placeholder={attachedFiles.length > 0 ? `Add a message about your ${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""}...` : user ? "Ask anything, or attach files for AI analysis…" : "Sign in for file uploads, or just ask..."}
+                  className="flex-1 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[40px] max-h-[160px]"
+                  rows={1}
+                />
+                <Button size="icon" className="rounded-xl gradient-primary flex-shrink-0" onClick={() => handleSend()} disabled={(!input.trim() && attachedFiles.length === 0) || isStreaming}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };
