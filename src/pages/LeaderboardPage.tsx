@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { Trophy, Medal, Crown, Star, Flame, Target, Award } from "lucide-react";
+import { Trophy, Medal, Crown, Star, Flame, Target, Award, Code, Briefcase, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PageShell from "@/components/PageShell";
@@ -13,6 +13,16 @@ interface LeaderboardEntry {
   quizzes_taken: number;
   perfect_scores: number;
   avg_percentage: number;
+  dsa_solved: number;
+  interviews_done: number;
+  best_cv_score: number;
+}
+
+interface UserBadge {
+  badge_id: string;
+  badge_name: string;
+  badge_icon: string;
+  earned_at: string;
 }
 
 const rankIcons = [
@@ -21,9 +31,16 @@ const rankIcons = [
   <Medal className="w-5 h-5 text-amber-600" />,
 ];
 
+const BADGE_DEFS = [
+  { id: "dsa_warrior", name: "DSA Warrior", icon: "⚔️", desc: "Solve 10 DSA problems" },
+  { id: "interview_ready", name: "Interview Ready", icon: "🎤", desc: "Complete 5 mock interviews" },
+  { id: "cv_master", name: "CV Master", icon: "📄", desc: "Score 80+ on CV review" },
+];
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [badges, setBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLeaderboard = async () => {
@@ -39,21 +56,29 @@ const LeaderboardPage = () => {
     setLoading(false);
   };
 
+  const fetchBadges = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_badges" as any)
+      .select("badge_id, badge_name, badge_icon, earned_at")
+      .eq("user_id", user.id);
+    if (data) setBadges(data as unknown as UserBadge[]);
+  };
+
   useEffect(() => {
     fetchLeaderboard();
+    fetchBadges();
 
-    // Real-time: re-fetch when quiz_results changes
     const channel = supabase
       .channel("leaderboard-updates")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "quiz_results" },
-        () => fetchLeaderboard()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_results" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "career_activity" }, () => fetchLeaderboard())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useEffect(() => { fetchBadges(); }, [user]);
 
   const getUserRank = () => {
     if (!user) return -1;
@@ -61,6 +86,7 @@ const LeaderboardPage = () => {
   };
 
   const currentUserRank = getUserRank();
+  const earnedBadgeIds = new Set(badges.map(b => b.badge_id));
 
   return (
     <PageShell
@@ -87,7 +113,7 @@ const LeaderboardPage = () => {
               <div className="flex-1">
                 <p className="font-display font-bold text-foreground">Your Rank</p>
                 <p className="text-sm text-muted-foreground">
-                  {entries[currentUserRank].total_points} points • {entries[currentUserRank].quizzes_taken} quizzes • {entries[currentUserRank].perfect_scores} perfect
+                  {entries[currentUserRank].total_points} points • {entries[currentUserRank].quizzes_taken} quizzes • {entries[currentUserRank].dsa_solved} DSA solved
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -96,6 +122,40 @@ const LeaderboardPage = () => {
                   {entries[currentUserRank].total_points}
                 </span>
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Badges Section */}
+        {user && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-4 space-y-3">
+            <h3 className="font-display font-semibold text-foreground text-sm flex items-center gap-2">
+              <Award className="w-4 h-4 text-primary" /> Career Achievements
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {BADGE_DEFS.map((badge) => {
+                const earned = earnedBadgeIds.has(badge.id);
+                return (
+                  <motion.div
+                    key={badge.id}
+                    whileHover={{ scale: 1.03 }}
+                    className={`rounded-xl p-3 text-center transition-all ${
+                      earned
+                        ? "glass border-2 border-amber-500/40 bg-amber-500/5"
+                        : "glass opacity-50 grayscale"
+                    }`}
+                  >
+                    <span className="text-2xl block mb-1">{badge.icon}</span>
+                    <p className={`font-display font-semibold text-xs ${earned ? "text-amber-400" : "text-muted-foreground"}`}>
+                      {badge.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{badge.desc}</p>
+                    {earned && (
+                      <span className="text-[10px] text-emerald-400 font-medium mt-1 block">✓ Earned</span>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -120,28 +180,20 @@ const LeaderboardPage = () => {
                 >
                   <div className={`relative ${isCurrentUser ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-background rounded-full" : ""}`}>
                     {entry.avatar_url ? (
-                      <img
-                        src={entry.avatar_url}
-                        alt={entry.display_name || "User"}
-                        className={`${isFirst ? "w-16 h-16" : "w-12 h-12"} rounded-full object-cover`}
-                      />
+                      <img src={entry.avatar_url} alt={entry.display_name || "User"} className={`${isFirst ? "w-16 h-16" : "w-12 h-12"} rounded-full object-cover`} />
                     ) : (
                       <div className={`${isFirst ? "w-16 h-16" : "w-12 h-12"} rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold ${isFirst ? "text-xl" : "text-sm"}`}>
                         {(entry.display_name || "?").charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div className="absolute -top-2 -right-2">
-                      {rankIcons[idx]}
-                    </div>
+                    <div className="absolute -top-2 -right-2">{rankIcons[idx]}</div>
                   </div>
                   <p className={`font-display font-semibold text-foreground ${isFirst ? "text-sm" : "text-xs"} max-w-[80px] truncate text-center`}>
                     {entry.display_name || "Anonymous"}
                   </p>
                   <p className="text-xs text-amber-400 font-bold">{entry.total_points} pts</p>
                   <div className={`${podiumHeight} w-20 rounded-t-xl glass border border-border/50 flex items-center justify-center`}>
-                    <span className="font-display font-bold text-2xl text-muted-foreground/50">
-                      {idx + 1}
-                    </span>
+                    <span className="font-display font-bold text-2xl text-muted-foreground/50">{idx + 1}</span>
                   </div>
                 </motion.div>
               );
@@ -151,12 +203,13 @@ const LeaderboardPage = () => {
 
         {/* Full Rankings Table */}
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-[60px_1fr_100px_80px_80px] gap-2 px-4 py-3 border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="grid grid-cols-[50px_1fr_80px_60px_60px_60px] gap-2 px-4 py-3 border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span>Rank</span>
             <span>Student</span>
             <span className="text-center">Points</span>
-            <span className="text-center">Quizzes</span>
-            <span className="text-center">Avg %</span>
+            <span className="text-center">Quiz</span>
+            <span className="text-center">DSA</span>
+            <span className="text-center">Avg%</span>
           </div>
 
           <LayoutGroup>
@@ -170,7 +223,7 @@ const LeaderboardPage = () => {
                 <div className="p-8 text-center space-y-2">
                   <Target className="w-10 h-10 text-muted-foreground/30 mx-auto" />
                   <p className="text-foreground font-display font-semibold">No rankings yet</p>
-                  <p className="text-xs text-muted-foreground">Complete quizzes to appear on the leaderboard!</p>
+                  <p className="text-xs text-muted-foreground">Complete quizzes or DSA problems to appear!</p>
                 </div>
               ) : (
                 entries.map((entry, idx) => {
@@ -182,31 +235,19 @@ const LeaderboardPage = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.03, type: "spring", damping: 25 }}
-                      className={`grid grid-cols-[60px_1fr_100px_80px_80px] gap-2 px-4 py-3 items-center border-b border-border/20 transition-colors ${
-                        isCurrentUser
-                          ? "bg-amber-500/10 border-l-4 border-l-amber-500"
-                          : "hover:bg-muted/20"
+                      className={`grid grid-cols-[50px_1fr_80px_60px_60px_60px] gap-2 px-4 py-3 items-center border-b border-border/20 transition-colors ${
+                        isCurrentUser ? "bg-amber-500/10 border-l-4 border-l-amber-500" : "hover:bg-muted/20"
                       }`}
                     >
-                      {/* Rank */}
                       <div className="flex items-center justify-center">
-                        {idx < 3 ? (
-                          rankIcons[idx]
-                        ) : (
-                          <span className="font-display font-bold text-sm text-muted-foreground">
-                            {idx + 1}
-                          </span>
+                        {idx < 3 ? rankIcons[idx] : (
+                          <span className="font-display font-bold text-sm text-muted-foreground">{idx + 1}</span>
                         )}
                       </div>
 
-                      {/* Student */}
                       <div className="flex items-center gap-3 min-w-0">
                         {entry.avatar_url ? (
-                          <img
-                            src={entry.avatar_url}
-                            alt={entry.display_name || "User"}
-                            className={`w-8 h-8 rounded-lg object-cover flex-shrink-0 ${isCurrentUser ? "ring-2 ring-amber-400" : ""}`}
-                          />
+                          <img src={entry.avatar_url} alt={entry.display_name || "User"} className={`w-8 h-8 rounded-lg object-cover flex-shrink-0 ${isCurrentUser ? "ring-2 ring-amber-400" : ""}`} />
                         ) : (
                           <div className={`w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground flex-shrink-0 ${isCurrentUser ? "ring-2 ring-amber-400" : ""}`}>
                             {(entry.display_name || "?").charAt(0).toUpperCase()}
@@ -217,35 +258,24 @@ const LeaderboardPage = () => {
                             {entry.display_name || "Anonymous"}
                             {isCurrentUser && <span className="text-xs ml-1">(You)</span>}
                           </p>
-                          {entry.perfect_scores > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Star className="w-3 h-3 text-amber-400" />
-                              <span className="text-[10px] text-amber-400">{entry.perfect_scores} perfect</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            {entry.dsa_solved > 0 && <span className="flex items-center gap-0.5"><Code className="w-2.5 h-2.5" />{entry.dsa_solved}</span>}
+                            {entry.interviews_done > 0 && <span className="flex items-center gap-0.5"><Briefcase className="w-2.5 h-2.5" />{entry.interviews_done}</span>}
+                            {entry.perfect_scores > 0 && <span className="flex items-center gap-0.5"><Star className="w-2.5 h-2.5 text-amber-400" />{entry.perfect_scores}</span>}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Points */}
                       <div className="text-center">
                         <span className={`font-display font-bold text-sm ${isCurrentUser ? "text-amber-400" : "text-foreground"}`}>
                           {entry.total_points}
                         </span>
                       </div>
-
-                      {/* Quizzes */}
-                      <div className="text-center text-sm text-muted-foreground">
-                        {entry.quizzes_taken}
-                      </div>
-
-                      {/* Avg % */}
+                      <div className="text-center text-sm text-muted-foreground">{entry.quizzes_taken}</div>
+                      <div className="text-center text-sm text-muted-foreground">{entry.dsa_solved}</div>
                       <div className="text-center">
                         <span className={`text-sm font-medium ${
-                          entry.avg_percentage >= 80
-                            ? "text-emerald-400"
-                            : entry.avg_percentage >= 60
-                            ? "text-amber-400"
-                            : "text-destructive"
+                          entry.avg_percentage >= 80 ? "text-emerald-400" : entry.avg_percentage >= 60 ? "text-amber-400" : "text-destructive"
                         }`}>
                           {entry.avg_percentage}%
                         </span>
@@ -258,25 +288,27 @@ const LeaderboardPage = () => {
           </LayoutGroup>
         </div>
 
-        {/* Points System Info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="glass rounded-2xl p-4 space-y-2"
-        >
+        {/* Scoring System */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="glass rounded-2xl p-4 space-y-2">
           <h3 className="font-display font-semibold text-foreground text-sm flex items-center gap-2">
-            <Award className="w-4 h-4 text-primary" />
-            Scoring System
+            <Award className="w-4 h-4 text-primary" /> Scoring System
           </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              Each correct answer = <span className="font-bold text-foreground">10 points</span>
+              Correct answer = <span className="font-bold text-foreground">10 pts</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-amber-400" />
-              Perfect score bonus = <span className="font-bold text-amber-400">+50 points</span>
+              Perfect quiz = <span className="font-bold text-amber-400">+50 pts</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              DSA solved = <span className="font-bold text-emerald-400">+20 pts</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-violet-400" />
+              Optimized = <span className="font-bold text-violet-400">+10 bonus</span>
             </div>
           </div>
         </motion.div>
