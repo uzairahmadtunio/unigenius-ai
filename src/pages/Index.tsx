@@ -9,6 +9,7 @@ import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
 import DepartmentSelector from "@/components/DepartmentSelector";
 import GlobalSearch from "@/components/GlobalSearch";
+import AttendanceAlert from "@/components/AttendanceAlert";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const Index = () => {
