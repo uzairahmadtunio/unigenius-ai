@@ -73,7 +73,7 @@ const Index = () => {
         {/* Semester Selector */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-4">
           <h2 className="font-display font-bold text-lg text-foreground">Select Semester</h2>
-          <SemesterSelector selected={semester} onSelect={setSemester} />
+          <SemesterSelector selected={semester} onSelect={handleSemesterChange} />
         </motion.section>
 
         {/* Subject Grid */}
