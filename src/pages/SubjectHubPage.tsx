@@ -440,10 +440,7 @@ Start by greeting the student and asking your first viva question.`
         { icon: BookOpen, label: "Prepare for Viva" },
       ];
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith("image/")) return <ImageIcon className="w-3.5 h-3.5 text-primary" />;
-    return <FileText className="w-3.5 h-3.5 text-primary" />;
-  };
+  // File icon handled by FileIcon component
 
   if (!result) {
     return (
