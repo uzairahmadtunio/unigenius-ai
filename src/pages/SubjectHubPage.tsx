@@ -391,26 +391,7 @@ Start by greeting the student and asking your first viva question.`
         }
 
         for (let i = 0; i < attachedFiles.length; i++) {
-          const f = attachedFiles[i];
-          if (f.type.startsWith("image/")) {
-            parts.push({ type: "image_url", image_url: { url: f.dataUrl } });
-            parts.push({
-              type: "text",
-              text: `[Image ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this image in context of ${subjectName}. Extract text/code via OCR if present.`,
-            });
-          } else if (f.type === "application/pdf") {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({
-              type: "text",
-              text: `[PDF ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this PDF for ${subjectName}.`,
-            });
-          } else {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({
-              type: "text",
-              text: `[Document ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this document for ${subjectName}.`,
-            });
-          }
+          parts.push(...buildFileContentParts(attachedFiles[i], i, attachedFiles.length, subjectName));
         }
         apiContent = parts;
       } else {
