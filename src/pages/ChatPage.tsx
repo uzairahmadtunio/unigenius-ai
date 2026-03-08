@@ -84,7 +84,7 @@ const ChatPage = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (attachedFiles.length + files.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} files allowed`);
+      toast.error("Maximum 20 files allowed per message for best AI analysis.");
       e.target.value = "";
       return;
     }
