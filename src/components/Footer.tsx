@@ -40,7 +40,7 @@ const Footer = () => {
             <Github className="w-4 h-4" />
           </a>
           <a
-            href="https://wa.me/923064379361?text=Assalam-o-Alaikum%20Uzair%20bhai,%20UniGenius%20AI%20ke%20bare%20mein%20help%20chahye.."
+            href="https://wa.me/923064379361?text=Hi%20Uzair,%20I%20need%20help%20with%20UniGenius%20AI."
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-[#25D366] hover:text-[#25D366]/80 transition-colors hover:drop-shadow-[0_0_6px_rgba(37,211,102,0.5)]"
