@@ -223,7 +223,7 @@ Start by greeting the student and asking your first viva question.`
     }
     for (const f of files) {
       if (f.size > 20 * 1024 * 1024) { toast.error(`File too large: ${f.name} (max 20MB)`); continue; }
-      if (!ALLOWED_TYPES.some(t => f.type === t || f.type.startsWith(t.split("/")[0] + "/"))) {
+      if (!isFileAllowed(f)) {
         toast.error(`Unsupported file: ${f.name}`); continue;
       }
       const reader = new FileReader();
