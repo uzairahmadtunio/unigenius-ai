@@ -27,6 +27,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import PremiumPage from "./pages/PremiumPage";
 import PlannerPage from "./pages/PlannerPage";
 import NotesPage from "./pages/NotesPage";
+import PresentationPage from "./pages/PresentationPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/planner" element={<PlannerPage />} />
                 <Route path="/notes" element={<NotesPage />} />
+                <Route path="/presentations" element={<PresentationPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
