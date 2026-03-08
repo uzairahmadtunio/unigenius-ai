@@ -77,6 +77,7 @@ const App = () => (
                 <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/planner" element={<PlannerPage />} />
                 <Route path="/notes" element={<NotesPage />} />
+                <Route path="/presentations" element={<PresentationPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
