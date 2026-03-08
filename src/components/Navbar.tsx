@@ -1,4 +1,4 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2 } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,7 +10,12 @@ import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-const Navbar = () => {
+interface NavbarProps {
+  onMenuToggle?: () => void;
+  showMenu?: boolean;
+}
+
+const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
