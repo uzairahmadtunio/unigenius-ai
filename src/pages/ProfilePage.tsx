@@ -55,9 +55,6 @@ interface ProfileData {
   show_on_leaderboard: boolean;
 }
 
-const gradePoints: Record<string, number> = { "A+": 4.0, A: 4.0, "A-": 3.67, "B+": 3.33, B: 3.0, "B-": 2.67, "C+": 2.33, C: 2.0, "C-": 1.67, D: 1.0, F: 0.0 };
-interface CourseGrade { grade: string; credits: number }
-
 const departments = [
   { value: "se", label: "Software Engineering" },
   { value: "cs", label: "Computer Science" },
