@@ -64,6 +64,7 @@ const SubjectHubPage = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [titleGenerated, setTitleGenerated] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const systemPrompt = mode === "viva"
