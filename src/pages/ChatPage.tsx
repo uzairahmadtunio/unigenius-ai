@@ -65,6 +65,7 @@ const ChatPage = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [voiceGender, setVoiceGender] = useState<"female" | "male">("female");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
