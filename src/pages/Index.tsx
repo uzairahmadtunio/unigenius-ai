@@ -11,6 +11,9 @@ import DepartmentSelector from "@/components/DepartmentSelector";
 import GlobalSearch from "@/components/GlobalSearch";
 import AttendanceAlert from "@/components/AttendanceAlert";
 import CareerReadinessWidget from "@/components/CareerReadinessWidget";
+import NoticeBoard from "@/components/NoticeBoard";
+import ExamCountdown from "@/components/ExamCountdown";
+import VivaReminder from "@/components/VivaReminder";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const SPLASH_KEY = "unigenius-splash-shown";
@@ -66,8 +69,19 @@ const Index = () => {
           <GlobalSearch />
         </motion.section>
 
-        {/* Career Readiness */}
+        {/* Viva Reminder */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <VivaReminder semester={semester} />
+        </motion.section>
+
+        {/* Notice Board */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <NoticeBoard />
+        </motion.section>
+
+        {/* Exam Countdown + Career Readiness */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ExamCountdown semester={semester} />
           <CareerReadinessWidget />
         </motion.section>
 

@@ -1,6 +1,7 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
@@ -13,6 +14,8 @@ const Navbar = () => {
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notices, setNotices] = useState<any[]>([]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -23,6 +26,27 @@ const Navbar = () => {
     supabase.from("profiles").select("avatar_url").eq("user_id", user.id).single().then(({ data }) => {
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
     });
+
+    // Fetch notices and read state
+    const fetchNotices = async () => {
+      const { data: allNotices } = await supabase
+        .from("university_notices" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const { data: reads } = await supabase
+        .from("user_notice_reads" as any)
+        .select("notice_id")
+        .eq("user_id", user.id);
+
+      const readSet = new Set((reads || []).map((r: any) => r.notice_id));
+      const active = (allNotices || []).filter(
+        (n: any) => !readSet.has(n.id) && (!n.expires_at || new Date(n.expires_at) > new Date())
+      );
+      setNotices(active.slice(0, 5));
+      setUnreadCount(active.length);
+    };
+    fetchNotices();
   }, [user]);
 
   return (
@@ -64,6 +88,39 @@ const Navbar = () => {
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
+
+          {/* Bell Notification */}
+          {user && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-xl relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0 rounded-xl" align="end">
+                <div className="p-3 border-b border-border">
+                  <p className="font-display font-semibold text-sm">Notifications</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notices.length === 0 ? (
+                    <p className="p-4 text-xs text-muted-foreground text-center">All caught up! 🎉</p>
+                  ) : (
+                    notices.map((n: any) => (
+                      <div key={n.id} className="p-3 border-b border-border/30 hover:bg-muted/50 transition-colors">
+                        <p className="text-xs font-semibold text-foreground">{n.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           {user ? (
             <div className="flex items-center gap-2">
               <Button

@@ -193,6 +193,33 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_schedule: {
+        Row: {
+          created_at: string
+          exam_date: string
+          exam_type: string
+          id: string
+          semester: number
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date: string
+          exam_type?: string
+          id?: string
+          semester: number
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string
+          exam_type?: string
+          id?: string
+          semester?: number
+          subject?: string
+        }
+        Relationships: []
+      }
       flashcard_sets: {
         Row: {
           cards: Json
@@ -496,6 +523,39 @@ export type Database = {
         }
         Relationships: []
       }
+      university_notices: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          priority: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          starts_at?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_icon: string
@@ -522,6 +582,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_notice_reads: {
+        Row: {
+          id: string
+          notice_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notice_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notice_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notice_reads_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "university_notices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
