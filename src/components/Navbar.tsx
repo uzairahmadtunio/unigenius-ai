@@ -88,6 +88,39 @@ const Navbar = () => {
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
+
+          {/* Bell Notification */}
+          {user && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-xl relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0 rounded-xl" align="end">
+                <div className="p-3 border-b border-border">
+                  <p className="font-display font-semibold text-sm">Notifications</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notices.length === 0 ? (
+                    <p className="p-4 text-xs text-muted-foreground text-center">All caught up! 🎉</p>
+                  ) : (
+                    notices.map((n: any) => (
+                      <div key={n.id} className="p-3 border-b border-border/30 hover:bg-muted/50 transition-colors">
+                        <p className="text-xs font-semibold text-foreground">{n.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           {user ? (
             <div className="flex items-center gap-2">
               <Button
