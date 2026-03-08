@@ -402,7 +402,7 @@ const NoticesTab = () => {
 
   const handleDelete = async (id: string) => {
     await supabase.from("university_notices").delete().eq("id", id);
-    toast.success("Notice deleted.");
+    toast.success("Notice Removed Successfully");
     fetchNotices();
   };
 
