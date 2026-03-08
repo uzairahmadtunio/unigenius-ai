@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { fireCelebration, recordCareerActivity, checkAndAwardBadges } from "@/lib/career-points";
 
 type ActiveTab = "interview" | "dsa" | "cv";
 
@@ -124,7 +125,7 @@ Start by greeting the candidate and asking your first question.`
       const apiMessages = [
         {
           role: "system",
-          content: `You are a technical interviewer for SE roles. Candidate is in Semester ${semester}, topics: ${topics}. Ask ONE question at a time, give feedback on answers, increase difficulty gradually.`
+          content: `You are a technical interviewer for SE roles. Candidate is in Semester ${semester}, topics: ${topics}. Ask ONE question at a time, give feedback on answers, increase difficulty gradually. After 5-6 questions, give a final assessment with score out of 10. End with "INTERVIEW_COMPLETE" on its own line.`
         },
         ...newMsgs,
       ];
@@ -167,6 +168,15 @@ Start by greeting the candidate and asking your first question.`
               setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: snap } : m));
             }
           } catch {}
+        }
+      }
+
+      // Check if interview is complete
+      if (user && assistantText.includes("INTERVIEW_COMPLETE")) {
+        const saved = await recordCareerActivity(user.id, "interview_complete", 15, { semester });
+        if (saved) {
+          fireCelebration(15);
+          checkAndAwardBadges(user.id);
         }
       }
     } catch (e: any) {
@@ -293,6 +303,7 @@ Start by greeting the candidate and asking your first question.`
 
 // ─── DSA Practice ─────────────────────────────────────────────────
 const DSAPractice = () => {
+  const { user } = useAuth();
   const [problem, setProblem] = useState<string>("");
   const [code, setCode] = useState("// Write your solution here\n\n");
   const [analysis, setAnalysis] = useState("");
@@ -397,6 +408,7 @@ FORMAT:
 3. **Space Complexity**: Same detailed analysis with LaTeX notation.
 4. **Optimization**: Can it be improved? Show the optimized version if applicable.
 5. **Code Quality**: Comments on style, naming, readability.
+6. **Optimized**: At the very end, add a line "OPTIMIZED: yes" if the solution has optimal time complexity for this problem type, or "OPTIMIZED: no" otherwise.
 
 Use markdown formatting and LaTeX for all complexity expressions.`
             },
@@ -429,6 +441,24 @@ Use markdown formatting and LaTeX for all complexity expressions.`
               setAnalysis(snap);
             }
           } catch {}
+        }
+      }
+
+      // Award points after successful analysis
+      if (user && text.length > 50) {
+        const isOptimized = text.toLowerCase().includes("optimized: yes");
+        const basePoints = 20;
+        const bonusPoints = isOptimized ? 10 : 0;
+        const totalPoints = basePoints + bonusPoints;
+
+        const saved = await recordCareerActivity(user.id, "dsa_solve", totalPoints, {
+          difficulty,
+          optimized: isOptimized,
+        });
+
+        if (saved) {
+          fireCelebration(totalPoints);
+          checkAndAwardBadges(user.id);
         }
       }
     } catch (e: any) {
@@ -609,6 +639,17 @@ Be specific, actionable, and encouraging. Use the actual content from the CV.`
             const c = JSON.parse(json).choices?.[0]?.delta?.content;
             if (c) { text += c; setAnalysis(text); }
           } catch {}
+        }
+      }
+
+      // Extract score and record activity
+      if (user && text.length > 50) {
+        const scoreMatch = text.match(/CV Score:\s*(\d+)\s*\/\s*100/i);
+        const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
+        const saved = await recordCareerActivity(user.id, "cv_score", score >= 80 ? 25 : 15, { score });
+        if (saved) {
+          fireCelebration(score >= 80 ? 25 : 15);
+          checkAndAwardBadges(user.id);
         }
       }
     } catch (e: any) {
