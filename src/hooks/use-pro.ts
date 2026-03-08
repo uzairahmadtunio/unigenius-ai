@@ -14,13 +14,16 @@ export const usePro = () => {
       return;
     }
 
+    // Check streak-based free pro day
+    const streakClaimed = !!localStorage.getItem("streak-pro-claimed-" + new Date().toDateString());
+
     supabase
       .from("profiles")
       .select("is_pro")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        setIsPro(!!(data as any)?.is_pro);
+        setIsPro(!!(data as any)?.is_pro || streakClaimed);
         setLoading(false);
       });
   }, [user]);

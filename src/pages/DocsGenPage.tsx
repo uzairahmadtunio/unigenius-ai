@@ -13,7 +13,11 @@ import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 
+import { usePro } from "@/hooks/use-pro";
+import ProPaywall from "@/components/ProPaywall";
+
 const DocsGenPage = () => {
+  const { isPro, loading: proLoading } = usePro();
   const { department } = useDepartment();
   const { user } = useAuth();
   const [semester, setSemester] = useState(1);
@@ -145,7 +149,9 @@ const DocsGenPage = () => {
       subtitle="Lab Manuals & Assignments"
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center"><FileText className="w-5 h-5 text-primary-foreground" /></div>}
     >
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="relative min-h-[400px]">
+        {!isPro && !proLoading && <ProPaywall feature="professional lab manuals and AI document generation" />}
+        <div className="grid lg:grid-cols-3 gap-4">
         {/* Form */}
         <div className="space-y-4">
           <div className="glass rounded-2xl p-6 space-y-4">
@@ -290,6 +296,7 @@ const DocsGenPage = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </PageShell>

@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Trophy, Calendar, TrendingUp } from "lucide-react";
+import { Flame, Trophy, Calendar, TrendingUp, Gift } from "lucide-react";
 import { useStreak } from "@/hooks/use-streak";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import confetti from "canvas-confetti";
 
 const DailyStreakWidget = () => {
   const { user } = useAuth();
   const { currentStreak, longestStreak, totalActiveDays, loading } = useStreak();
+  const [claimed, setClaimed] = useState(() => {
+    return !!localStorage.getItem("streak-pro-claimed-" + new Date().toDateString());
+  });
 
   if (!user || loading) return null;
 
@@ -24,6 +31,15 @@ const DailyStreakWidget = () => {
     hot: "text-orange-500",
     blazing: "text-red-500",
     legendary: "text-purple-500",
+  };
+
+  const canClaimProDay = currentStreak >= 7 && !claimed;
+
+  const claimProDay = () => {
+    localStorage.setItem("streak-pro-claimed-" + new Date().toDateString(), "true");
+    setClaimed(true);
+    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    toast.success("🎉 Free Pro Day claimed! Enjoy all Pro features today!");
   };
 
   return (
@@ -59,8 +75,18 @@ const DailyStreakWidget = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-4">
+        {/* Stats + Claim */}
+        <div className="flex items-center gap-4">
+          {canClaimProDay && (
+            <Button
+              size="sm"
+              onClick={claimProDay}
+              className="rounded-xl gap-1.5 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse hover:animate-none"
+            >
+              <Gift className="w-3.5 h-3.5" />
+              Free Pro Day
+            </Button>
+          )}
           <div className="text-center">
             <div className="flex items-center gap-1 justify-center">
               <Trophy className="w-3 h-3 text-yellow-500" />
@@ -79,9 +105,7 @@ const DailyStreakWidget = () => {
       </div>
 
       {/* Streak progress bar to next milestone */}
-      {currentStreak > 0 && (
-        <StreakProgress current={currentStreak} />
-      )}
+      {currentStreak > 0 && <StreakProgress current={currentStreak} />}
     </motion.div>
   );
 };

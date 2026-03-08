@@ -27,8 +27,15 @@ const AuthPage = () => {
         if (error) throw error;
         // Founder celebration 🎉
         if (data.user?.email === "uzairahmadtunio786@gmail.com") {
-          confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
-          setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.4 } }), 300);
+          const duration = 3000;
+          const end = Date.now() + duration;
+          const frame = () => {
+            confetti({ particleCount: 8, angle: 60, spread: 55, origin: { x: 0 }, colors: ["#a855f7", "#6366f1", "#3b82f6"] });
+            confetti({ particleCount: 8, angle: 120, spread: 55, origin: { x: 1 }, colors: ["#f59e0b", "#ef4444", "#ec4899"] });
+            if (Date.now() < end) requestAnimationFrame(frame);
+          };
+          frame();
+          confetti({ particleCount: 300, spread: 160, origin: { y: 0.35 }, startVelocity: 45, gravity: 0.8 });
           toast.success("🎉 Welcome back, Founder! UniGenius is LIVE!");
         } else {
           toast.success("Welcome back!");
