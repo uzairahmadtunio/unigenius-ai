@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Download, Loader2, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDepartment } from "@/contexts/DepartmentContext";
+import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { getSubjects } from "@/data/subjects";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -13,6 +15,7 @@ import jsPDF from "jspdf";
 
 const DocsGenPage = () => {
   const { department } = useDepartment();
+  const { user } = useAuth();
   const [semester, setSemester] = useState(1);
   const [docType, setDocType] = useState<"lab" | "assignment">("lab");
   const [subject, setSubject] = useState("");
@@ -21,7 +24,33 @@ const DocsGenPage = () => {
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Dynamic student info from profile
+  const [studentName, setStudentName] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [studentDept, setStudentDept] = useState("");
+
   const subjects = department ? getSubjects(department, semester) : [];
+
+  // Fetch profile data
+  useEffect(() => {
+    if (!user) return;
+    const fetchProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, roll_number, current_semester")
+        .eq("user_id", user.id)
+        .single();
+      if (data) {
+        setStudentName(data.display_name || "");
+        setRollNumber((data as any).roll_number || "");
+        if (data.current_semester) setSemester(data.current_semester);
+      }
+    };
+    fetchProfile();
+    if (department) {
+      setStudentDept(departmentInfo[department]?.fullName || "");
+    }
+  }, [user, department]);
 
   const generateDoc = async () => {
     if (!subject || !topic.trim()) { toast.error("Select a subject and enter a topic"); return; }
@@ -35,7 +64,18 @@ const DocsGenPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ type: docType, subject, topic, additionalNotes }),
+        body: JSON.stringify({
+          type: docType,
+          subject,
+          topic,
+          additionalNotes,
+          semester,
+          studentInfo: {
+            name: studentName || "",
+            rollNumber: rollNumber || "",
+            department: studentDept || "",
+          },
+        }),
       });
 
       if (!resp.ok) {
@@ -164,6 +204,29 @@ const DocsGenPage = () => {
               />
             </div>
 
+            {/* Student Info Fields */}
+            <div className="space-y-2 border-t border-border/50 pt-4">
+              <label className="text-xs text-muted-foreground font-medium">Student Information</label>
+              <Input
+                placeholder="Your Name"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                className="rounded-xl"
+              />
+              <Input
+                placeholder="Roll Number"
+                value={rollNumber}
+                onChange={(e) => setRollNumber(e.target.value)}
+                className="rounded-xl"
+              />
+              <Input
+                placeholder="Department"
+                value={studentDept}
+                onChange={(e) => setStudentDept(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Additional Instructions (optional)</label>
               <Textarea
@@ -198,8 +261,8 @@ const DocsGenPage = () => {
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {docType === "lab"
-                ? "Generates: Objective → Apparatus → Theory → Algorithm → Procedure → Code → Output → Conclusion"
-                : "Generates: Title → Introduction → Detailed Content → Examples → Practice Questions → Summary → References"}
+                ? "Generates: University Header → Student Info → Tasks (Code + Output) → Conclusion"
+                : "Generates: Title → Introduction → Detailed Content → Examples → Summary → References"}
             </p>
           </div>
         </div>
@@ -222,7 +285,7 @@ const DocsGenPage = () => {
                 <p className="font-display font-semibold text-foreground">Document Preview</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {docType === "lab"
-                    ? "Configure your lab manual with subject & experiment, then generate a complete document with Objective, Theory, Algorithm, Code, and Conclusion."
+                    ? "Configure your lab manual with subject & experiment, then generate a complete document with University header, student info, and task-based code & output."
                     : "Configure your assignment with subject & topic, then generate a professional document with detailed academic formatting."}
                 </p>
               </div>
