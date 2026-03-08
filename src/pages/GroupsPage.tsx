@@ -23,9 +23,25 @@ interface Group {
   owner_id: string;
   semester: number;
   created_at: string;
+  avatar_url: string | null;
   member_count?: number;
   is_owner?: boolean;
 }
+
+const GroupAvatar = ({ url, name, size = "md" }: { url?: string | null; name?: string; size?: "sm" | "md" }) => {
+  const sizes = { sm: "w-8 h-8", md: "w-10 h-10" };
+  return (
+    <div className={`${sizes[size]} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center`}>
+      {url ? (
+        <img src={url} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span className="font-bold text-primary-foreground text-sm">
+          {(name || "G")[0].toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const GroupsPage = () => {
   const { user } = useAuth();
@@ -245,9 +261,7 @@ const GroupsPage = () => {
                   className="glass rounded-2xl p-5 cursor-pointer hover:border-primary/30 border-2 border-transparent transition-all group"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <GroupAvatar url={g.avatar_url} name={g.name} />
                     {g.is_owner && (
                       <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/15 rounded-full px-2 py-0.5 uppercase tracking-wider">
                         <Crown className="w-2.5 h-2.5" /> Owner

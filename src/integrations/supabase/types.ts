@@ -366,6 +366,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          avatar_url: string | null
           created_at: string
           description: string | null
           id: string
@@ -375,6 +376,7 @@ export type Database = {
           semester: number | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -384,6 +386,7 @@ export type Database = {
           semester?: number | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
