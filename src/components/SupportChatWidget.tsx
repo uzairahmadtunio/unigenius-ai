@@ -150,7 +150,7 @@ const SupportChatWidget = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed bottom-24 md:bottom-6 right-6 z-50"
           >
             <Button
               onClick={() => setOpen(true)}
