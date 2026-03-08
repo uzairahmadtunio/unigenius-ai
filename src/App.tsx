@@ -25,6 +25,7 @@ import GroupDetailPage from "./pages/GroupDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
