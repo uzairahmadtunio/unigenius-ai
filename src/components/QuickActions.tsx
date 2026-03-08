@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquare, Brain, Code, FileText, Briefcase, ClipboardList, CalendarCheck } from "lucide-react";
+import { MessageSquare, Brain, Code, FileText, Briefcase, ClipboardList, CalendarCheck, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const actions = [
@@ -8,6 +8,7 @@ const actions = [
   { icon: Code, label: "Code Lab", desc: "Debug & Optimize Code", path: "/code-lab", color: "from-emerald-500 to-teal-500" },
   { icon: FileText, label: "Docs Gen", desc: "Lab Manuals & Notes", path: "/docs-gen", color: "from-amber-500 to-orange-500" },
   { icon: CalendarCheck, label: "Attendance", desc: "Track & Monitor", path: "/attendance", color: "from-cyan-500 to-blue-500" },
+  { icon: Trophy, label: "Leaderboard", desc: "Rankings & Points", path: "/leaderboard", color: "from-amber-500 to-yellow-500" },
   { icon: ClipboardList, label: "Exam Prep", desc: "Midterms & Finals", path: "/exam-prep", color: "from-rose-500 to-pink-500" },
   { icon: Briefcase, label: "Career", desc: "Interviews & Internships", path: "/career", color: "from-sky-500 to-indigo-500" },
 ];
@@ -16,7 +17,7 @@ const QuickActions = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
       {actions.map((action, idx) => (
         <motion.button
           key={action.label}
