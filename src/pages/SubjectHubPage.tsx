@@ -93,8 +93,33 @@ Start by greeting the student and asking your first viva question.`
   const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
+  // Fetch profile for export
   useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("display_name, roll_number, section, university, current_semester")
+      .eq("user_id", user.id).single().then(({ data }) => { if (data) setProfileData(data); });
+  }, [user]);
+
+  const handleExport = (content: string, format: "pdf" | "docx") => {
+    const opts = {
+      subject: subjectName,
+      topic: content.slice(0, 60).replace(/[#*\n]/g, "").trim(),
+      semester,
+      docType: "assignment" as const,
+      studentInfo: {
+        name: profileData?.display_name || "",
+        rollNumber: profileData?.roll_number || "",
+        department: deptName,
+        section: profileData?.section || "",
+        university: profileData?.university || "University of Larkana",
+      },
+    };
+    if (format === "pdf") generateProfessionalPDF(content, opts);
+    else generateDOCX(content, opts);
+  };
+
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
