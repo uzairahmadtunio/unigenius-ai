@@ -256,7 +256,7 @@ const ChatPage = () => {
         if (attachedFiles.length > 1) {
           parts.push({
             type: "text",
-            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together and provide a combined, comprehensive answer referencing each file.`,
+            text: `The student has uploaded ${attachedFiles.length} files simultaneously. Analyze ALL of them together. Provide a structured response: first give an overview summary, then address each file individually (e.g., "**File 1: ${attachedFiles[0]?.name}** — ..."), and finally provide a combined conclusion or solution.`,
           });
         }
 
