@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 const categories = ["general", "fee", "exam", "academic", "event"];
 const priorities = ["normal", "high", "urgent"];
 
-type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments";
+type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments" | "promos";
 
 const tabItems = [
   { id: "overview" as AdminTab, label: "Overview", icon: BarChart3 },
@@ -34,6 +34,7 @@ const tabItems = [
   { id: "alerts" as AdminTab, label: "Global Alerts", icon: Radio },
   { id: "support" as AdminTab, label: "Support Inbox", icon: Headset },
   { id: "payments" as AdminTab, label: "Payments", icon: CreditCard },
+  { id: "promos" as AdminTab, label: "Promo Manager", icon: Tag },
 ];
 
 const AdminDashboard = () => {
