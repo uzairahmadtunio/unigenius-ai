@@ -446,17 +446,26 @@ const ChatPage = () => {
                         {msg.role === "assistant" ? <MarkdownMessage content={msg.content} /> : msg.content || "…"}
                       </div>
                       {msg.role === "assistant" && msg.content && msg.id !== "welcome" && (
-                        <button
-                          onClick={() => handleReadAloud(msg.id, msg.content)}
-                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-1 ml-1"
-                          title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
-                        >
-                          {speakingMsgId === msg.id ? (
-                            <><Square className="w-3 h-3" /> Stop</>
-                          ) : (
-                            <><Volume2 className="w-3 h-3" /> Read Aloud</>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2 mt-1 ml-1">
+                          <button
+                            onClick={() => handleReadAloud(msg.id, msg.content)}
+                            className={`flex items-center gap-1 text-[10px] transition-colors ${speakingMsgId === msg.id ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                            title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
+                          >
+                            {speakingMsgId === msg.id ? (
+                              <><Square className="w-3 h-3" /> Stop</>
+                            ) : (
+                              <><Volume2 className="w-3 h-3" /> Read Aloud</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setVoiceGender(prev => prev === "female" ? "male" : "female")}
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md border border-border/50"
+                            title="Switch voice"
+                          >
+                            {voiceGender === "female" ? "♀ Female" : "♂ Male"}
+                          </button>
+                        </div>
                       )}
                     </div>
                     {msg.role === "user" && (
