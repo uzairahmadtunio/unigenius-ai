@@ -97,6 +97,30 @@ const ChatPage = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // TTS Read Aloud
+  const handleReadAloud = useCallback((msgId: string, text: string) => {
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    // Strip markdown for cleaner reading
+    const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[*#_`~>|]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").trim();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+  }, [speakingMsgId]);
+
+  // Cleanup TTS on unmount
+  useEffect(() => {
+    return () => window.speechSynthesis.cancel();
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
