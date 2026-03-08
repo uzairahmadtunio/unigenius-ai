@@ -363,8 +363,17 @@ Start by greeting the student and asking your first viva question.`
   }
 
   return (
-    <div className="min-h-screen flex flex-col gradient-hero">
+    <div className="min-h-screen flex flex-col gradient-hero" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       <Navbar />
+      {isDragOver && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
+            <Upload className="w-10 h-10 text-primary" />
+            <p className="font-display font-semibold text-foreground">Drop files here</p>
+            <p className="text-xs text-muted-foreground">PDF, Images, DOCX — up to {MAX_FILES} files</p>
+          </div>
+        </div>
+      )}
       <div className="flex-1 container mx-auto max-w-3xl px-4 py-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 mb-3">
