@@ -44,6 +44,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [supportUnread, setSupportUnread] = useState(0);
+  const [feedbackUnread, setFeedbackUnread] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && (!user || !isAdmin)) {
