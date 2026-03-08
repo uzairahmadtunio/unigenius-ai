@@ -399,10 +399,11 @@ FORMAT:
 3. **Space Complexity**: Same detailed analysis with LaTeX notation.
 4. **Optimization**: Can it be improved? Show the optimized version if applicable.
 5. **Code Quality**: Comments on style, naming, readability.
+6. **Optimized**: At the very end, add a line "OPTIMIZED: yes" if the solution has optimal time complexity for this problem type, or "OPTIMIZED: no" otherwise.
 
 Use markdown formatting and LaTeX for all complexity expressions.`
             },
-            { role: "user", content: `**Problem:**\n${problem}\n\n**My Solution:**\n\`\`\`\n${code}\n\`\`\`` }
+            { role: "user", content: \`**Problem:**\n\${problem}\n\n**My Solution:**\n\\\`\\\`\\\`\n\${code}\n\\\`\\\`\\\`\` }
           ],
         }),
       });
@@ -431,6 +432,24 @@ Use markdown formatting and LaTeX for all complexity expressions.`
               setAnalysis(snap);
             }
           } catch {}
+        }
+      }
+
+      // Award points after successful analysis
+      if (user && text.length > 50) {
+        const isOptimized = text.toLowerCase().includes("optimized: yes");
+        const basePoints = 20;
+        const bonusPoints = isOptimized ? 10 : 0;
+        const totalPoints = basePoints + bonusPoints;
+
+        const saved = await recordCareerActivity(user.id, "dsa_solve", totalPoints, {
+          difficulty,
+          optimized: isOptimized,
+        });
+
+        if (saved) {
+          fireCelebration(totalPoints);
+          checkAndAwardBadges(user.id);
         }
       }
     } catch (e: any) {
