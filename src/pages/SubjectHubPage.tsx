@@ -334,6 +334,7 @@ Start by greeting the student and asking your first viva question.`
         }
       }
     }
+    return assistantSoFar;
   };
 
   // ─── Send handler ────────────────────────────────────────────
