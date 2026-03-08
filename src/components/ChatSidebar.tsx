@@ -25,6 +25,9 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 
   const fetchSessions = async () => {
@@ -41,6 +44,13 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
 
   useEffect(() => { fetchSessions(); }, [user, refreshTrigger]);
 
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
   const deleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
     const { error } = await supabase.from("chat_sessions").delete().eq("id", chatId);
@@ -48,6 +58,21 @@ const ChatSidebar = ({ activeChatId, onSelectChat, onNewChat, refreshTrigger }: 
     setSessions(prev => prev.filter(s => s.id !== chatId));
     if (activeChatId === chatId) onNewChat();
     toast.success("Chat deleted");
+  };
+
+  const startEditing = (e: React.MouseEvent, session: ChatSession) => {
+    e.stopPropagation();
+    setEditingId(session.id);
+    setEditValue(session.title);
+  };
+
+  const saveTitle = async (chatId: string) => {
+    const trimmed = editValue.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    setSessions(prev => prev.map(s => s.id === chatId ? { ...s, title: trimmed } : s));
+    setEditingId(null);
+    const { error } = await supabase.from("chat_sessions").update({ title: trimmed }).eq("id", chatId);
+    if (error) toast.error("Failed to rename chat");
   };
 
   if (collapsed) {
