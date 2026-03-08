@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
+import { ACCEPT_EXTENSIONS, isFileAllowed, getFileCategory, FILE_CATEGORY_STYLES, buildFileContentParts, DROP_ZONE_TEXT } from "@/lib/file-types";
+import FileIcon from "@/components/FileIcon";
 
 interface Message {
   id: string;
