@@ -1,14 +1,6 @@
 import { useState, useCallback, DragEvent } from "react";
 import { toast } from "sonner";
-
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+import { ALLOWED_MIME_TYPES, isFileAllowed } from "@/lib/file-types";
 
 interface AttachedFile {
   name: string;
@@ -37,7 +29,7 @@ export function useFileDrop(
         toast.error(`File too large: ${f.name} (max 20MB)`);
         continue;
       }
-      if (!ALLOWED_TYPES.some(t => f.type === t || f.type.startsWith(t.split("/")[0] + "/"))) {
+      if (!isFileAllowed(f)) {
         toast.error(`Unsupported file: ${f.name}`);
         continue;
       }

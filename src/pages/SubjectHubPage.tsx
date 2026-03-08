@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Bot, User, MessageSquare, BookOpen, Code, ListChecks,
-  FileQuestion, ArrowLeft, Mic, Paperclip, X, FileText, Image as ImageIcon, Upload,
+  FileQuestion, ArrowLeft, Mic, Paperclip, X, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
+import { ACCEPT_EXTENSIONS, isFileAllowed, getFileCategory, FILE_CATEGORY_STYLES, buildFileContentParts, DROP_ZONE_TEXT } from "@/lib/file-types";
+import FileIcon from "@/components/FileIcon";
 
 interface Message {
   id: string;
@@ -39,14 +41,7 @@ interface AttachedFile {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const TITLE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-title`;
 const MAX_FILES = 20;
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+// File types handled by shared lib
 
 const SubjectHubPage = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -228,7 +223,7 @@ Start by greeting the student and asking your first viva question.`
     }
     for (const f of files) {
       if (f.size > 20 * 1024 * 1024) { toast.error(`File too large: ${f.name} (max 20MB)`); continue; }
-      if (!ALLOWED_TYPES.some(t => f.type === t || f.type.startsWith(t.split("/")[0] + "/"))) {
+      if (!isFileAllowed(f)) {
         toast.error(`Unsupported file: ${f.name}`); continue;
       }
       const reader = new FileReader();
@@ -396,26 +391,7 @@ Start by greeting the student and asking your first viva question.`
         }
 
         for (let i = 0; i < attachedFiles.length; i++) {
-          const f = attachedFiles[i];
-          if (f.type.startsWith("image/")) {
-            parts.push({ type: "image_url", image_url: { url: f.dataUrl } });
-            parts.push({
-              type: "text",
-              text: `[Image ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this image in context of ${subjectName}. Extract text/code via OCR if present.`,
-            });
-          } else if (f.type === "application/pdf") {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({
-              type: "text",
-              text: `[PDF ${i + 1}/${attachedFiles.length}: ${f.name}] — Read and analyze this PDF for ${subjectName}.`,
-            });
-          } else {
-            parts.push({ type: "file", file: { name: f.name, mime_type: f.type, data: f.dataUrl.split(",")[1] } });
-            parts.push({
-              type: "text",
-              text: `[Document ${i + 1}/${attachedFiles.length}: ${f.name}] — Analyze this document for ${subjectName}.`,
-            });
-          }
+          parts.push(...buildFileContentParts(attachedFiles[i], i, attachedFiles.length, subjectName));
         }
         apiContent = parts;
       } else {
@@ -464,10 +440,7 @@ Start by greeting the student and asking your first viva question.`
         { icon: BookOpen, label: "Prepare for Viva" },
       ];
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith("image/")) return <ImageIcon className="w-3.5 h-3.5 text-primary" />;
-    return <FileText className="w-3.5 h-3.5 text-primary" />;
-  };
+  // File icon handled by FileIcon component
 
   if (!result) {
     return (
@@ -496,7 +469,7 @@ Start by greeting the student and asking your first viva question.`
           <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 border-2 border-dashed border-primary">
             <Upload className="w-10 h-10 text-primary" />
             <p className="font-display font-semibold text-foreground">Drop files here</p>
-            <p className="text-xs text-muted-foreground">PDF, Images, DOCX — up to {MAX_FILES} files</p>
+            <p className="text-xs text-muted-foreground">{DROP_ZONE_TEXT} — up to {MAX_FILES} files</p>
           </div>
         </div>
       )}
@@ -577,9 +550,7 @@ Start by greeting the student and asking your first viva question.`
                     <div className="flex flex-wrap gap-1.5 justify-end">
                       {msg.fileNames.map((name, i) => (
                         <span key={i} className="glass rounded-lg px-2 py-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                          {name.match(/\.(png|jpg|jpeg|webp|gif)$/i)
-                            ? <ImageIcon className="w-2.5 h-2.5" />
-                            : <FileText className="w-2.5 h-2.5" />}
+                          <FileIcon fileName={name} size="xs" />
                           {name}
                         </span>
                       ))}
@@ -700,8 +671,8 @@ Start by greeting the student and asking your first viva question.`
                       </div>
                     ) : (
                       <div className="px-3 py-2 flex items-center gap-2 min-w-[120px]">
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          {getFileIcon(f.type)}
+                        <div className={`w-9 h-9 rounded-lg ${FILE_CATEGORY_STYLES[getFileCategory(f.type)].bgColor} flex items-center justify-center flex-shrink-0`}>
+                          <FileIcon fileName={f.name} mimeType={f.type} size="sm" />
                         </div>
                         <div className="min-w-0 space-y-0.5">
                           <p className="text-[11px] text-foreground truncate max-w-[100px] font-medium">{f.name}</p>
@@ -726,7 +697,7 @@ Start by greeting the student and asking your first viva question.`
             ref={fileInputRef}
             onChange={handleFileSelect}
             multiple
-            accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx"
+            accept={ACCEPT_EXTENSIONS}
             className="hidden"
           />
           <Button
