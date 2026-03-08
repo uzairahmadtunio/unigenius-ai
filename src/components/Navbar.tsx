@@ -105,18 +105,20 @@ const Navbar = () => {
 
           {/* Bell Notification */}
           {user && (
-            <Popover onOpenChange={async (open) => {
+            <Popover onOpenChange={(open) => {
               if (open && unreadCount > 0 && user) {
-                // Mark all unread notices as read
-                const inserts = notices.map((n: any) => ({
+                // Clear badge immediately
+                const toMark = [...notices];
+                setUnreadCount(0);
+                setNotices([]);
+                // Mark as read in background
+                const inserts = toMark.map((n: any) => ({
                   user_id: user.id,
                   notice_id: n.id,
                 }));
                 if (inserts.length > 0) {
-                  await supabase.from("user_notice_reads").insert(inserts as any);
+                  supabase.from("user_notice_reads").insert(inserts as any);
                 }
-                setUnreadCount(0);
-                setNotices([]);
               }
             }}>
               <PopoverTrigger asChild>
