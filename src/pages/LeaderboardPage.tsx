@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { Trophy, Medal, Crown, Star, Flame, Target, Award, Code, Briefcase, FileText } from "lucide-react";
+import { Trophy, Medal, Crown, Star, Flame, Target, Award, Code, Briefcase, FileText, Calendar, CalendarDays, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PageShell from "@/components/PageShell";
