@@ -25,6 +25,8 @@ import GroupDetailPage from "./pages/GroupDetailPage";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import PremiumPage from "./pages/PremiumPage";
+import PlannerPage from "./pages/PlannerPage";
+import NotesPage from "./pages/NotesPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
