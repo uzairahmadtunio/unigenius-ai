@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Progress } from "@/components/ui/progress";
+import { useFileDrop } from "@/hooks/use-file-drop";
 
 interface Message {
   id: string;
