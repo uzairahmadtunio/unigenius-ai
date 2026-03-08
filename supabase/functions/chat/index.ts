@@ -8,10 +8,8 @@ const corsHeaders = {
 // Convert multimodal content parts to Gemini-compatible format
 function transformMessages(messages: any[]) {
   return messages.map((msg: any) => {
-    // If content is a string, pass as-is
     if (typeof msg.content === "string") return msg;
 
-    // If content is an array of parts, transform for OpenAI-compatible API
     if (Array.isArray(msg.content)) {
       const transformedParts: any[] = [];
 
@@ -19,20 +17,62 @@ function transformMessages(messages: any[]) {
         if (part.type === "text") {
           transformedParts.push(part);
         } else if (part.type === "image_url") {
-          // Images: pass through as image_url (Gemini supports base64 data URLs)
           transformedParts.push(part);
         } else if (part.type === "file") {
-          // PDFs/DOCX: convert to image_url format with proper mime type
-          // The Lovable AI gateway / Gemini supports inline base64 data
           const { name, mime_type, data } = part.file;
-          if (mime_type === "application/pdf") {
-            // Send PDF as image_url with data URL (Gemini handles PDFs natively)
+          // PDFs and images: Gemini handles natively via data URL
+          if (mime_type === "application/pdf" || mime_type.startsWith("image/")) {
             transformedParts.push({
               type: "image_url",
               image_url: { url: `data:${mime_type};base64,${data}` },
             });
-          } else {
-            // For DOCX and other binary docs, add instruction text
+          }
+          // Word documents
+          else if (mime_type.includes("wordprocessingml") || mime_type === "application/msword") {
+            transformedParts.push({
+              type: "image_url",
+              image_url: { url: `data:${mime_type};base64,${data}` },
+            });
+          }
+          // PowerPoint presentations
+          else if (mime_type.includes("presentationml") || mime_type === "application/vnd.ms-powerpoint") {
+            transformedParts.push({
+              type: "image_url",
+              image_url: { url: `data:${mime_type};base64,${data}` },
+            });
+          }
+          // Audio files (Gemini supports audio natively)
+          else if (mime_type.startsWith("audio/")) {
+            transformedParts.push({
+              type: "image_url",
+              image_url: { url: `data:${mime_type};base64,${data}` },
+            });
+          }
+          // Video files
+          else if (mime_type.startsWith("video/")) {
+            transformedParts.push({
+              type: "image_url",
+              image_url: { url: `data:${mime_type};base64,${data}` },
+            });
+          }
+          // Text files
+          else if (mime_type === "text/plain") {
+            // Decode text content inline
+            try {
+              const textContent = atob(data);
+              transformedParts.push({
+                type: "text",
+                text: `[Content of ${name}]:\n${textContent}`,
+              });
+            } catch {
+              transformedParts.push({
+                type: "text",
+                text: `[File attached: ${name} (${mime_type})] — Please analyze this document.`,
+              });
+            }
+          }
+          // Fallback for other binary docs
+          else {
             transformedParts.push({
               type: "text",
               text: `[File attached: ${name} (${mime_type})] — The user uploaded this document. Please help analyze its content based on the context provided.`,
