@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import SplashScreen from "@/components/SplashScreen";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import SemesterSelector from "@/components/SemesterSelector";
 import SubjectGrid from "@/components/SubjectGrid";
 import QuickActions from "@/components/QuickActions";
@@ -104,6 +105,10 @@ const Index = () => {
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-4">
           <h2 className="font-display font-bold text-lg text-foreground">Semester {semester} Subjects</h2>
           <SubjectGrid semester={semester} />
+        </motion.section>
+        {/* Feedback */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex justify-end">
+          <FeedbackWidget />
         </motion.section>
       </main>
 
