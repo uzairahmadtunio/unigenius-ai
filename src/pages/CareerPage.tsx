@@ -828,8 +828,12 @@ const tabs = [
   { id: "skills" as ActiveTab, icon: TrendingUp, label: "Skill Sync", desc: "Freelance Gigs", color: "from-amber-500 to-orange-500" },
 ];
 
+import { usePro } from "@/hooks/use-pro";
+import ProPaywall from "@/components/ProPaywall";
+
 const CareerPage = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("interview");
+  const { isPro, loading: proLoading } = usePro();
 
   return (
     <PageShell
@@ -841,7 +845,9 @@ const CareerPage = () => {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="relative min-h-[400px]">
+        {!isPro && !proLoading && <ProPaywall feature="AI career tools, mock interviews, and CV optimizer" />}
+        <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {tabs.map((tab) => (
             <motion.button
