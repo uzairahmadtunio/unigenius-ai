@@ -124,6 +124,11 @@ const AdminDashboard = () => {
                   {supportUnread > 9 ? "9+" : supportUnread}
                 </span>
               )}
+              {tab.id === "feedback" && feedbackUnread > 0 && (
+                <span className="ml-auto w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {feedbackUnread > 9 ? "9+" : feedbackUnread}
+                </span>
+              )}
             </button>
           ))}
         </nav>
