@@ -148,8 +148,9 @@ const DocsGenPage = () => {
       title="Docs Generator"
       subtitle="Lab Manuals & Assignments"
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center"><FileText className="w-5 h-5 text-primary-foreground" /></div>}
-      extra={!isPro && !proLoading ? <div className="relative"><ProPaywall feature="professional lab manuals and AI document generation" /></div> : undefined}
     >
+      <div className="relative">
+        {!isPro && !proLoading && <ProPaywall feature="professional lab manuals and AI document generation" />}
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Form */}
         <div className="space-y-4">
