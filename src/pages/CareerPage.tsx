@@ -875,6 +875,7 @@ const CareerPage = () => {
             {activeTab === "interview" && <InterviewPrep />}
             {activeTab === "dsa" && <DSAPractice />}
             {activeTab === "cv" && <CVOptimizer />}
+            {activeTab === "skills" && <SkillAnalyzer />}
           </motion.div>
         </AnimatePresence>
 
