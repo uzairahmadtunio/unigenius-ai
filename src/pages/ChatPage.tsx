@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, Upload } from "lucide-react";
+import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, Upload, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,13 +79,21 @@ const ChatPage = () => {
     }
   }, [userScrolledUp]);
 
-  // Detect if user scrolled up manually
+  // Detect if user scrolled up manually + show scroll-to-top
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    // If user is more than 100px from bottom, they've scrolled up
     setUserScrolledUp(distFromBottom > 100);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const scrollToBottomManual = useCallback(() => {
+    setUserScrolledUp(false);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
@@ -352,7 +360,7 @@ const ChatPage = () => {
           </div>
 
           {/* Scrollable messages area */}
-          <div className="flex-1 overflow-y-auto min-h-0" ref={scrollContainerRef} onScroll={handleScroll}>
+          <div className="flex-1 overflow-y-auto min-h-0 relative" ref={scrollContainerRef} onScroll={handleScroll}>
             <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
               <AnimatePresence>
                 {messages.map((msg) => (
@@ -418,6 +426,34 @@ const ChatPage = () => {
               )}
               <div ref={bottomRef} />
             </div>
+
+            {/* Floating scroll buttons */}
+            <AnimatePresence>
+              {userScrolledUp && (
+                <>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToTop}
+                    className="absolute top-20 right-4 z-20 w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm border border-border/50 shadow-elevated flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    title="Scroll to top"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </motion.button>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToBottomManual}
+                    className="absolute bottom-4 right-4 z-20 w-9 h-9 rounded-full gradient-primary shadow-elevated flex items-center justify-center text-primary-foreground"
+                    title="Scroll to bottom"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </motion.button>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Fixed bottom input area */}
