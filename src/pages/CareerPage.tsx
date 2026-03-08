@@ -170,6 +170,15 @@ Start by greeting the candidate and asking your first question.`
           } catch {}
         }
       }
+
+      // Check if interview is complete
+      if (user && assistantText.includes("INTERVIEW_COMPLETE")) {
+        const saved = await recordCareerActivity(user.id, "interview_complete", 15, { semester });
+        if (saved) {
+          fireCelebration(15);
+          checkAndAwardBadges(user.id);
+        }
+      }
     } catch (e: any) {
       toast.error(e.message || "Error");
     } finally {
