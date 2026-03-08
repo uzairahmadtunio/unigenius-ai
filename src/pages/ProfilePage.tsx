@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Trophy, Calculator, Camera, Save, Edit2, Calendar, Loader2, Github, Linkedin, BadgeCheck, X, Plus, Eye, EyeOff, Award, BookOpen, TrendingUp } from "lucide-react";
+import { User, Trophy, Camera, Save, Edit2, Calendar, Loader2, Github, Linkedin, BadgeCheck, X, Plus, Eye, EyeOff, Award, BookOpen, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
