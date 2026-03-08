@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.generate-doc]
 verify_jwt = false
+
+[functions.viva-session]
+verify_jwt = false
+
+[functions.generate-flashcards]
+verify_jwt = false
