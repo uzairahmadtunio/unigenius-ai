@@ -606,7 +606,7 @@ const GlobalAlertsTab = () => {
     setSubmitting(true);
     await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("is_active", true);
     await (supabase.from("global_alerts" as any) as any).insert({ message, alert_type: alertType, is_active: true });
-    toast.success("🚨 Global Alert Live!", { description: "All users will see this banner." });
+    toast.success("Global Alert Published", { description: "All users will see this banner." });
     setMessage("");
     setSubmitting(false);
     fetchAlerts();
