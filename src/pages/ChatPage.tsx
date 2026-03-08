@@ -249,6 +249,7 @@ const ChatPage = () => {
   const handleSend = async (text?: string) => {
     const msg = text || input.trim();
     if ((!msg && attachedFiles.length === 0) || isStreaming) return;
+    setUserScrolledUp(false);
 
     const fileNames = attachedFiles.map(f => f.name);
     const fileThumbnails = attachedFiles.filter(f => f.type.startsWith("image/")).map(f => f.dataUrl);
