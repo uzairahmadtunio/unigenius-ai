@@ -63,16 +63,34 @@ const ChatPage = () => {
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [titleGenerated, setTitleGenerated] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
 
+  // Smart auto-scroll: only scroll if user hasn't manually scrolled up
+  const scrollToBottom = useCallback(() => {
+    if (!userScrolledUp) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [userScrolledUp]);
+
+  // Detect if user scrolled up manually
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // If user is more than 100px from bottom, they've scrolled up
+    setUserScrolledUp(distFromBottom > 100);
+  }, []);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
