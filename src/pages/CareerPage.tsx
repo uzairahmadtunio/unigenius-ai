@@ -17,7 +17,7 @@ import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { fireCelebration, recordCareerActivity, checkAndAwardBadges, PRESET_DSA_PROBLEMS, type DSAProblem } from "@/lib/career-points";
 
-type ActiveTab = "interview" | "dsa" | "cv";
+type ActiveTab = "interview" | "dsa" | "cv" | "skills";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
