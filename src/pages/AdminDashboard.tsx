@@ -1166,7 +1166,7 @@ const PromoManagerTab = () => {
 
   const toggleActive = async (id: string, currentActive: boolean) => {
     await supabase.from("promo_codes" as any).update({ is_active: !currentActive } as any).eq("id", id);
-    toast.success(currentActive ? "Code deactivated" : "Code activated");
+    toast.success(currentActive ? "Promo Code Deactivated" : "Promo Code Activated");
     fetchCodes();
   };
 
