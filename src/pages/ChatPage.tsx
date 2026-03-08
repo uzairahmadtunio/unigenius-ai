@@ -143,9 +143,15 @@ const ChatPage = () => {
     window.speechSynthesis.speak(utterance);
   }, [speakingMsgId, voiceGender, getBestVoice]);
 
-  // Cleanup TTS on unmount
+  // Preload voices & cleanup TTS on unmount
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    window.speechSynthesis.getVoices(); // trigger async load
+    const onVoicesChanged = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener?.("voiceschanged", onVoicesChanged);
+    return () => {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.removeEventListener?.("voiceschanged", onVoicesChanged);
+    };
   }, []);
 
   useEffect(() => {
