@@ -23,9 +23,25 @@ interface Group {
   owner_id: string;
   semester: number;
   created_at: string;
+  avatar_url: string | null;
   member_count?: number;
   is_owner?: boolean;
 }
+
+const GroupAvatar = ({ url, name, size = "md" }: { url?: string | null; name?: string; size?: "sm" | "md" }) => {
+  const sizes = { sm: "w-8 h-8", md: "w-10 h-10" };
+  return (
+    <div className={`${sizes[size]} rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center`}>
+      {url ? (
+        <img src={url} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span className="font-bold text-primary-foreground text-sm">
+          {(name || "G")[0].toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const GroupsPage = () => {
   const { user } = useAuth();
