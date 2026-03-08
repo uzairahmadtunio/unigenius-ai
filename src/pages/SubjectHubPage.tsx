@@ -17,6 +17,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { useFileDrop } from "@/hooks/use-file-drop";
+import ChatSidebar from "@/components/ChatSidebar";
 
 interface Message {
   id: string;
@@ -36,6 +37,7 @@ interface AttachedFile {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const TITLE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-title`;
 const MAX_FILES = 20;
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -63,8 +65,10 @@ const SubjectHubPage = () => {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadingFileIndex, setUploadingFileIndex] = useState(-1);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [sidebarRefresh, setSidebarRefresh] = useState(0);
+  const [titleGenerated, setTitleGenerated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
 
   const systemPrompt = mode === "viva"
     ? `You are a strict but helpful university professor conducting a mock viva voce for "${subjectName}" in Semester ${semester} of a ${deptName} program. 
@@ -98,6 +102,97 @@ Start by greeting the student and asking your first viva question.`
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Auto-load last active chat for this subject
+  useEffect(() => {
+    if (!user || !subjectId) return;
+    const loadLastSession = async () => {
+      const { data } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("subject", subjectId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        loadChat(data.id);
+      }
+    };
+    loadLastSession();
+  }, [user, subjectId]);
+
+  const createChatSession = async (): Promise<string | null> => {
+    if (!user) return null;
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({ user_id: user.id, title: `${subjectName} Chat`, subject: subjectId })
+      .select("id")
+      .single();
+    if (error) { console.error("Failed to create chat session:", error); return null; }
+    return data.id;
+  };
+
+  const saveMessage = async (chatId: string, role: string, content: string, fileNames?: string[], fileUrls?: string[]) => {
+    if (!user) return;
+    await supabase.from("chat_messages").insert({
+      chat_id: chatId, user_id: user.id, role, content,
+      file_names: fileNames || [], file_urls: fileUrls || [],
+    });
+    await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", chatId);
+  };
+
+  const generateTitle = async (chatId: string, msgs: Message[]) => {
+    if (!user || titleGenerated) return;
+    try {
+      const resp = await fetch(TITLE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: msgs.filter(m => !m.id.startsWith("welcome")).map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const { title } = await resp.json();
+      if (title && title !== "New Chat") {
+        await supabase.from("chat_sessions").update({ title }).eq("id", chatId);
+        setTitleGenerated(true);
+        setSidebarRefresh(prev => prev + 1);
+      }
+    } catch (e) { console.error("Title generation error:", e); }
+  };
+
+  const loadChat = async (chatId: string) => {
+    if (!user) return;
+    setActiveChatId(chatId);
+    setTitleGenerated(true);
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: true });
+    if (error) { toast.error("Failed to load chat"); return; }
+    const loadedMessages: Message[] = [
+      { id: "welcome", role: "assistant", content: getWelcome() },
+      ...(data || []).map((m: any) => ({
+        id: m.id, role: m.role as "user" | "assistant", content: m.content,
+        fileNames: m.file_names?.length > 0 ? m.file_names : undefined,
+      })),
+    ];
+    setMessages(loadedMessages);
+    setAttachedFiles([]);
+    setInput("");
+  };
+
+  const handleNewChat = () => {
+    setActiveChatId(null);
+    setMessages([{ id: "welcome", role: "assistant", content: getWelcome() }]);
+    setTitleGenerated(false);
+    setAttachedFiles([]);
+    setInput("");
+  };
+
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -110,6 +205,8 @@ Start by greeting the student and asking your first viva question.`
   const switchMode = (newMode: "tutor" | "viva") => {
     setMode(newMode);
     setAttachedFiles([]);
+    setActiveChatId(null);
+    setTitleGenerated(false);
     setMessages([{ id: "welcome-" + newMode, role: "assistant", content: newMode === "viva"
       ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Tayyar ho? Shuru karte hain...`
       : getWelcome()
@@ -237,6 +334,7 @@ Start by greeting the student and asking your first viva question.`
         }
       }
     }
+    return assistantSoFar;
   };
 
   // ─── Send handler ────────────────────────────────────────────
@@ -262,11 +360,26 @@ Start by greeting the student and asking your first viva question.`
     setIsStreaming(true);
 
     try {
-      // Upload to storage
+      let storageUrls: string[] = [];
       if (attachedFiles.length > 0 && user) {
         setIsUploading(true);
-        await uploadToStorage(attachedFiles);
+        storageUrls = await uploadToStorage(attachedFiles);
         setIsUploading(false);
+      }
+
+      // Ensure we have a chat session
+      let chatId = activeChatId;
+      if (!chatId && user) {
+        chatId = await createChatSession();
+        if (chatId) {
+          setActiveChatId(chatId);
+          setSidebarRefresh(prev => prev + 1);
+        }
+      }
+
+      // Save user message to DB
+      if (chatId && user) {
+        await saveMessage(chatId, "user", displayContent, fileNames, storageUrls);
       }
 
       // Build multimodal API content
@@ -316,7 +429,19 @@ Start by greeting the student and asking your first viva question.`
             ? { role: m.role, content: apiContent }
             : { role: m.role, content: m.content }
         );
-      await streamChat(apiMessages);
+      const assistantContent = await streamChat(apiMessages);
+
+      // Save assistant message to DB
+      if (chatId && user && assistantContent) {
+        await saveMessage(chatId, "assistant", assistantContent);
+      }
+
+      // Generate title after first exchange
+      const userMsgCount = newMessages.filter(m => m.role === "user").length;
+      if (chatId && userMsgCount >= 1 && !titleGenerated) {
+        const allMsgs = [...newMessages, { id: "temp", role: "assistant" as const, content: assistantContent }];
+        generateTitle(chatId, allMsgs);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to get response");
     } finally {
@@ -375,7 +500,17 @@ Start by greeting the student and asking your first viva question.`
           </div>
         </div>
       )}
-      <div className="flex-1 container mx-auto max-w-3xl px-4 py-4 flex flex-col">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Subject-specific Chat Sidebar */}
+        <ChatSidebar
+          activeChatId={activeChatId}
+          onSelectChat={loadChat}
+          onNewChat={handleNewChat}
+          refreshTrigger={sidebarRefresh}
+          subject={subjectId || null}
+        />
+
+        <div className="flex-1 flex flex-col max-w-3xl mx-auto px-4 py-4 w-full">
         {/* Header */}
         <div className="flex items-center gap-3 mb-3">
           <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => navigate("/")}>
@@ -636,6 +771,7 @@ Start by greeting the student and asking your first viva question.`
           >
             <Send className="w-4 h-4" />
           </Button>
+        </div>
         </div>
       </div>
       <Footer />
