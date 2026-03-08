@@ -100,7 +100,6 @@ const ProfilePage = () => {
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
   const [badges, setBadges] = useState<BadgeData[]>([]);
   const [attendancePercent, setAttendancePercent] = useState(0);
-  const [courses, setCourses] = useState<CourseGrade[]>([{ grade: "A", credits: 3 }]);
   const [newSkill, setNewSkill] = useState("");
 
   const [profile, setProfile] = useState<ProfileData>({
