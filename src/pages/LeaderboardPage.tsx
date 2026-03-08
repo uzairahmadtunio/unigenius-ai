@@ -140,6 +140,26 @@ const LeaderboardPage = () => {
           </motion.div>
         )}
 
+        {/* Time Filter */}
+        <div className="flex gap-2">
+          {TIME_FILTERS.map((filter) => (
+            <motion.button
+              key={filter.id}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setTimeFilter(filter.id)}
+              className={`flex-1 glass rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 text-sm font-display font-semibold transition-all ${
+                timeFilter === filter.id
+                  ? "ring-2 ring-primary shadow-elevated text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <filter.icon className="w-4 h-4" />
+              {filter.label}
+            </motion.button>
+          ))}
+        </div>
+
         {/* Badges Section */}
         {user && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-4 space-y-3">
