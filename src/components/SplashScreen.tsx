@@ -241,15 +241,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
                   Get Started →
                 </motion.button>
 
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-xs text-white/40"
-                >
-                  Join <span className="text-white/60 font-medium">Mudasir</span> and{" "}
-                  <span className="text-white/60 font-medium">Wasi</span> who are already saving time!
-                </motion.p>
               </motion.div>
             )}
           </AnimatePresence>
