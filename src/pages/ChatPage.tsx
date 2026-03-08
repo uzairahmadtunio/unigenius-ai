@@ -406,13 +406,13 @@ const ChatPage = () => {
                 <Bot className="w-4 h-4 text-primary-foreground" />
               </div>
               <div className="glass rounded-2xl px-4 py-3 flex items-center gap-2">
-                {isUploading ? (
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground">
-                      Uploading file {uploadingFileIndex + 1} of {attachedFiles.length}…
-                    </span>
-                    <Progress value={attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0} className="h-1.5 w-32" />
-                  </div>
+                 {isUploading ? (
+                   <div className="space-y-1">
+                     <span className="text-xs text-muted-foreground">
+                       Uploading {uploadingFileIndex + 1}/{attachedFiles.length} — {Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)}%
+                     </span>
+                     <Progress value={Math.round(((uploadingFileIndex) / attachedFiles.length) * 100 + (attachedFiles[uploadingFileIndex]?.uploadProgress ?? 0) / attachedFiles.length)} className="h-1.5 w-40" />
+                   </div>
                 ) : (
                   <>
                     <span className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" />
