@@ -1305,4 +1305,87 @@ const PromoManagerTab = () => {
   );
 };
 
+/* ===== FEEDBACK TAB ===== */
+const feedbackTypeConfig: Record<string, { icon: any; label: string; color: string }> = {
+  appreciate: { icon: Star, label: "Appreciate", color: "text-amber-400" },
+  bug: { icon: Bug, label: "Bug Report", color: "text-destructive" },
+  suggestion: { icon: Lightbulb, label: "Suggestion", color: "text-primary" },
+};
+
+const FeedbackTab = () => {
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+
+  const fetchFeedbacks = async () => {
+    const { data } = await supabase
+      .from("feedbacks" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setFeedbacks((data as any[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchFeedbacks(); }, []);
+
+  const filtered = feedbacks.filter((f: any) => filter === "all" || f.feedback_type === filter);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">Student Feedback</h2>
+          <p className="text-xs text-muted-foreground">{feedbacks.length} submissions received</p>
+        </div>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-36 rounded-xl text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="appreciate">⭐ Appreciate</SelectItem>
+            <SelectItem value="bug">🐞 Bug Reports</SelectItem>
+            <SelectItem value="suggestion">💡 Suggestions</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading feedback...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">No feedback yet.</div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((f: any) => {
+            const config = feedbackTypeConfig[f.feedback_type] || feedbackTypeConfig.appreciate;
+            const Icon = config.icon;
+            return (
+              <Card key={f.id} className="border-border/30 bg-card">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 ${config.color}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-foreground">{f.user_name}</span>
+                        <Badge variant="outline" className="text-[9px]">{config.label}</Badge>
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {new Date(f.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{f.user_email}</p>
+                      <p className="text-xs text-foreground mt-2 whitespace-pre-wrap">{f.message}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 export default AdminDashboard;
