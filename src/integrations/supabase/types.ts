@@ -553,6 +553,71 @@ export type Database = {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          sender_id: string
+          sender_role: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          sender_id: string
+          sender_role?: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          sender_id?: string
+          sender_role?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       university_notices: {
         Row: {
           category: string
@@ -717,6 +782,23 @@ export type Database = {
           total_notices: number
           total_quizzes: number
           total_users: number
+        }[]
+      }
+      admin_get_support_tickets: {
+        Args: never
+        Returns: {
+          created_at: string
+          last_message: string
+          last_message_at: string
+          status: string
+          subject: string
+          ticket_id: string
+          unread_count: number
+          updated_at: string
+          user_avatar: string
+          user_email: string
+          user_id: string
+          user_name: string
         }[]
       }
       get_leaderboard_filtered: {

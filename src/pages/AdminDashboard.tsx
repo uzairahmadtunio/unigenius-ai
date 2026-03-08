@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
-  Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X
+  Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X,
+  Headset, Send, CheckCircle2, MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 const categories = ["general", "fee", "exam", "academic", "event"];
 const priorities = ["normal", "high", "urgent"];
 
-type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts";
+type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support";
 
 const tabItems = [
   { id: "overview" as AdminTab, label: "Overview", icon: BarChart3 },
@@ -30,6 +31,7 @@ const tabItems = [
   { id: "notices" as AdminTab, label: "Notices", icon: Megaphone },
   { id: "groups" as AdminTab, label: "Groups", icon: FolderOpen },
   { id: "alerts" as AdminTab, label: "Global Alerts", icon: Radio },
+  { id: "support" as AdminTab, label: "Support Inbox", icon: Headset },
 ];
 
 const AdminDashboard = () => {
@@ -37,12 +39,31 @@ const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [supportUnread, setSupportUnread] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && (!user || !isAdmin)) {
       navigate("/");
     }
   }, [authLoading, adminLoading, user, isAdmin, navigate]);
+
+  // Fetch unread support count
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchUnread = async () => {
+      const { data } = await supabase.rpc("admin_get_support_tickets" as any);
+      const total = (data || []).reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0);
+      setSupportUnread(total);
+    };
+    fetchUnread();
+    const channel = supabase
+      .channel("admin-support-notify")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, () => {
+        fetchUnread();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
 
   if (authLoading || adminLoading) {
     return (
@@ -74,7 +95,7 @@ const AdminDashboard = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors relative ${
                 activeTab === tab.id
                   ? "bg-primary/10 text-primary font-semibold"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -82,6 +103,11 @@ const AdminDashboard = () => {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
+              {tab.id === "support" && supportUnread > 0 && (
+                <span className="ml-auto w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {supportUnread > 9 ? "9+" : supportUnread}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -98,12 +124,17 @@ const AdminDashboard = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] transition-colors relative ${
               activeTab === tab.id ? "text-primary" : "text-muted-foreground"
             }`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
+            {tab.id === "support" && supportUnread > 0 && (
+              <span className="absolute top-1 right-1/4 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
+                {supportUnread > 9 ? "+" : supportUnread}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -127,6 +158,7 @@ const AdminDashboard = () => {
           {activeTab === "notices" && <NoticesTab />}
           {activeTab === "groups" && <GroupsTab />}
           {activeTab === "alerts" && <GlobalAlertsTab />}
+          {activeTab === "support" && <SupportTab />}
         </div>
       </main>
     </div>
@@ -176,7 +208,6 @@ const OverviewTab = () => {
         <div className="text-center py-12 text-muted-foreground text-sm">Loading statistics...</div>
       )}
 
-      {/* Activity bar chart placeholder */}
       <Card className="border-border/30 bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-display">Platform Activity</CardTitle>
@@ -273,18 +304,8 @@ const UsersTab = () => {
                   <p className="text-sm font-semibold text-foreground truncate">{u.display_name || "No Name"}</p>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                     <span className="truncate">{u.email}</span>
-                    {u.roll_number && (
-                      <>
-                        <span>•</span>
-                        <span>{u.roll_number}</span>
-                      </>
-                    )}
-                    {u.current_semester && (
-                      <>
-                        <span>•</span>
-                        <span>Sem {u.current_semester}</span>
-                      </>
-                    )}
+                    {u.roll_number && <><span>•</span><span>{u.roll_number}</span></>}
+                    {u.current_semester && <><span>•</span><span>Sem {u.current_semester}</span></>}
                   </div>
                 </div>
                 <Button
@@ -304,7 +325,6 @@ const UsersTab = () => {
         </div>
       )}
 
-      {/* Delete Confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -395,7 +415,6 @@ const NoticesTab = () => {
         </Button>
       </div>
 
-      {/* Form Dialog */}
       <Dialog open={formOpen} onOpenChange={(o) => { if (!o) resetForm(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -425,7 +444,6 @@ const NoticesTab = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Notices list */}
       <div className="space-y-2">
         {notices.length === 0 ? (
           <Card className="border-border/30 bg-card">
@@ -581,15 +599,8 @@ const GlobalAlertsTab = () => {
     e.preventDefault();
     if (!message.trim()) return;
     setSubmitting(true);
-
-    // Deactivate existing active alerts first
-    await (supabase.from("global_alerts" as any) as any)
-      .update({ is_active: false })
-      .eq("is_active", true);
-
-    await (supabase.from("global_alerts" as any) as any)
-      .insert({ message, alert_type: alertType, is_active: true });
-
+    await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("is_active", true);
+    await (supabase.from("global_alerts" as any) as any).insert({ message, alert_type: alertType, is_active: true });
     toast.success("🚨 Global Alert Live!", { description: "All users will see this banner." });
     setMessage("");
     setSubmitting(false);
@@ -597,17 +608,13 @@ const GlobalAlertsTab = () => {
   };
 
   const handleDeactivate = async (id: string) => {
-    await (supabase.from("global_alerts" as any) as any)
-      .update({ is_active: false })
-      .eq("id", id);
+    await (supabase.from("global_alerts" as any) as any).update({ is_active: false }).eq("id", id);
     toast.success("Alert deactivated.");
     fetchAlerts();
   };
 
   const handleDelete = async (id: string) => {
-    await (supabase.from("global_alerts" as any) as any)
-      .delete()
-      .eq("id", id);
+    await (supabase.from("global_alerts" as any) as any).delete().eq("id", id);
     toast.success("Alert deleted.");
     fetchAlerts();
   };
@@ -631,9 +638,7 @@ const GlobalAlertsTab = () => {
             />
             <div className="flex items-center gap-3">
               <Select value={alertType} onValueChange={setAlertType}>
-                <SelectTrigger className="rounded-xl w-40">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="rounded-xl w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="info">ℹ️ Info</SelectItem>
                   <SelectItem value="warning">⚠️ Warning</SelectItem>
@@ -681,6 +686,275 @@ const GlobalAlertsTab = () => {
             </Card>
           ))
         )}
+      </div>
+    </motion.div>
+  );
+};
+
+/* ===== SUPPORT INBOX TAB ===== */
+const SupportTab = () => {
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [filter, setFilter] = useState<"all" | "open" | "closed">("all");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchTickets = async () => {
+    const { data } = await supabase.rpc("admin_get_support_tickets" as any);
+    setTickets(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchTickets(); }, []);
+
+  // Realtime for new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-support-messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, (payload) => {
+        if (selectedTicket && (payload.new as any).ticket_id === selectedTicket.ticket_id) {
+          setMessages((prev) => [...prev, payload.new]);
+        }
+        fetchTickets();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedTicket]);
+
+  const openTicket = async (ticket: any) => {
+    setSelectedTicket(ticket);
+    const { data } = await supabase
+      .from("support_messages" as any)
+      .select("*")
+      .eq("ticket_id", ticket.ticket_id)
+      .order("created_at", { ascending: true });
+    setMessages(data || []);
+
+    // Mark student messages as read
+    await (supabase.from("support_messages" as any) as any)
+      .update({ is_read: true })
+      .eq("ticket_id", ticket.ticket_id)
+      .eq("sender_role", "student")
+      .eq("is_read", false);
+    fetchTickets();
+  };
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  const handleReply = async () => {
+    if (!reply.trim() || !selectedTicket || !user) return;
+    setSending(true);
+    await (supabase.from("support_messages" as any) as any).insert({
+      ticket_id: selectedTicket.ticket_id,
+      sender_id: user.id,
+      sender_role: "admin",
+      message: reply.trim(),
+    });
+    await (supabase.from("support_tickets" as any) as any)
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", selectedTicket.ticket_id);
+    setReply("");
+    setSending(false);
+  };
+
+  const handleResolve = async (ticketId: string) => {
+    await (supabase.from("support_tickets" as any) as any)
+      .update({ status: "closed", updated_at: new Date().toISOString() })
+      .eq("id", ticketId);
+    toast.success("✅ Ticket marked as resolved!");
+    if (selectedTicket?.ticket_id === ticketId) {
+      setSelectedTicket(null);
+      setMessages([]);
+    }
+    fetchTickets();
+  };
+
+  const filteredTickets = tickets.filter((t: any) => {
+    if (filter === "open") return t.status === "open";
+    if (filter === "closed") return t.status === "closed";
+    return true;
+  });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground">Support Inbox</h2>
+          <p className="text-xs text-muted-foreground">{tickets.filter((t: any) => t.status === "open").length} open tickets</p>
+        </div>
+        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <SelectTrigger className="rounded-xl w-28"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4" style={{ minHeight: "500px" }}>
+        {/* Ticket List */}
+        <div className="lg:col-span-2 space-y-2 overflow-y-auto max-h-[600px]">
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">Loading tickets...</div>
+          ) : filteredTickets.length === 0 ? (
+            <Card className="border-border/30 bg-card">
+              <CardContent className="p-8 text-center">
+                <Headset className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">No support tickets yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredTickets.map((t: any) => (
+              <Card
+                key={t.ticket_id}
+                className={`border-border/30 cursor-pointer transition-colors hover:bg-muted/30 ${
+                  selectedTicket?.ticket_id === t.ticket_id ? "border-primary bg-primary/5" : "bg-card"
+                }`}
+                onClick={() => openTicket(t)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Avatar className="w-7 h-7 border border-border">
+                      <AvatarImage src={t.user_avatar} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                        {(t.user_name || "?").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground truncate">{t.user_name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{t.user_email}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {t.unread_count > 0 && (
+                        <span className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                          {t.unread_count}
+                        </span>
+                      )}
+                      <Badge variant={t.status === "open" ? "default" : "secondary"} className="text-[9px]">
+                        {t.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  {t.last_message && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-1 pl-9">{t.last_message}</p>
+                  )}
+                  {t.last_message_at && (
+                    <p className="text-[9px] text-muted-foreground/50 mt-0.5 pl-9">
+                      {new Date(t.last_message_at).toLocaleString("en-PK", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Chat Panel */}
+        <div className="lg:col-span-3 border border-border rounded-2xl bg-card flex flex-col overflow-hidden">
+          {!selectedTicket ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageCircle className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Select a ticket to view conversation</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Avatar className="w-8 h-8 border border-border">
+                    <AvatarImage src={selectedTicket.user_avatar} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {(selectedTicket.user_name || "?").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{selectedTicket.user_name}</p>
+                    <p className="text-[10px] text-muted-foreground">{selectedTicket.user_email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedTicket.status === "open" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl text-xs gap-1.5 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                      onClick={() => handleResolve(selectedTicket.ticket_id)}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Resolve
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" className="rounded-xl w-8 h-8" onClick={() => { setSelectedTicket(null); setMessages([]); }}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2" style={{ maxHeight: "380px" }}>
+                {messages.map((m: any) => (
+                  <div key={m.id} className={`flex ${m.sender_role === "admin" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${
+                        m.sender_role === "admin"
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted text-foreground rounded-bl-sm"
+                      }`}
+                    >
+                      {m.sender_role === "student" && (
+                        <p className="text-[9px] font-bold text-primary mb-0.5">👤 Student</p>
+                      )}
+                      {m.sender_role === "admin" && (
+                        <p className="text-[9px] font-bold text-primary-foreground/70 mb-0.5">🛡️ You</p>
+                      )}
+                      <p className="whitespace-pre-wrap">{m.message}</p>
+                      <p className={`text-[9px] mt-1 ${m.sender_role === "admin" ? "text-primary-foreground/60" : "text-muted-foreground/60"}`}>
+                        {new Date(m.created_at).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reply Input */}
+              {selectedTicket.status === "open" && (
+                <div className="p-3 border-t border-border shrink-0">
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Type your reply..."
+                      value={reply}
+                      onChange={(e) => setReply(e.target.value)}
+                      className="rounded-xl min-h-[40px] max-h-[80px] resize-none text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleReply();
+                        }
+                      }}
+                    />
+                    <Button onClick={handleReply} disabled={!reply.trim() || sending} size="icon" className="rounded-xl shrink-0 self-end">
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {selectedTicket.status === "closed" && (
+                <div className="p-3 border-t border-border text-center">
+                  <p className="text-xs text-muted-foreground">✅ This ticket has been resolved</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </motion.div>
   );
