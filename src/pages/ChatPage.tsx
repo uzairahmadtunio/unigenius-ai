@@ -426,6 +426,34 @@ const ChatPage = () => {
               )}
               <div ref={bottomRef} />
             </div>
+
+            {/* Floating scroll buttons */}
+            <AnimatePresence>
+              {userScrolledUp && (
+                <>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToTop}
+                    className="absolute top-20 right-4 z-20 w-9 h-9 rounded-full bg-card/90 backdrop-blur-sm border border-border/50 shadow-elevated flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    title="Scroll to top"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </motion.button>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToBottomManual}
+                    className="absolute bottom-4 right-4 z-20 w-9 h-9 rounded-full gradient-primary shadow-elevated flex items-center justify-center text-primary-foreground"
+                    title="Scroll to bottom"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </motion.button>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Fixed bottom input area */}
