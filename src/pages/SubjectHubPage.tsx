@@ -102,6 +102,97 @@ Start by greeting the student and asking your first viva question.`
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Auto-load last active chat for this subject
+  useEffect(() => {
+    if (!user || !subjectId) return;
+    const loadLastSession = async () => {
+      const { data } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("subject", subjectId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        loadChat(data.id);
+      }
+    };
+    loadLastSession();
+  }, [user, subjectId]);
+
+  const createChatSession = async (): Promise<string | null> => {
+    if (!user) return null;
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({ user_id: user.id, title: `${subjectName} Chat`, subject: subjectId })
+      .select("id")
+      .single();
+    if (error) { console.error("Failed to create chat session:", error); return null; }
+    return data.id;
+  };
+
+  const saveMessage = async (chatId: string, role: string, content: string, fileNames?: string[], fileUrls?: string[]) => {
+    if (!user) return;
+    await supabase.from("chat_messages").insert({
+      chat_id: chatId, user_id: user.id, role, content,
+      file_names: fileNames || [], file_urls: fileUrls || [],
+    });
+    await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", chatId);
+  };
+
+  const generateTitle = async (chatId: string, msgs: Message[]) => {
+    if (!user || titleGenerated) return;
+    try {
+      const resp = await fetch(TITLE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: msgs.filter(m => !m.id.startsWith("welcome")).map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const { title } = await resp.json();
+      if (title && title !== "New Chat") {
+        await supabase.from("chat_sessions").update({ title }).eq("id", chatId);
+        setTitleGenerated(true);
+        setSidebarRefresh(prev => prev + 1);
+      }
+    } catch (e) { console.error("Title generation error:", e); }
+  };
+
+  const loadChat = async (chatId: string) => {
+    if (!user) return;
+    setActiveChatId(chatId);
+    setTitleGenerated(true);
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: true });
+    if (error) { toast.error("Failed to load chat"); return; }
+    const loadedMessages: Message[] = [
+      { id: "welcome", role: "assistant", content: getWelcome() },
+      ...(data || []).map((m: any) => ({
+        id: m.id, role: m.role as "user" | "assistant", content: m.content,
+        fileNames: m.file_names?.length > 0 ? m.file_names : undefined,
+      })),
+    ];
+    setMessages(loadedMessages);
+    setAttachedFiles([]);
+    setInput("");
+  };
+
+  const handleNewChat = () => {
+    setActiveChatId(null);
+    setMessages([{ id: "welcome", role: "assistant", content: getWelcome() }]);
+    setTitleGenerated(false);
+    setAttachedFiles([]);
+    setInput("");
+  };
+
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -114,6 +205,8 @@ Start by greeting the student and asking your first viva question.`
   const switchMode = (newMode: "tutor" | "viva") => {
     setMode(newMode);
     setAttachedFiles([]);
+    setActiveChatId(null);
+    setTitleGenerated(false);
     setMessages([{ id: "welcome-" + newMode, role: "assistant", content: newMode === "viva"
       ? `🎤 **Mock Viva Mode — ${subjectName}**\n\nAssalam-o-Alaikum! Main aapka viva examiner hun. Tayyar ho? Shuru karte hain...`
       : getWelcome()
