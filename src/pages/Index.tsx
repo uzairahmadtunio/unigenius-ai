@@ -15,6 +15,7 @@ import CareerReadinessWidget from "@/components/CareerReadinessWidget";
 import NoticeBoard from "@/components/NoticeBoard";
 import ExamCountdown from "@/components/ExamCountdown";
 import VivaReminder from "@/components/VivaReminder";
+import DailyStreakWidget from "@/components/DailyStreakWidget";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 
 const SPLASH_KEY = "unigenius-splash-shown";
@@ -67,6 +68,9 @@ const Index = () => {
             <InviteButton variant="outline" />
           </div>
         </motion.section>
+
+        {/* Daily Streak */}
+        <DailyStreakWidget />
 
         {/* Global Search */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex justify-center">
