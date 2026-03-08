@@ -44,6 +44,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [supportUnread, setSupportUnread] = useState(0);
+  const [feedbackUnread, setFeedbackUnread] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && (!user || !isAdmin)) {
@@ -59,11 +60,22 @@ const AdminDashboard = () => {
       const total = (data || []).reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0);
       setSupportUnread(total);
     };
+    const fetchFeedbackUnread = async () => {
+      const { data, count } = await supabase
+        .from("feedbacks" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new");
+      setFeedbackUnread(count || 0);
+    };
     fetchUnread();
+    fetchFeedbackUnread();
     const channel = supabase
       .channel("admin-support-notify")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, () => {
         fetchUnread();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "feedbacks" }, () => {
+        fetchFeedbackUnread();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -112,6 +124,11 @@ const AdminDashboard = () => {
                   {supportUnread > 9 ? "9+" : supportUnread}
                 </span>
               )}
+              {tab.id === "feedback" && feedbackUnread > 0 && (
+                <span className="ml-auto w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {feedbackUnread > 9 ? "9+" : feedbackUnread}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -137,6 +154,11 @@ const AdminDashboard = () => {
             {tab.id === "support" && supportUnread > 0 && (
               <span className="absolute top-1 right-1/4 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
                 {supportUnread > 9 ? "+" : supportUnread}
+              </span>
+            )}
+            {tab.id === "feedback" && feedbackUnread > 0 && (
+              <span className="absolute top-1 right-1/4 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
+                {feedbackUnread > 9 ? "+" : feedbackUnread}
               </span>
             )}
           </button>
@@ -165,7 +187,7 @@ const AdminDashboard = () => {
           {activeTab === "support" && <SupportTab />}
           {activeTab === "payments" && <PaymentsTab />}
           {activeTab === "promos" && <PromoManagerTab />}
-          {activeTab === "feedback" && <FeedbackTab />}
+          {activeTab === "feedback" && <FeedbackTab onCountChange={setFeedbackUnread} />}
         </div>
       </main>
     </div>
@@ -1307,60 +1329,121 @@ const PromoManagerTab = () => {
 
 /* ===== FEEDBACK TAB ===== */
 const feedbackTypeConfig: Record<string, { icon: any; label: string; color: string }> = {
-  appreciate: { icon: Star, label: "Appreciate", color: "text-amber-400" },
-  bug: { icon: Bug, label: "Bug Report", color: "text-destructive" },
-  suggestion: { icon: Lightbulb, label: "Suggestion", color: "text-primary" },
+  appreciate: { icon: Star, label: "Customer Appreciation", color: "text-amber-400" },
+  bug: { icon: Bug, label: "Technical Report", color: "text-destructive" },
+  suggestion: { icon: Lightbulb, label: "Feature Request", color: "text-primary" },
 };
 
-const FeedbackTab = () => {
+const FeedbackTab = ({ onCountChange }: { onCountChange: (n: number) => void }) => {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchFeedbacks = async () => {
     const { data } = await supabase
       .from("feedbacks" as any)
       .select("*")
       .order("created_at", { ascending: false });
-    setFeedbacks((data as any[]) || []);
+    const list = (data as any[]) || [];
+    setFeedbacks(list);
+    onCountChange(list.filter((f: any) => f.status === "new").length);
     setLoading(false);
   };
 
   useEffect(() => { fetchFeedbacks(); }, []);
 
-  const filtered = feedbacks.filter((f: any) => filter === "all" || f.feedback_type === filter);
+  const handleMarkReviewed = async (id: string) => {
+    await supabase.from("feedbacks" as any).update({ status: "reviewed" } as any).eq("id", id);
+    toast.success("Feedback Marked as Reviewed");
+    fetchFeedbacks();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    await supabase.from("feedbacks" as any).delete().eq("id", deleteTarget.id);
+    toast.success("Feedback Removed Successfully");
+    setDeleteTarget(null);
+    fetchFeedbacks();
+  };
+
+  const handleExportCSV = () => {
+    if (feedbacks.length === 0) return;
+    const headers = ["Student Name", "Email", "Category", "Message", "Status", "Date"];
+    const rows = feedbacks.map((f: any) => [
+      f.user_name,
+      f.user_email,
+      feedbackTypeConfig[f.feedback_type]?.label || f.feedback_type,
+      `"${(f.message || "").replace(/"/g, '""')}"`,
+      f.status,
+      new Date(f.created_at).toLocaleDateString("en-US"),
+    ]);
+    const csv = [headers.join(","), ...rows.map((r: string[]) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `unigenius-feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Feedback Report Exported");
+  };
+
+  const filtered = feedbacks.filter((f: any) => {
+    if (filter === "all") return true;
+    if (filter === "new" || filter === "reviewed") return f.status === filter;
+    return f.feedback_type === filter;
+  });
+
+  const newCount = feedbacks.filter((f: any) => f.status === "new").length;
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl font-display font-bold text-foreground">Student Feedback</h2>
-          <p className="text-xs text-muted-foreground">{feedbacks.length} submissions received</p>
+          <h2 className="text-xl font-display font-bold text-foreground">Customer Insights</h2>
+          <p className="text-xs text-muted-foreground">
+            {feedbacks.length} total submissions • {newCount} pending review
+          </p>
         </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-36 rounded-xl text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="appreciate">⭐ Appreciate</SelectItem>
-            <SelectItem value="bug">🐞 Bug Reports</SelectItem>
-            <SelectItem value="suggestion">💡 Suggestions</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-40 rounded-xl text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Feedback</SelectItem>
+              <SelectItem value="new">⏳ Pending Review</SelectItem>
+              <SelectItem value="reviewed">✅ Reviewed</SelectItem>
+              <SelectItem value="appreciate">⭐ Appreciation</SelectItem>
+              <SelectItem value="bug">🐞 Technical Reports</SelectItem>
+              <SelectItem value="suggestion">💡 Feature Requests</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-xl text-xs gap-1.5"
+            onClick={handleExportCSV}
+            disabled={feedbacks.length === 0}
+          >
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground text-sm">Loading feedback...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">No feedback yet.</div>
+        <div className="text-center py-12 text-muted-foreground text-sm">No feedback found.</div>
       ) : (
         <div className="space-y-2">
           {filtered.map((f: any) => {
             const config = feedbackTypeConfig[f.feedback_type] || feedbackTypeConfig.appreciate;
             const Icon = config.icon;
+            const isNew = f.status === "new";
             return (
-              <Card key={f.id} className="border-border/30 bg-card">
+              <Card key={f.id} className={`border-border/30 bg-card ${isNew ? "border-l-2 border-l-primary" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`mt-0.5 ${config.color}`}>
@@ -1370,12 +1453,40 @@ const FeedbackTab = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-foreground">{f.user_name}</span>
                         <Badge variant="outline" className="text-[9px]">{config.label}</Badge>
+                        <Badge
+                          variant={isNew ? "default" : "secondary"}
+                          className="text-[9px]"
+                        >
+                          {isNew ? "New" : "Reviewed"}
+                        </Badge>
                         <span className="text-[10px] text-muted-foreground ml-auto">
                           {new Date(f.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground">{f.user_email}</p>
                       <p className="text-xs text-foreground mt-2 whitespace-pre-wrap">{f.message}</p>
+                      <div className="flex items-center gap-2 mt-3">
+                        {isNew && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl text-[10px] h-7 gap-1"
+                            onClick={() => handleMarkReviewed(f.id)}
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            Mark as Reviewed
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-xl text-[10px] h-7 gap-1 text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteTarget(f)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1384,6 +1495,24 @@ const FeedbackTab = () => {
           })}
         </div>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Remove Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently remove this feedback from{" "}
+              <strong>{deleteTarget?.user_name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" className="rounded-xl" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl" onClick={handleDelete}>Remove Permanently</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

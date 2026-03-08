@@ -259,6 +259,7 @@ export type Database = {
           feedback_type: string
           id: string
           message: string
+          status: string
           user_email: string
           user_id: string
           user_name: string
@@ -268,6 +269,7 @@ export type Database = {
           feedback_type?: string
           id?: string
           message?: string
+          status?: string
           user_email?: string
           user_id: string
           user_name?: string
@@ -277,6 +279,7 @@ export type Database = {
           feedback_type?: string
           id?: string
           message?: string
+          status?: string
           user_email?: string
           user_id?: string
           user_name?: string
