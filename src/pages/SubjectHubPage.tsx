@@ -119,7 +119,7 @@ Start by greeting the student and asking your first viva question.`
     if (format === "pdf") generateProfessionalPDF(content, opts);
     else generateDOCX(content, opts);
   };
-
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
