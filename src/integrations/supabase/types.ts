@@ -131,9 +131,14 @@ export type Database = {
           created_at: string
           current_semester: number | null
           display_name: string | null
+          github_url: string | null
+          headline: string | null
           id: string
+          linkedin_url: string | null
           roll_number: string | null
           section: string | null
+          show_on_leaderboard: boolean | null
+          skills: string[] | null
           university: string | null
           updated_at: string
           user_id: string
@@ -143,9 +148,14 @@ export type Database = {
           created_at?: string
           current_semester?: number | null
           display_name?: string | null
+          github_url?: string | null
+          headline?: string | null
           id?: string
+          linkedin_url?: string | null
           roll_number?: string | null
           section?: string | null
+          show_on_leaderboard?: boolean | null
+          skills?: string[] | null
           university?: string | null
           updated_at?: string
           user_id: string
@@ -155,9 +165,14 @@ export type Database = {
           created_at?: string
           current_semester?: number | null
           display_name?: string | null
+          github_url?: string | null
+          headline?: string | null
           id?: string
+          linkedin_url?: string | null
           roll_number?: string | null
           section?: string | null
+          show_on_leaderboard?: boolean | null
+          skills?: string[] | null
           university?: string | null
           updated_at?: string
           user_id?: string
