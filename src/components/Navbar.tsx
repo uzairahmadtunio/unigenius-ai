@@ -104,7 +104,20 @@ const Navbar = () => {
 
           {/* Bell Notification */}
           {user && (
-            <Popover>
+            <Popover onOpenChange={async (open) => {
+              if (open && unreadCount > 0 && user) {
+                // Mark all unread notices as read
+                const inserts = notices.map((n: any) => ({
+                  user_id: user.id,
+                  notice_id: n.id,
+                }));
+                if (inserts.length > 0) {
+                  await supabase.from("user_notice_reads").insert(inserts as any);
+                }
+                setUnreadCount(0);
+                setNotices([]);
+              }
+            }}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-xl relative">
                   <Bell className="w-4 h-4" />
