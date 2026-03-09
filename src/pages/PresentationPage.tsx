@@ -239,44 +239,37 @@ const PresentationPage = () => {
         const isThankYou = idx === slides.length - 1 && slide.title.toUpperCase().includes("THANK");
 
         if (isTitle || isThankYou) {
-          // Full header background for title/thank you
           s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 7.5, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 1, y: isTitle ? 2 : 2.5, w: 11.33, h: 1.5, fontSize: 40, bold: true,
+            x: 1, y: isTitle ? 1.8 : 2.2, w: 11.33, h: 1.8, fontSize: 44, bold: true,
             color: t.pptxTitle, align: "center", fontFace: "Arial",
           });
           if (isTitle && slide.subtitle) {
             s.addText(slide.subtitle, {
-              x: 2, y: 4, w: 9.33, h: 1, fontSize: 18, color: t.pptxSubtitle,
+              x: 2, y: 4.2, w: 9.33, h: 1, fontSize: 22, color: t.pptxSubtitle,
               align: "center", fontFace: "Arial",
             });
           }
           if (isThankYou && slide.bullets.length > 0) {
             s.addText(slide.bullets[0], {
-              x: 2, y: 4.2, w: 9.33, h: 1, fontSize: 22, color: t.pptxSubtitle,
+              x: 2, y: 4.5, w: 9.33, h: 1, fontSize: 28, color: t.pptxSubtitle,
               align: "center", fontFace: "Arial",
             });
           }
         } else {
-          // Content slide: header bar top
-          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.4, fill: { color: t.pptxHeaderBg } });
+          // Content slide: header bar
+          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.6, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 0.8, y: 0.25, w: 11.73, h: 0.9, fontSize: 28, bold: true,
+            x: 0.8, y: 0.2, w: 11.73, h: 1.2, fontSize: 36, bold: true,
             color: t.pptxTitle, fontFace: "Arial",
           });
-          // Bullets with proper spacing
+          // Bullets with large font and proper spacing
           slide.bullets.forEach((bullet, bIdx) => {
             s.addText(`•   ${bullet}`, {
-              x: 1.2, y: 2 + bIdx * 1.1, w: 10.5, fontSize: 20, color: t.pptxBullet,
-              fontFace: "Arial", lineSpacing: 26,
+              x: 1.4, y: 2.3 + bIdx * 1.4, w: 10.5, fontSize: 28, color: t.pptxBullet,
+              fontFace: "Arial", lineSpacing: 32,
             });
           });
-          // Image hint in bottom corner
-          if (slide.imageSuggestion) {
-            s.addText(`💡 ${slide.imageSuggestion}`, {
-              x: 0.8, y: 6.4, w: 8, fontSize: 9, color: t.pptxHint, italic: true,
-            });
-          }
         }
       });
 
