@@ -114,7 +114,9 @@ Each object: title (string), subtitle (string, optional), bullets (string[]), im
     slides = slides.map((s: any) => ({
       title: s.title || "Untitled Slide",
       subtitle: s.subtitle || "",
-      bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 4),
+      bullets: (Array.isArray(s.bullets) ? s.bullets : [])
+        .slice(0, 3)
+        .map((b: string) => b.split(" ").slice(0, 10).join(" ")),
       imageSuggestion: s.imageSuggestion || "",
       icon: s.icon || "presentation",
       speakerNotes: s.speakerNotes || "",
