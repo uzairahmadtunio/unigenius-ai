@@ -308,25 +308,33 @@ const PresentationPage = () => {
         <div className={`${t.slideHeaderBg} px-5 py-3`}>
           <div className="flex items-center gap-2.5">
             <DynamicIcon name={slide.icon} className={`w-5 h-5 ${t.slideTitleColor}`} />
-            <h3 className={`font-display font-bold text-base sm:text-lg ${t.slideTitleColor}`}>{slide.title}</h3>
+            <h3 className={`font-display font-bold text-lg sm:text-xl ${t.slideTitleColor} uppercase tracking-wide`}>{slide.title}</h3>
           </div>
         </div>
-        {/* Bullets */}
-        <div className="px-6 py-5 space-y-3">
+        {/* Bullets — clean, bold, spaced */}
+        <div className="px-6 py-6 space-y-4">
           {slide.bullets.map((bullet, bIdx) => (
             <div key={bIdx} className={`flex items-start gap-3 ${t.slideBulletColor}`}>
-              <span className={`w-2 h-2 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
-              <span className="text-sm sm:text-base leading-relaxed">{bullet}</span>
+              <span className={`w-2.5 h-2.5 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
+              <span className="text-base sm:text-lg font-medium leading-relaxed">{bullet}</span>
             </div>
           ))}
         </div>
-        {/* Image hint — corner box */}
+        {/* Image hint — tooltip only */}
         {slide.imageSuggestion && (
-          <div className={`mx-5 mb-4 ${t.slideHintBg} rounded-lg px-3 py-2 flex items-start gap-2`}>
-            <span className="text-sm flex-shrink-0">💡</span>
-            <p className={`text-[11px] italic ${t.slideHintText} leading-snug`}>
-              Recommended Image: {slide.imageSuggestion}
-            </p>
+          <div className="absolute bottom-2.5 left-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className={`${t.slideHintBg} rounded-full p-1.5 opacity-60 hover:opacity-100 transition-opacity`}>
+                    <ImageIcon className={`w-3.5 h-3.5 ${t.slideHintText}`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">📸 {slide.imageSuggestion}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
         {/* Slide number */}
