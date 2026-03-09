@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Camera, Palette, ArrowUp, MessageSquareText } from "lucide-react";
+import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import type { LucideProps } from "lucide-react";
 import { Button } from "@/components/ui/button";
