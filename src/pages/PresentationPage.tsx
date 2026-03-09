@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon } from "lucide-react";
+import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon, FileText, Upload, Wand2, RefreshCw } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import type { LucideProps } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,16 +24,17 @@ interface Slide {
   subtitle?: string;
   bullets: string[];
   imageSuggestion: string;
+  imageUrl?: string;
   icon: string;
   speakerNotes: string;
 }
 
 type ThemeKey = "academic" | "darkTech" | "minimalist";
+type InputMode = "ai" | "paste" | "import";
 
 interface ThemeConfig {
   label: string;
   desc: string;
-  // Preview (WYSIWYG) — matches export
   slideBg: string;
   slideHeaderBg: string;
   slideTitleColor: string;
@@ -44,7 +45,6 @@ interface ThemeConfig {
   slideHintBg: string;
   slideHintText: string;
   notesBg: string;
-  // PPTX export hex
   pptxBg: string;
   pptxHeaderBg: string;
   pptxTitle: string;
@@ -121,9 +121,11 @@ const THEMES: Record<ThemeKey, ThemeConfig> = {
 };
 
 const SLIDES_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-slides`;
+const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-slide-image`;
 
 const PresentationPage = () => {
   const [topic, setTopic] = useState("");
+  const [pasteText, setPasteText] = useState("");
   const [slideCount, setSlideCount] = useState(8);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -134,6 +136,9 @@ const PresentationPage = () => {
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
+  const [inputMode, setInputMode] = useState<InputMode>("ai");
+  const [generatingImages, setGeneratingImages] = useState<Set<number>>(new Set());
+  const [sessionId] = useState(() => crypto.randomUUID());
 
   const slidesContainerRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -156,33 +161,85 @@ const PresentationPage = () => {
     setExpandedNotes(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
   };
 
+  // Generate image for a single slide
+  const generateImageForSlide = useCallback(async (slideIndex: number, description: string) => {
+    setGeneratingImages(prev => new Set(prev).add(slideIndex));
+    try {
+      const resp = await fetch(IMAGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({ prompt: description, slideIndex, sessionId }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.error("Image gen failed:", err);
+        return null;
+      }
+      const data = await resp.json();
+      return data.imageUrl || null;
+    } catch (err) {
+      console.error("Image generation error:", err);
+      return null;
+    } finally {
+      setGeneratingImages(prev => { const n = new Set(prev); n.delete(slideIndex); return n; });
+    }
+  }, [sessionId]);
+
+  // Generate all images in parallel
+  const generateAllImages = useCallback(async (slidesList: Slide[]) => {
+    const promises = slidesList.map(async (slide, idx) => {
+      if (idx === 0 || (idx === slidesList.length - 1 && slide.title.toUpperCase().includes("THANK"))) return null;
+      if (!slide.imageSuggestion) return null;
+      return generateImageForSlide(idx, slide.imageSuggestion);
+    });
+    const results = await Promise.allSettled(promises);
+    setSlides(prev => prev.map((slide, idx) => {
+      const result = results[idx];
+      if (result?.status === "fulfilled" && result.value) {
+        return { ...slide, imageUrl: result.value };
+      }
+      return slide;
+    }));
+    toast.success("AI images generated!");
+  }, [generateImageForSlide]);
+
   const generateSlides = useCallback(async () => {
-    if (!topic.trim()) { toast.error("Please enter a topic!"); return; }
+    const inputText = inputMode === "paste" ? pasteText.trim() : topic.trim();
+    if (!inputText) { toast.error("Please enter a topic or paste text!"); return; }
     setIsGenerating(true);
     setSlides([]);
     setExpandedNotes(new Set());
     try {
+      const body: any = { slideCount };
+      if (inputMode === "paste") {
+        body.topic = `Create a presentation from this content:\n\n${inputText}`;
+      } else {
+        body.topic = inputText;
+      }
       const resp = await fetch(SLIDES_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ topic: topic.trim(), slideCount }),
+        body: JSON.stringify(body),
       });
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || "Failed to generate slides"); }
       const data = await resp.json();
       if (!data.slides || !Array.isArray(data.slides)) throw new Error("Invalid response");
-      const enriched = data.slides.map((s: any) => ({
+      const enriched: Slide[] = data.slides.map((s: any) => ({
         title: s.title || "Untitled",
         subtitle: s.subtitle || "",
         bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 3),
         imageSuggestion: s.imageSuggestion || "",
+        imageUrl: "",
         icon: s.icon || "presentation",
         speakerNotes: s.speakerNotes || "",
       }));
       setSlides(enriched);
-      toast.success(`${enriched.length} slides generated!`);
+      toast.success(`${enriched.length} slides generated! Generating images...`);
+      // Auto-generate images
+      setTimeout(() => generateAllImages(enriched), 500);
     } catch (err: any) { toast.error(err.message || "Generation failed"); }
     finally { setIsGenerating(false); }
-  }, [topic, slideCount]);
+  }, [topic, pasteText, slideCount, inputMode, generateAllImages]);
 
   const startEdit = (index: number) => {
     setEditingIndex(index);
@@ -196,6 +253,16 @@ const PresentationPage = () => {
   };
   const cancelEdit = () => { setEditingIndex(null); setEditSlide(null); };
   const deleteSlide = (index: number) => { setSlides(prev => prev.filter((_, i) => i !== index)); toast.success("Slide removed"); };
+
+  const regenerateImage = useCallback(async (idx: number) => {
+    const slide = slides[idx];
+    if (!slide.imageSuggestion) return;
+    const url = await generateImageForSlide(idx, slide.imageSuggestion);
+    if (url) {
+      setSlides(prev => prev.map((s, i) => i === idx ? { ...s, imageUrl: url } : s));
+      toast.success("Image regenerated!");
+    }
+  }, [slides, generateImageForSlide]);
 
   const handleReadSlide = useCallback((idx: number) => {
     if (speakingIdx === idx) { window.speechSynthesis.cancel(); setSpeakingIdx(null); return; }
@@ -222,21 +289,38 @@ const PresentationPage = () => {
       const pptx = new PptxGenJS();
       pptx.layout = "LAYOUT_WIDE";
       pptx.author = "UniGenius AI";
-      pptx.subject = topic;
-      pptx.title = topic;
+      pptx.subject = topic || "AI Presentation";
+      pptx.title = topic || "AI Presentation";
+
+      // Pre-fetch images as base64 for PPTX
+      const imageDataMap: Record<number, string> = {};
+      for (let i = 0; i < slides.length; i++) {
+        if (slides[i].imageUrl) {
+          try {
+            const resp = await fetch(slides[i].imageUrl!);
+            const blob = await resp.blob();
+            const reader = new FileReader();
+            const base64 = await new Promise<string>((resolve) => {
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            imageDataMap[i] = base64;
+          } catch { /* skip image */ }
+        }
+      }
 
       slides.forEach((slide, idx) => {
         const s = pptx.addSlide();
         s.background = { fill: t.pptxBg };
         if (slide.speakerNotes) s.addNotes(slide.speakerNotes);
 
-        // Slide number bottom-right
         s.addText(`${idx + 1} / ${slides.length}`, {
           x: 11.5, y: 6.8, w: 1.5, fontSize: 9, color: t.pptxSlideNum, align: "right",
         });
 
         const isTitle = idx === 0;
         const isThankYou = idx === slides.length - 1 && slide.title.toUpperCase().includes("THANK");
+        const hasImage = !!imageDataMap[idx];
 
         if (isTitle || isThankYou) {
           s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 7.5, fill: { color: t.pptxHeaderBg } });
@@ -257,32 +341,47 @@ const PresentationPage = () => {
             });
           }
         } else {
-          // Content slide: header bar
+          // Header bar
           s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.6, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
             x: 0.8, y: 0.2, w: 11.73, h: 1.2, fontSize: 36, bold: true,
             color: t.pptxTitle, fontFace: "Arial",
           });
-          // Bullets with large font and proper spacing
+
+          const textWidth = hasImage ? 7 : 10.5;
+          // Bullets
           slide.bullets.forEach((bullet, bIdx) => {
             s.addText(`•   ${bullet}`, {
-              x: 1.4, y: 2.3 + bIdx * 1.4, w: 10.5, fontSize: 28, color: t.pptxBullet,
+              x: 1.4, y: 2.3 + bIdx * 1.4, w: textWidth, fontSize: 28, color: t.pptxBullet,
               fontFace: "Arial", lineSpacing: 32,
             });
           });
+
+          // AI Image on right side
+          if (hasImage) {
+            try {
+              s.addImage({
+                data: imageDataMap[idx],
+                x: 8.8, y: 2, w: 4, h: 4,
+                rounding: true,
+              });
+            } catch { /* skip */ }
+          }
         }
       });
 
-      await pptx.writeFile({ fileName: `${topic.replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_")}_presentation.pptx` });
-      toast.success("PowerPoint downloaded!");
+      const fileName = (topic || "presentation").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_");
+      await pptx.writeFile({ fileName: `${fileName}_presentation.pptx` });
+      toast.success("PowerPoint downloaded with AI images!");
     } catch (err: any) { console.error("PPTX error:", err); toast.error("Failed to generate PowerPoint"); }
     finally { setIsDownloading(false); }
   }, [slides, topic, t]);
 
-  // Render a single slide preview (WYSIWYG — matches PPTX output)
+  // Render slide preview — WYSIWYG with image
   const renderSlidePreview = (slide: Slide, idx: number) => {
     const isTitle = idx === 0;
     const isThankYou = idx === slides.length - 1 && slide.title.toUpperCase().includes("THANK");
+    const isImageGenerating = generatingImages.has(idx);
 
     if (isTitle || isThankYou) {
       return (
@@ -296,7 +395,6 @@ const PresentationPage = () => {
           {isThankYou && slide.bullets.length > 0 && (
             <p className={`mt-4 text-base sm:text-lg ${t.slideSubtitleColor} text-center`}>{slide.bullets[0]}</p>
           )}
-          {/* Slide number */}
           <span className="absolute bottom-3 right-4 text-[10px] text-white/30">{idx + 1} / {slides.length}</span>
         </div>
       );
@@ -304,24 +402,47 @@ const PresentationPage = () => {
 
     return (
       <div className={`${t.slideBg} w-full rounded-t-none rounded-b-xl relative`}>
-        {/* Header bar */}
+        {/* Header */}
         <div className={`${t.slideHeaderBg} px-5 py-3`}>
           <div className="flex items-center gap-2.5">
             <DynamicIcon name={slide.icon} className={`w-5 h-5 ${t.slideTitleColor}`} />
             <h3 className={`font-display font-bold text-lg sm:text-xl ${t.slideTitleColor} uppercase tracking-wide`}>{slide.title}</h3>
           </div>
         </div>
-        {/* Bullets — clean, bold, spaced */}
-        <div className="px-6 py-6 space-y-4">
-          {slide.bullets.map((bullet, bIdx) => (
-            <div key={bIdx} className={`flex items-start gap-3 ${t.slideBulletColor}`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
-              <span className="text-base sm:text-lg font-medium leading-relaxed">{bullet}</span>
+        {/* Content: text + image side by side */}
+        <div className="flex gap-4 px-6 py-6">
+          {/* Bullets */}
+          <div className={`space-y-4 ${slide.imageUrl ? "flex-1" : "w-full"}`}>
+            {slide.bullets.map((bullet, bIdx) => (
+              <div key={bIdx} className={`flex items-start gap-3 ${t.slideBulletColor}`}>
+                <span className={`w-2.5 h-2.5 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
+                <span className="text-base sm:text-lg font-medium leading-relaxed">{bullet}</span>
+              </div>
+            ))}
+          </div>
+          {/* AI Image */}
+          {(slide.imageUrl || isImageGenerating) && (
+            <div className="w-36 sm:w-48 flex-shrink-0 flex flex-col items-center gap-2">
+              {isImageGenerating ? (
+                <div className="w-full aspect-square rounded-xl bg-muted/30 flex items-center justify-center border border-border/30">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : slide.imageUrl ? (
+                <img src={slide.imageUrl} alt={slide.imageSuggestion} className="w-full rounded-xl object-cover shadow-lg border border-white/10" />
+              ) : null}
+              <Button
+                variant="ghost" size="sm"
+                className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+                onClick={() => regenerateImage(idx)}
+                disabled={isImageGenerating}
+              >
+                <RefreshCw className="w-2.5 h-2.5" /> Refresh
+              </Button>
             </div>
-          ))}
+          )}
         </div>
-        {/* Image hint — tooltip only */}
-        {slide.imageSuggestion && (
+        {/* Image hint tooltip */}
+        {slide.imageSuggestion && !slide.imageUrl && !isImageGenerating && (
           <div className="absolute bottom-2.5 left-4">
             <TooltipProvider>
               <Tooltip>
@@ -337,30 +458,74 @@ const PresentationPage = () => {
             </TooltipProvider>
           </div>
         )}
-        {/* Slide number */}
         <span className={`absolute bottom-2.5 right-4 text-[10px] ${t.slideNumberColor}`}>{idx + 1} / {slides.length}</span>
       </div>
     );
   };
 
+  const inputModes: { key: InputMode; icon: React.ReactNode; label: string; desc: string }[] = [
+    { key: "ai", icon: <Wand2 className="w-5 h-5" />, label: "Generate with AI", desc: "Enter a topic" },
+    { key: "paste", icon: <FileText className="w-5 h-5" />, label: "Paste in Text", desc: "Paste raw content" },
+    { key: "import", icon: <Upload className="w-5 h-5" />, label: "Import File", desc: "Coming soon" },
+  ];
+
   return (
     <PageShell
       title="AI Slide Maker"
-      subtitle="Gamma-style AI Presentations"
+      subtitle="Gamma-style AI Presentations with AI Images"
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center"><Presentation className="w-5 h-5 text-primary-foreground" /></div>}
     >
       <div className="space-y-6" ref={topRef}>
+        {/* Mode Selector — Gamma-style */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-3 gap-3">
+          {inputModes.map((mode) => (
+            <button
+              key={mode.key}
+              onClick={() => mode.key !== "import" && setInputMode(mode.key)}
+              disabled={mode.key === "import"}
+              className={`relative rounded-2xl p-4 sm:p-5 border-2 transition-all text-left ${
+                inputMode === mode.key
+                  ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                  : "border-border/50 bg-card/50 hover:border-primary/30"
+              } ${mode.key === "import" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
+                inputMode === mode.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              }`}>
+                {mode.icon}
+              </div>
+              <p className="font-display font-semibold text-sm text-foreground">{mode.label}</p>
+              <p className="text-[11px] text-muted-foreground">{mode.desc}</p>
+              {mode.key === "import" && (
+                <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">Soon</span>
+              )}
+            </button>
+          ))}
+        </motion.div>
+
         {/* Input Section */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">Presentation Topic</label>
-            <Input
-              value={topic} onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Listening Skills & Reading Skills"
-              className="rounded-xl text-sm"
-              onKeyDown={(e) => { if (e.key === "Enter" && !isGenerating) generateSlides(); }}
-            />
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 space-y-4">
+          {inputMode === "ai" ? (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Presentation Topic</label>
+              <Input
+                value={topic} onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g., 7C's of Communication, Data Structures in C++"
+                className="rounded-xl text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter" && !isGenerating) generateSlides(); }}
+              />
+            </div>
+          ) : inputMode === "paste" ? (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Paste Your Content</label>
+              <Textarea
+                value={pasteText} onChange={(e) => setPasteText(e.target.value)}
+                placeholder="Paste your raw text, notes, or bullet points here. AI will structure them into professional slides..."
+                className="rounded-xl text-sm min-h-[120px]"
+                rows={5}
+              />
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
@@ -387,13 +552,13 @@ const PresentationPage = () => {
               </div>
             </div>
 
-            <Button onClick={generateSlides} disabled={isGenerating || !topic.trim()} className="rounded-xl gradient-primary text-primary-foreground gap-2 ml-auto">
+            <Button onClick={generateSlides} disabled={isGenerating || (inputMode === "ai" ? !topic.trim() : !pasteText.trim())} className="rounded-xl gradient-primary text-primary-foreground gap-2 ml-auto">
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {isGenerating ? "Generating..." : "Generate Slides"}
             </Button>
           </div>
 
-          {/* Theme bar preview */}
+          {/* Theme preview bar */}
           <div className="flex gap-2 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Theme:</span>
             <div className={`flex-1 h-7 rounded-lg ${t.slideHeaderBg} flex items-center px-3`}>
@@ -407,9 +572,11 @@ const PresentationPage = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3 sticky top-2 z-30">
             <div>
               <p className="text-sm font-semibold text-foreground">{slides.length} Slides — {THEMES[theme].label}</p>
-              <p className="text-xs text-muted-foreground">WYSIWYG preview • Speaker notes included in export</p>
+              <p className="text-xs text-muted-foreground">
+                {generatingImages.size > 0 ? `Generating ${generatingImages.size} images...` : "AI images • Speaker notes • WYSIWYG preview"}
+              </p>
             </div>
-            <Button onClick={downloadPPTX} disabled={isDownloading} className="rounded-xl gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600">
+            <Button onClick={downloadPPTX} disabled={isDownloading || generatingImages.size > 0} className="rounded-xl gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600">
               {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {isDownloading ? "Creating..." : "Download .pptx"}
             </Button>
@@ -422,14 +589,14 @@ const PresentationPage = () => {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center animate-pulse">
               <Presentation className="w-8 h-8 text-white" />
             </div>
-            <p className="font-display font-semibold text-foreground">Creating {slideCount} slides...</p>
+            <p className="font-display font-semibold text-foreground">Creating {slideCount} slides with AI images...</p>
             <div className="flex gap-1">
               {[0, 0.2, 0.4].map((d) => <span key={d} className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: `${d}s` }} />)}
             </div>
           </motion.div>
         )}
 
-        {/* Slide Cards — WYSIWYG Preview */}
+        {/* Slide Cards */}
         <div ref={slidesContainerRef} className="space-y-6">
           <AnimatePresence>
             {slides.map((slide, idx) => (
@@ -441,7 +608,7 @@ const PresentationPage = () => {
                 transition={{ delay: idx * 0.04 }}
                 className="rounded-2xl overflow-hidden border border-white/10 shadow-elevated backdrop-blur-sm bg-card/30"
               >
-                {/* Toolbar above slide */}
+                {/* Toolbar */}
                 <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border/50">
                   <span className="text-xs font-medium text-muted-foreground">Slide {idx + 1}</span>
                   <div className="flex items-center gap-1">
@@ -466,7 +633,7 @@ const PresentationPage = () => {
                   </div>
                 </div>
 
-                {/* Slide Preview or Edit Mode */}
+                {/* Slide Preview or Edit */}
                 {editingIndex === idx && editSlide ? (
                   <div className="p-5 space-y-3 bg-card">
                     <Input value={editSlide.title} onChange={(e) => setEditSlide({ ...editSlide, title: e.target.value })} className="rounded-xl font-bold text-lg" placeholder="Slide title" />
@@ -484,13 +651,13 @@ const PresentationPage = () => {
                       <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" onClick={() => setEditSlide({ ...editSlide, bullets: [...editSlide.bullets, ""] })}><Plus className="w-3 h-3" /> Add Point</Button>
                     )}
                     <Textarea value={editSlide.speakerNotes} onChange={(e) => setEditSlide({ ...editSlide, speakerNotes: e.target.value })} className="rounded-xl text-sm" placeholder="Speaker notes..." rows={2} />
-                    <Input value={editSlide.imageSuggestion} onChange={(e) => setEditSlide({ ...editSlide, imageSuggestion: e.target.value })} className="rounded-xl text-sm" placeholder="Image suggestion" />
+                    <Input value={editSlide.imageSuggestion} onChange={(e) => setEditSlide({ ...editSlide, imageSuggestion: e.target.value })} className="rounded-xl text-sm" placeholder="Image description for AI generation" />
                   </div>
                 ) : (
                   renderSlidePreview(slide, idx)
                 )}
 
-                {/* Speaker Notes (collapsible) */}
+                {/* Speaker Notes */}
                 {editingIndex !== idx && slide.speakerNotes && expandedNotes.has(idx) && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className={`${t.notesBg} px-5 py-3 border-t border-border/30`}>
                     <div className="flex items-center gap-2 mb-1">
@@ -512,8 +679,8 @@ const PresentationPage = () => {
               <Presentation className="w-8 h-8 text-muted-foreground/40" />
             </div>
             <p className="font-display font-semibold text-foreground">AI Presentation Maker</p>
-            <p className="text-sm text-muted-foreground">Enter a topic and generate clean, professional slides — max 3 bullets per slide.</p>
-            <p className="text-xs text-muted-foreground">🎨 3 Themes • ✏️ Edit • 🎤 Notes • 🔊 Listen • 📥 PPTX (44pt headings)</p>
+            <p className="text-sm text-muted-foreground">Generate professional slides with AI-generated images — max 3 bullets per slide.</p>
+            <p className="text-xs text-muted-foreground">🪄 AI Generate • 📝 Paste Text • 🖼️ AI Images • 🎨 3 Themes • 📥 PPTX Export</p>
           </motion.div>
         )}
       </div>
