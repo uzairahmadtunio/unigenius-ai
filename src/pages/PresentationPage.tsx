@@ -173,7 +173,7 @@ const PresentationPage = () => {
       const enriched = data.slides.map((s: any) => ({
         title: s.title || "Untitled",
         subtitle: s.subtitle || "",
-        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 4),
+        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 3),
         imageSuggestion: s.imageSuggestion || "",
         icon: s.icon || "presentation",
         speakerNotes: s.speakerNotes || "",
