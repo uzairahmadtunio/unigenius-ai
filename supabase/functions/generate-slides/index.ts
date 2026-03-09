@@ -20,39 +20,39 @@ serve(async (req) => {
 Generate exactly ${count} slides following this STRICT structure:
 
 SLIDE 1 (Title Slide):
-- title: The main topic name (short, bold)
-- subtitle: "Presented by: [Generic Student Names]"  
-- bullets: [] (EMPTY array - no bullets on title slide)
-- This is ONLY a title card
+- title: The main topic name (short, bold, max 5 words)
+- subtitle: "Presented by: Uzair Ahmad & Group"
+- bullets: [] (EMPTY array - absolutely NO bullets on title slide)
 
 SLIDES 2 to ${count - 1} (Content Slides):
-- title: One clear, bold heading (ALL CAPS preferred, max 6 words)
-- bullets: EXACTLY 3-4 short bullet points (each bullet MAX 12 words, NO paragraphs, NO long sentences)
-- Each bullet must be a concise fact or point, not a paragraph
+- title: One clear, bold heading (ALL CAPS, max 5 words)
+- bullets: EXACTLY 3 short bullet points (each bullet MAX 8 words). NO paragraphs. NO long sentences. NO explanations.
+- Keep it like a real PowerPoint: keywords only, not full sentences.
 
 SLIDE ${count} (Closing Slide):
 - title: "THANK YOU"
-- bullets: ["Any Questions?"] or similar short closing
+- bullets: ["Any Questions?"]
 
 OUTPUT FORMAT — JSON array only, no markdown:
 [
   {
-    "title": "TOPIC NAME HERE",
-    "subtitle": "Presented by: Name1, Name2",
+    "title": "TOPIC NAME",
+    "subtitle": "Presented by: Uzair Ahmad & Group",
     "bullets": [],
     "imageSuggestion": "A relevant image description",
     "icon": "lucide-icon-name",
-    "speakerNotes": "1-2 sentence script for presenter"
+    "speakerNotes": "2-3 sentence script for presenter"
   }
 ]
 
 CRITICAL RULES:
-- MAXIMUM 4 bullet points per slide. NEVER exceed 4.
-- Each bullet point must be SHORT (under 12 words). No paragraphs.
-- Title slide has NO bullets, only title + subtitle
-- Last slide is always "THANK YOU"
+- MAXIMUM 3 bullet points per content slide. NEVER 4. NEVER more.
+- Each bullet point MUST be under 8 words. If longer, shorten it.
+- Title slide: NO bullets, only title + subtitle
+- Last slide: always "THANK YOU"
 - icon: valid Lucide kebab-case name (book-open, code, brain, lightbulb, users, target, trophy, layers, ear, eye, message-circle, pen-tool, graduation-cap)
-- subtitle field is optional, only used for title slide`;
+- subtitle field only for title slide
+- speakerNotes: 2-3 sentences the presenter should say`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -65,14 +65,14 @@ CRITICAL RULES:
         messages: [
           {
             role: "system",
-            content: `You are a strict presentation designer. You create clean, minimal slides like Gamma.app or professional university presentations.
+            content: `You are a strict presentation designer. You make clean, minimal slides like Gamma.app.
 
 ABSOLUTE RULES:
-1. Each slide has MAX 4 bullet points. NEVER more.
-2. Each bullet is under 12 words. NO long sentences or paragraphs.
-3. First slide = title only (empty bullets array, include subtitle field).
-4. Last slide = "THANK YOU" with minimal content.
-5. Headings are bold and concise (max 6 words, prefer ALL CAPS).
+1. Each content slide has EXACTLY 3 bullet points. Never more, never less.
+2. Each bullet is under 8 words — keywords only, NOT full sentences.
+3. First slide = title only (empty bullets array, include subtitle "Presented by: Uzair Ahmad & Group").
+4. Last slide = "THANK YOU" with ["Any Questions?"].
+5. Headings: ALL CAPS, max 5 words, bold.
 6. Output ONLY valid JSON array. No markdown, no code fences.
 
 Each object: title (string), subtitle (string, optional), bullets (string[]), imageSuggestion (string), icon (string), speakerNotes (string).`,
@@ -114,7 +114,9 @@ Each object: title (string), subtitle (string, optional), bullets (string[]), im
     slides = slides.map((s: any) => ({
       title: s.title || "Untitled Slide",
       subtitle: s.subtitle || "",
-      bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 4),
+      bullets: (Array.isArray(s.bullets) ? s.bullets : [])
+        .slice(0, 3)
+        .map((b: string) => b.split(" ").slice(0, 10).join(" ")),
       imageSuggestion: s.imageSuggestion || "",
       icon: s.icon || "presentation",
       speakerNotes: s.speakerNotes || "",

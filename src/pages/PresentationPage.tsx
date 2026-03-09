@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Camera, Palette, ArrowUp, MessageSquareText } from "lucide-react";
+import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import type { LucideProps } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import PageShell from "@/components/PageShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -172,7 +173,7 @@ const PresentationPage = () => {
       const enriched = data.slides.map((s: any) => ({
         title: s.title || "Untitled",
         subtitle: s.subtitle || "",
-        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 4),
+        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 3),
         imageSuggestion: s.imageSuggestion || "",
         icon: s.icon || "presentation",
         speakerNotes: s.speakerNotes || "",
@@ -238,44 +239,37 @@ const PresentationPage = () => {
         const isThankYou = idx === slides.length - 1 && slide.title.toUpperCase().includes("THANK");
 
         if (isTitle || isThankYou) {
-          // Full header background for title/thank you
           s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 7.5, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 1, y: isTitle ? 2 : 2.5, w: 11.33, h: 1.5, fontSize: 40, bold: true,
+            x: 1, y: isTitle ? 1.8 : 2.2, w: 11.33, h: 1.8, fontSize: 44, bold: true,
             color: t.pptxTitle, align: "center", fontFace: "Arial",
           });
           if (isTitle && slide.subtitle) {
             s.addText(slide.subtitle, {
-              x: 2, y: 4, w: 9.33, h: 1, fontSize: 18, color: t.pptxSubtitle,
+              x: 2, y: 4.2, w: 9.33, h: 1, fontSize: 22, color: t.pptxSubtitle,
               align: "center", fontFace: "Arial",
             });
           }
           if (isThankYou && slide.bullets.length > 0) {
             s.addText(slide.bullets[0], {
-              x: 2, y: 4.2, w: 9.33, h: 1, fontSize: 22, color: t.pptxSubtitle,
+              x: 2, y: 4.5, w: 9.33, h: 1, fontSize: 28, color: t.pptxSubtitle,
               align: "center", fontFace: "Arial",
             });
           }
         } else {
-          // Content slide: header bar top
-          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.4, fill: { color: t.pptxHeaderBg } });
+          // Content slide: header bar
+          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.6, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 0.8, y: 0.25, w: 11.73, h: 0.9, fontSize: 28, bold: true,
+            x: 0.8, y: 0.2, w: 11.73, h: 1.2, fontSize: 36, bold: true,
             color: t.pptxTitle, fontFace: "Arial",
           });
-          // Bullets with proper spacing
+          // Bullets with large font and proper spacing
           slide.bullets.forEach((bullet, bIdx) => {
             s.addText(`•   ${bullet}`, {
-              x: 1.2, y: 2 + bIdx * 1.1, w: 10.5, fontSize: 20, color: t.pptxBullet,
-              fontFace: "Arial", lineSpacing: 26,
+              x: 1.4, y: 2.3 + bIdx * 1.4, w: 10.5, fontSize: 28, color: t.pptxBullet,
+              fontFace: "Arial", lineSpacing: 32,
             });
           });
-          // Image hint in bottom corner
-          if (slide.imageSuggestion) {
-            s.addText(`💡 ${slide.imageSuggestion}`, {
-              x: 0.8, y: 6.4, w: 8, fontSize: 9, color: t.pptxHint, italic: true,
-            });
-          }
         }
       });
 
@@ -314,25 +308,33 @@ const PresentationPage = () => {
         <div className={`${t.slideHeaderBg} px-5 py-3`}>
           <div className="flex items-center gap-2.5">
             <DynamicIcon name={slide.icon} className={`w-5 h-5 ${t.slideTitleColor}`} />
-            <h3 className={`font-display font-bold text-base sm:text-lg ${t.slideTitleColor}`}>{slide.title}</h3>
+            <h3 className={`font-display font-bold text-lg sm:text-xl ${t.slideTitleColor} uppercase tracking-wide`}>{slide.title}</h3>
           </div>
         </div>
-        {/* Bullets */}
-        <div className="px-6 py-5 space-y-3">
+        {/* Bullets — clean, bold, spaced */}
+        <div className="px-6 py-6 space-y-4">
           {slide.bullets.map((bullet, bIdx) => (
             <div key={bIdx} className={`flex items-start gap-3 ${t.slideBulletColor}`}>
-              <span className={`w-2 h-2 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
-              <span className="text-sm sm:text-base leading-relaxed">{bullet}</span>
+              <span className={`w-2.5 h-2.5 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
+              <span className="text-base sm:text-lg font-medium leading-relaxed">{bullet}</span>
             </div>
           ))}
         </div>
-        {/* Image hint — corner box */}
+        {/* Image hint — tooltip only */}
         {slide.imageSuggestion && (
-          <div className={`mx-5 mb-4 ${t.slideHintBg} rounded-lg px-3 py-2 flex items-start gap-2`}>
-            <span className="text-sm flex-shrink-0">💡</span>
-            <p className={`text-[11px] italic ${t.slideHintText} leading-snug`}>
-              Recommended Image: {slide.imageSuggestion}
-            </p>
+          <div className="absolute bottom-2.5 left-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className={`${t.slideHintBg} rounded-full p-1.5 opacity-60 hover:opacity-100 transition-opacity`}>
+                    <ImageIcon className={`w-3.5 h-3.5 ${t.slideHintText}`} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">📸 {slide.imageSuggestion}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
         {/* Slide number */}
@@ -478,7 +480,7 @@ const PresentationPage = () => {
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEditSlide({ ...editSlide, bullets: editSlide.bullets.filter((_, i) => i !== bIdx) })}><X className="w-3 h-3" /></Button>
                       </div>
                     ))}
-                    {editSlide.bullets.length < 4 && (
+                    {editSlide.bullets.length < 3 && (
                       <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" onClick={() => setEditSlide({ ...editSlide, bullets: [...editSlide.bullets, ""] })}><Plus className="w-3 h-3" /> Add Point</Button>
                     )}
                     <Textarea value={editSlide.speakerNotes} onChange={(e) => setEditSlide({ ...editSlide, speakerNotes: e.target.value })} className="rounded-xl text-sm" placeholder="Speaker notes..." rows={2} />
@@ -510,8 +512,8 @@ const PresentationPage = () => {
               <Presentation className="w-8 h-8 text-muted-foreground/40" />
             </div>
             <p className="font-display font-semibold text-foreground">AI Presentation Maker</p>
-            <p className="text-sm text-muted-foreground">Enter a topic and generate clean, professional slides — max 4 bullets per slide.</p>
-            <p className="text-xs text-muted-foreground">🎨 3 Themes • ✏️ Edit • 🎤 Speaker Notes • 🔊 Listen • 📥 Export PPTX</p>
+            <p className="text-sm text-muted-foreground">Enter a topic and generate clean, professional slides — max 3 bullets per slide.</p>
+            <p className="text-xs text-muted-foreground">🎨 3 Themes • ✏️ Edit • 🎤 Notes • 🔊 Listen • 📥 PPTX (44pt headings)</p>
           </motion.div>
         )}
       </div>
