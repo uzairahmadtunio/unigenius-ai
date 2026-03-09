@@ -480,7 +480,7 @@ const PresentationPage = () => {
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEditSlide({ ...editSlide, bullets: editSlide.bullets.filter((_, i) => i !== bIdx) })}><X className="w-3 h-3" /></Button>
                       </div>
                     ))}
-                    {editSlide.bullets.length < 4 && (
+                    {editSlide.bullets.length < 3 && (
                       <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" onClick={() => setEditSlide({ ...editSlide, bullets: [...editSlide.bullets, ""] })}><Plus className="w-3 h-3" /> Add Point</Button>
                     )}
                     <Textarea value={editSlide.speakerNotes} onChange={(e) => setEditSlide({ ...editSlide, speakerNotes: e.target.value })} className="rounded-xl text-sm" placeholder="Speaker notes..." rows={2} />
