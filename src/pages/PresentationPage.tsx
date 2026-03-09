@@ -512,8 +512,8 @@ const PresentationPage = () => {
               <Presentation className="w-8 h-8 text-muted-foreground/40" />
             </div>
             <p className="font-display font-semibold text-foreground">AI Presentation Maker</p>
-            <p className="text-sm text-muted-foreground">Enter a topic and generate clean, professional slides — max 4 bullets per slide.</p>
-            <p className="text-xs text-muted-foreground">🎨 3 Themes • ✏️ Edit • 🎤 Speaker Notes • 🔊 Listen • 📥 Export PPTX</p>
+            <p className="text-sm text-muted-foreground">Enter a topic and generate clean, professional slides — max 3 bullets per slide.</p>
+            <p className="text-xs text-muted-foreground">🎨 3 Themes • ✏️ Edit • 🎤 Notes • 🔊 Listen • 📥 PPTX (44pt headings)</p>
           </motion.div>
         )}
       </div>
