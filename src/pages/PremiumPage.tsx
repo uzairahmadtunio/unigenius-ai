@@ -1,15 +1,38 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Crown, Upload, CheckCircle2, Clock, XCircle, Smartphone, Copy, Check, Tag, Loader2 } from "lucide-react";
+import {
+  Crown, Upload, CheckCircle2, Clock, XCircle, Smartphone, Copy, Check,
+  Tag, Loader2, Zap, FileText, Mic, HardDrive, Bell, BadgeCheck,
+  Layers, File, Timer, User
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import PageShell from "@/components/PageShell";
+
+const FREE_FEATURES = [
+  { icon: Layers, label: "2 Slides / day", limited: true },
+  { icon: File, label: "PDF Only (2MB)", limited: true },
+  { icon: Mic, label: "Standard Voice", limited: true },
+  { icon: HardDrive, label: "50MB Storage", limited: true },
+  { icon: Timer, label: "Standard Timer", limited: true },
+  { icon: User, label: "Normal User Badge", limited: true },
+];
+
+const PRO_FEATURES = [
+  { icon: Layers, label: "Unlimited Slides" },
+  { icon: FileText, label: "All Formats (PPT, Docs, Images)" },
+  { icon: Mic, label: "Pro Voices (Aoede & Algieba)" },
+  { icon: HardDrive, label: "5GB Storage" },
+  { icon: Bell, label: "Priority Exam Alerts" },
+  { icon: BadgeCheck, label: "Golden Verified Tick 🌟" },
+];
 
 const PremiumPage = () => {
   const { user } = useAuth();
@@ -20,8 +43,8 @@ const PremiumPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"jazzcash" | "easypaisa">("jazzcash");
   const [copiedJazz, setCopiedJazz] = useState(false);
   const [copiedEasy, setCopiedEasy] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Promo code state
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_percent: number; remaining?: number } | null>(null);
@@ -55,30 +78,13 @@ const PremiumPage = () => {
         .eq("code", promoCode.trim().toUpperCase())
         .eq("is_active", true)
         .single();
-
-      if (error || !data) {
-        toast.error("Invalid or expired promo code");
-        setAppliedPromo(null);
-        return;
-      }
-
+      if (error || !data) { toast.error("Invalid or expired promo code"); setAppliedPromo(null); return; }
       const promo = data as any;
       const remaining = promo.usage_limit - promo.used_count;
-      if (remaining <= 0) {
-        toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai.");
-        setAppliedPromo(null);
-        return;
-      }
-
+      if (remaining <= 0) { toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai."); setAppliedPromo(null); return; }
       setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent, remaining });
-      toast.success("🎉 Mubarak! Uzair bhai ne aapko " + promo.discount_percent + "% discount de diya hai.", {
-        duration: 5000,
-      });
-    } catch {
-      toast.error("Failed to validate promo code");
-    } finally {
-      setPromoLoading(false);
-    }
+      toast.success("🎉 Mubarak! " + promo.discount_percent + "% discount applied!", { duration: 5000 });
+    } catch { toast.error("Failed to validate promo code"); } finally { setPromoLoading(false); }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,33 +92,18 @@ const PremiumPage = () => {
     const file = e.target.files[0];
     if (file.size > 5 * 1024 * 1024) { toast.error("File too large (max 5MB)"); return; }
     if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
-
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${Date.now()}.${ext}`;
-
     const { error: uploadErr } = await supabase.storage.from("payment-screenshots").upload(path, file);
     if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setUploading(false); return; }
-
     const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
-
-    // Promo increment now handled server-side on admin approve
-
     const { error: insertErr } = await (supabase.from("payment_requests" as any) as any).insert({
-      user_id: user.id,
-      screenshot_url: urlData.publicUrl,
-      payment_method: paymentMethod,
-      amount: finalPrice,
-      promo_code: appliedPromo?.code || null,
-      discount_percent: appliedPromo?.discount_percent || 0,
+      user_id: user.id, screenshot_url: urlData.publicUrl, payment_method: paymentMethod,
+      amount: finalPrice, promo_code: appliedPromo?.code || null, discount_percent: appliedPromo?.discount_percent || 0,
     });
-
-    if (insertErr) {
-      toast.error("Failed to submit: " + insertErr.message);
-    } else {
-      toast.success("🎉 Payment screenshot submitted!");
-      setPendingRequest({ status: "pending", payment_method: paymentMethod, created_at: new Date().toISOString() });
-    }
+    if (insertErr) { toast.error("Failed to submit: " + insertErr.message); }
+    else { toast.success("🎉 Payment screenshot submitted!"); setPendingRequest({ status: "pending", payment_method: paymentMethod, created_at: new Date().toISOString() }); setModalOpen(false); }
     setUploading(false);
   };
 
@@ -152,212 +143,208 @@ const PremiumPage = () => {
 
   return (
     <PageShell title="Premium" icon={<Crown className="w-5 h-5" />}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto space-y-6">
-        {/* Price Card */}
-        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
-          <CardHeader className="text-center pb-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-2">
-              <Crown className="w-7 h-7 text-white" />
-            </div>
-            <CardTitle className="font-display text-xl">UniGenius Pro</CardTitle>
-            <div className="mt-2">
-              {appliedPromo ? (
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold text-foreground">
-                    <span className="line-through text-muted-foreground text-lg mr-2">300</span>
-                    {finalPrice} <span className="text-sm font-normal text-muted-foreground">PKR / Month</span>
-                  </p>
-                  <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs">
-                    {appliedPromo.discount_percent}% OFF with {appliedPromo.code}
-                  </Badge>
-                </div>
-              ) : (
-                <p className="text-3xl font-bold text-foreground">
-                  300 <span className="text-sm font-normal text-muted-foreground">PKR / Month</span>
-                </p>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2 text-sm">
-              {[
-                "Professional PDF Pro — Advanced lab manuals & reports",
-                "Advanced Skill Sync — AI career analysis",
-                "Priority Support — Direct admin access",
-                "Ad-Free Experience",
-              ].map((f) => (
-                <div key={f} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span className="text-foreground">{f}</span>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-8">
+        {/* Pending/Rejected Banner */}
+        {pendingRequest?.status === "pending" && (
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Payment Under Review</p>
+                <p className="text-xs text-muted-foreground">Uzair bhai aapki payment verify kar rahe hain. 2-4 ghanton mein Pro active ho jayega. 🙏</p>
+              </div>
+              <Badge variant="outline" className="text-amber-500 border-amber-500/30 ml-auto shrink-0 text-xs">Pending</Badge>
+            </CardContent>
+          </Card>
+        )}
+        {pendingRequest?.status === "rejected" && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4 flex items-center gap-3">
+              <XCircle className="w-5 h-5 text-destructive shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Payment Rejected</p>
+                <p className="text-xs text-muted-foreground">{pendingRequest.admin_note || "Please try again with a valid screenshot."}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Free Card */}
+          <Card className="border-border/40 bg-card">
+            <CardHeader className="text-center pb-3">
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-2">
+                <Zap className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <CardTitle className="font-display text-lg">Free Plan</CardTitle>
+              <p className="text-2xl font-bold text-foreground mt-1">
+                0 <span className="text-sm font-normal text-muted-foreground">PKR</span>
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2.5 pb-6">
+              {FREE_FEATURES.map((f) => (
+                <div key={f.label} className="flex items-center gap-2.5 text-sm">
+                  <f.icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">{f.label}</span>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+              <div className="pt-4">
+                <Button disabled className="w-full rounded-xl" variant="outline">
+                  Current Plan
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Promo Code */}
-        <Card className="border-border/30">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Tag className="w-4 h-4 text-primary" />
-              <span className="text-sm font-display font-semibold text-foreground">Promo Code</span>
+          {/* Premium Card */}
+          <Card className="border-amber-500/40 shadow-lg shadow-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent relative overflow-hidden">
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-[10px] px-2 py-0.5">
+                Most Popular
+              </Badge>
             </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter promo code (e.g., UOL50)"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                className="rounded-xl flex-1"
-                disabled={!!appliedPromo}
-              />
-              {appliedPromo ? (
+            <CardHeader className="text-center pb-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-2">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+              <CardTitle className="font-display text-lg">Premium Pro</CardTitle>
+              <div className="mt-1">
+                <p className="text-3xl font-bold text-foreground">
+                  300 <span className="text-sm font-normal text-muted-foreground">PKR / mo</span>
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="text-sm line-through text-muted-foreground">500 PKR</span>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-[10px]">Save 40%</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2.5 pb-6">
+              {PRO_FEATURES.map((f) => (
+                <div key={f.label} className="flex items-center gap-2.5 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="text-foreground">{f.label}</span>
+                </div>
+              ))}
+              {/* Golden Tick Preview */}
+              <div className="flex items-center justify-center gap-2 pt-2 pb-1">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                  <BadgeCheck className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-semibold text-amber-500">Your Profile Badge</span>
+                </div>
+              </div>
+              <div className="pt-2">
                 <Button
-                  variant="outline"
-                  className="rounded-xl text-xs text-destructive border-destructive/30"
-                  onClick={() => { setAppliedPromo(null); setPromoCode(""); }}
+                  onClick={() => setModalOpen(true)}
+                  className="w-full rounded-xl gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 animate-pulse hover:animate-none"
                 >
-                  Remove
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Pro
                 </Button>
-              ) : (
-                <Button
-                  onClick={applyPromoCode}
-                  disabled={promoLoading || !promoCode.trim()}
-                  className="rounded-xl gap-1.5"
-                >
-                  {promoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Apply
-                </Button>
-              )}
-            </div>
-            {appliedPromo && (
-              <div className="space-y-1 mt-2">
-                <motion.p
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-xs text-emerald-500 font-medium"
-                >
-                  ✅ Mubarak! Uzair bhai ne aapko {appliedPromo.discount_percent}% discount de diya hai.
-                </motion.p>
-                {appliedPromo.remaining !== undefined && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-xs text-amber-500 font-medium"
-                  >
-                    ⚡ Hurry! Only {appliedPromo.remaining} spots left for this discount!
-                  </motion.p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+
+      {/* Payment Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display">
+              <Crown className="w-5 h-5 text-amber-500" />
+              Upgrade to Premium Pro
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Promo Code */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Promo Code</span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. UOL50"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="rounded-xl flex-1"
+                  disabled={!!appliedPromo}
+                />
+                {appliedPromo ? (
+                  <Button variant="outline" className="rounded-xl text-xs text-destructive border-destructive/30"
+                    onClick={() => { setAppliedPromo(null); setPromoCode(""); }}>Remove</Button>
+                ) : (
+                  <Button onClick={applyPromoCode} disabled={promoLoading || !promoCode.trim()} className="rounded-xl gap-1.5">
+                    {promoLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Apply
+                  </Button>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {appliedPromo && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-emerald-500 font-medium">
+                  ✅ {appliedPromo.discount_percent}% discount applied! Pay only {finalPrice} PKR
+                </motion.p>
+              )}
+            </div>
 
-        {/* Payment Methods */}
-        <Card className="border-border/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-display flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-primary" />
-              Payment Methods
-            </CardTitle>
-            {appliedPromo && (
-              <p className="text-xs text-muted-foreground">Send <strong className="text-foreground">{finalPrice} PKR</strong> to the selected account</p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* JazzCash */}
-            <div
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                paymentMethod === "jazzcash" ? "border-red-500 bg-red-500/5" : "border-border/30 hover:border-border"
-              }`}
-              onClick={() => setPaymentMethod("jazzcash")}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-sm text-foreground">JazzCash</p>
-                  <p className="text-xs text-muted-foreground">03064379361</p>
-                  <p className="text-[10px] text-muted-foreground">Account: Uzair Ahmad</p>
+            {/* Amount */}
+            <div className="text-center py-2 rounded-xl bg-muted/50">
+              <p className="text-sm text-muted-foreground">Amount to send</p>
+              <p className="text-2xl font-bold text-foreground">{finalPrice} PKR</p>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Select Payment Method</span>
+              </div>
+
+              <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "jazzcash" ? "border-red-500 bg-red-500/5" : "border-border/30 hover:border-border"}`}
+                onClick={() => setPaymentMethod("jazzcash")}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">JazzCash</p>
+                    <p className="text-xs text-muted-foreground">03064379361 — Uzair Ahmad</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
+                    onClick={(e) => { e.stopPropagation(); copyNumber("03064379361", "jazz"); }}>
+                    {copiedJazz ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedJazz ? "Copied" : "Copy"}
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
-                  onClick={(e) => { e.stopPropagation(); copyNumber("03064379361", "jazz"); }}>
-                  {copiedJazz ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copiedJazz ? "Copied" : "Copy"}
-                </Button>
+              </div>
+
+              <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === "easypaisa" ? "border-emerald-500 bg-emerald-500/5" : "border-border/30 hover:border-border"}`}
+                onClick={() => setPaymentMethod("easypaisa")}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">EasyPaisa</p>
+                    <p className="text-xs text-muted-foreground">03470326062 — Uzair Ahmad</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
+                    onClick={(e) => { e.stopPropagation(); copyNumber("03470326062", "easy"); }}>
+                    {copiedEasy ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedEasy ? "Copied" : "Copy"}
+                  </Button>
+                </div>
               </div>
             </div>
 
-            {/* EasyPaisa */}
-            <div
-              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                paymentMethod === "easypaisa" ? "border-emerald-500 bg-emerald-500/5" : "border-border/30 hover:border-border"
-              }`}
-              onClick={() => setPaymentMethod("easypaisa")}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-sm text-foreground">EasyPaisa</p>
-                  <p className="text-xs text-muted-foreground">03470326062</p>
-                  <p className="text-[10px] text-muted-foreground">Account: Uzair Ahmad</p>
-                </div>
-                <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1"
-                  onClick={(e) => { e.stopPropagation(); copyNumber("03470326062", "easy"); }}>
-                  {copiedEasy ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copiedEasy ? "Copied" : "Copy"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Upload Screenshot or Show Status */}
-        {pendingRequest?.status === "pending" ? (
-          <Card className="border-amber-500/30 bg-amber-500/5">
-            <CardContent className="p-6 text-center space-y-3">
-              <Clock className="w-10 h-10 text-amber-500 mx-auto" />
-              <h3 className="font-display font-semibold text-foreground">Payment Under Review</h3>
-              <p className="text-sm text-muted-foreground">
-                Shukriya! Uzair bhai aapki payment verify kar rahe hain. 2-4 ghanton mein Pro features active ho jayenge. 🙏
-              </p>
-              <Badge variant="outline" className="text-amber-500 border-amber-500/30">
-                <Clock className="w-3 h-3 mr-1" /> Pending Verification
-              </Badge>
-            </CardContent>
-          </Card>
-        ) : pendingRequest?.status === "rejected" ? (
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="p-6 text-center space-y-3">
-              <XCircle className="w-10 h-10 text-destructive mx-auto" />
-              <h3 className="font-display font-semibold text-foreground">Payment Rejected</h3>
-              <p className="text-sm text-muted-foreground">
-                {pendingRequest.admin_note || "Your payment could not be verified. Please try again with a valid screenshot."}
-              </p>
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
-                <Button asChild variant="outline" className="rounded-xl gap-2" disabled={uploading}>
-                  <span><Upload className="w-4 h-4" />{uploading ? "Uploading..." : "Upload New Screenshot"}</span>
-                </Button>
-              </label>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-border/30">
-            <CardContent className="p-6 text-center space-y-4">
-              <Upload className="w-10 h-10 text-primary mx-auto" />
-              <div>
-                <h3 className="font-display font-semibold text-foreground">Upload Payment Screenshot</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Send {finalPrice} PKR to the selected account and upload a screenshot of the transaction
-                </p>
-              </div>
+            {/* Upload */}
+            <div className="text-center space-y-2 pt-2">
+              <p className="text-xs text-muted-foreground">Send {finalPrice} PKR → Upload screenshot below</p>
               <label className="cursor-pointer inline-block">
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
                 <Button asChild className="rounded-xl gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0">
                   <span><Upload className="w-4 h-4" />{uploading ? "Uploading..." : "Upload Screenshot"}</span>
                 </Button>
               </label>
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 };
