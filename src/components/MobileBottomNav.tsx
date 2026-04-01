@@ -10,9 +10,15 @@ const navItems = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
+const hiddenRoutes = ["/ai-tutor", "/chat"];
+
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const shouldHide = hiddenRoutes.some((r) => location.pathname.startsWith(r));
+
+  if (shouldHide) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-border/50 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
