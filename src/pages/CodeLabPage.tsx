@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from "react";
-import { Code, Sparkles, Loader2, Bot, ImagePlus, X, Copy, Check, RotateCcw } from "lucide-react";
+import { Code, Sparkles, Loader2, Bot, ImagePlus, X, Copy, Check, RotateCcw, Terminal, Play } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
@@ -29,6 +29,8 @@ const CodeLabPage = () => {
   const [fetchError, setFetchError] = useState(false);
   const [lintDismissed, setLintDismissed] = useState(false);
   const [snapshotCode, setSnapshotCode] = useState("");
+  const [consoleOutput, setConsoleOutput] = useState<{ type: "success" | "error" | "info"; text: string }[]>([]);
+  const [activeTab, setActiveTab] = useState<"console" | "diff">("console");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lintErrors = useMemo(() => {
@@ -49,7 +51,6 @@ const CodeLabPage = () => {
   const analyzeCode = async (imageData?: string) => {
     if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
 
-    // Non-blocking: show lint as notification only, don't block analyze
     if (language === "cpp" && lintErrors.length > 0 && !imageData) {
       setLintDismissed(false);
       toast.info(`${lintErrors.length} lint issue(s) detected — analyzing with AI anyway...`);
@@ -59,6 +60,8 @@ const CodeLabPage = () => {
     setIsAnalyzing(true);
     setAnalysis("");
     setFetchError(false);
+    setActiveTab("diff");
+    setConsoleOutput(prev => [...prev, { type: "info", text: `> Analyzing ${language} code...` }]);
 
     try {
       const body: any = { code, language };
@@ -107,11 +110,15 @@ const CodeLabPage = () => {
           } catch { buffer = line + "\n" + buffer; break; }
         }
       }
+
+      setConsoleOutput(prev => [...prev, { type: "success", text: "✓ Analysis complete" }]);
     } catch (err: any) {
       if (err.message === "Failed to fetch" || err.name === "TypeError") {
         setFetchError(true);
+        setConsoleOutput(prev => [...prev, { type: "error", text: "✗ Network error — check your connection" }]);
         toast.error("Network error — check your connection and retry.");
       } else {
+        setConsoleOutput(prev => [...prev, { type: "error", text: `✗ ${err.message}` }]);
         toast.error(err.message || "Analysis failed");
       }
     } finally {
@@ -163,6 +170,8 @@ const CodeLabPage = () => {
     toast.success("Code copied!");
   };
 
+  const clearConsole = () => setConsoleOutput([]);
+
   const fixedCode = extractCode(analysis);
   const errorMsg = extractError(analysis);
 
@@ -172,121 +181,187 @@ const CodeLabPage = () => {
       subtitle={`${department ? departmentInfo[department].name : "SE"} IDE`}
       icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><Code className="w-5 h-5 text-primary-foreground" /></div>}
     >
-      <div className="space-y-4" onPaste={handlePaste}>
-        {/* Editor + Controls */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex gap-2">
-              {(["cpp", "python", "javascript"] as const).map((lang) => (
-                <Button
-                  key={lang}
-                  variant={language === lang ? "default" : "outline"}
-                  size="sm"
-                  className={`rounded-xl text-xs ${language === lang ? "gradient-primary text-primary-foreground" : ""}`}
-                  onClick={() => {
-                    setLanguage(lang);
-                    setCode(lang === "cpp" ? defaultCode.se.code : lang === "python" ? defaultCode.ai.code : "// JavaScript\nconsole.log('Hello UniGenius!');\n");
-                  }}
-                >
-                  {lang === "cpp" ? "C++" : lang === "python" ? "Python" : "JavaScript"}
-                </Button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5" onClick={() => fileInputRef.current?.click()} title="Upload error screenshot">
-                <ImagePlus className="w-3.5 h-3.5" /> Screenshot
-              </Button>
+      <div className="space-y-0" onPaste={handlePaste}>
+        {/* Top toolbar */}
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="flex gap-2">
+            {(["cpp", "python", "javascript"] as const).map((lang) => (
               <Button
-                onClick={() => analyzeCode(errorImage || undefined)}
-                disabled={isAnalyzing}
+                key={lang}
+                variant={language === lang ? "default" : "outline"}
                 size="sm"
-                className="rounded-xl gradient-primary text-primary-foreground gap-1.5 text-xs px-4"
+                className={`rounded-xl text-xs ${language === lang ? "gradient-primary text-primary-foreground" : ""}`}
+                onClick={() => {
+                  setLanguage(lang);
+                  setCode(lang === "cpp" ? defaultCode.se.code : lang === "python" ? defaultCode.ai.code : "// JavaScript\nconsole.log('Hello UniGenius!');\n");
+                }}
               >
-                {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {isAnalyzing ? "Analyzing..." : "Analyze"}
+                {lang === "cpp" ? "C++" : lang === "python" ? "Python" : "JavaScript"}
               </Button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5" onClick={() => fileInputRef.current?.click()} title="Upload error screenshot">
+              <ImagePlus className="w-3.5 h-3.5" /> Screenshot
+            </Button>
+            <Button
+              onClick={() => analyzeCode(errorImage || undefined)}
+              disabled={isAnalyzing}
+              size="sm"
+              className="rounded-xl gradient-primary text-primary-foreground gap-1.5 text-xs px-4"
+            >
+              {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+              {isAnalyzing ? "Analyzing..." : "Run & Analyze"}
+            </Button>
+          </div>
+        </div>
+
+        {!lintDismissed && (
+          <CodeLintWarnings errors={lintErrors} onDismiss={() => setLintDismissed(true)} />
+        )}
+
+        {/* Split-screen: Editor (left/top) + Console/Output (right/bottom) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border border-border/50 rounded-2xl overflow-hidden">
+          {/* Code Editor Panel */}
+          <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-border/50">
+            <div className="flex items-center gap-2 px-3 py-2 bg-background/80 border-b border-border/30">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+              </div>
+              <span className="text-xs text-muted-foreground font-mono ml-2">
+                main.{language === "cpp" ? "cpp" : language === "python" ? "py" : "js"}
+              </span>
+            </div>
+            <div style={{ height: "400px" }}>
+              <Editor
+                height="100%"
+                language={language}
+                theme="vs-dark"
+                value={code}
+                onChange={(v) => setCode(v || "")}
+                options={{ fontSize: 14, minimap: { enabled: false }, padding: { top: 12 }, scrollBeyondLastLine: false, automaticLayout: true, wordWrap: "on", lineNumbers: "on", renderLineHighlight: "all", cursorBlinking: "smooth" }}
+              />
             </div>
           </div>
 
-          {/* Non-blocking Lint Warnings */}
-          {!lintDismissed && (
-            <CodeLintWarnings errors={lintErrors} onDismiss={() => setLintDismissed(true)} />
-          )}
-
-          <div className="glass rounded-2xl overflow-hidden border border-border/50" style={{ height: "350px" }}>
-            <Editor
-              height="100%"
-              language={language}
-              theme="vs-dark"
-              value={code}
-              onChange={(v) => setCode(v || "")}
-              options={{ fontSize: 14, minimap: { enabled: false }, padding: { top: 16 }, scrollBeyondLastLine: false, automaticLayout: true, wordWrap: "on" }}
-            />
-          </div>
-
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-
-          {errorImage && (
-            <div className="glass rounded-xl p-3 flex items-center gap-3">
-              <img src={errorImage} alt="Error" className="w-12 h-12 rounded-lg object-cover" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground">Error image attached</p>
-                <p className="text-xs text-muted-foreground">Will be analyzed with your code</p>
-              </div>
-              <button onClick={() => setErrorImage(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
+          {/* Console / Output Panel */}
+          <div className="flex flex-col">
+            {/* Tabs */}
+            <div className="flex items-center gap-0 bg-background/80 border-b border-border/30">
+              <button
+                onClick={() => setActiveTab("console")}
+                className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === "console" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Terminal className="w-3 h-3 inline mr-1.5" />Console
               </button>
+              <button
+                onClick={() => setActiveTab("diff")}
+                className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === "diff" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Code className="w-3 h-3 inline mr-1.5" />AI Analysis
+              </button>
+              {activeTab === "console" && consoleOutput.length > 0 && (
+                <button onClick={clearConsole} className="ml-auto mr-3 text-xs text-muted-foreground hover:text-foreground">
+                  Clear
+                </button>
+              )}
+              {activeTab === "diff" && analysis && (
+                <button onClick={copyFixedCode} className="ml-auto mr-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              )}
             </div>
-          )}
+
+            {/* Panel Content */}
+            <div className="bg-[hsl(220,15%,8%)] overflow-y-auto" style={{ height: "370px" }}>
+              {activeTab === "console" ? (
+                <div className="p-3 font-mono text-xs space-y-1">
+                  {consoleOutput.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50 gap-2 py-16">
+                      <Terminal className="w-8 h-8" />
+                      <p className="text-xs">Console output will appear here</p>
+                      <p className="text-[10px]">Click "Run & Analyze" to start</p>
+                    </div>
+                  ) : (
+                    consoleOutput.map((line, i) => (
+                      <div key={i} className={`leading-relaxed ${
+                        line.type === "success" ? "text-emerald-400" :
+                        line.type === "error" ? "text-red-400" :
+                        "text-blue-400"
+                      }`}>
+                        {line.text}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 overflow-y-auto">
+                  {fetchError && !analysis ? (
+                    <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
+                      <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                        <X className="w-6 h-6 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="font-display font-semibold text-foreground text-sm">Connection Failed</p>
+                        <p className="text-xs text-muted-foreground mt-1">Network error. Check your internet.</p>
+                      </div>
+                      <Button onClick={() => analyzeCode(errorImage || undefined)} className="rounded-xl gap-2" variant="outline" size="sm">
+                        <RotateCcw className="w-3 h-3" /> Retry
+                      </Button>
+                    </div>
+                  ) : fixedCode ? (
+                    <CodeDiffView
+                      originalCode={snapshotCode}
+                      fixedCode={fixedCode}
+                      errorMsg={errorMsg}
+                      language={language}
+                      copied={copied}
+                      onCopy={copyFixedCode}
+                    />
+                  ) : analysis ? (
+                    <div className="text-sm text-foreground leading-relaxed">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-3 h-3 text-primary-foreground" />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground">Analyzing...</span>
+                      </div>
+                      <p className="text-muted-foreground whitespace-pre-wrap text-xs font-mono">{analysis}</p>
+                    </div>
+                  ) : isAnalyzing ? (
+                    <ThinkingAnimation message="Analyzing code..." />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center gap-3 py-12">
+                      <Code className="w-8 h-8 text-muted-foreground/30" />
+                      <div>
+                        <p className="font-display font-semibold text-foreground text-sm">AI Code Analysis</p>
+                        <p className="text-xs text-muted-foreground mt-1">Write code and click "Run & Analyze"</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Analysis Result — Split Diff View */}
-        <div className="glass rounded-2xl p-4 overflow-y-auto" style={{ maxHeight: "450px" }}>
-          {fetchError && !analysis ? (
-            <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
-              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                <X className="w-6 h-6 text-destructive" />
-              </div>
-              <div>
-                <p className="font-display font-semibold text-foreground">Connection Failed</p>
-                <p className="text-sm text-muted-foreground mt-1">Network error aaya hai. Apna internet check karein.</p>
-              </div>
-              <Button onClick={() => analyzeCode(errorImage || undefined)} className="rounded-xl gap-2" variant="outline">
-                <RotateCcw className="w-4 h-4" /> Retry
-              </Button>
+        <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+
+        {errorImage && (
+          <div className="glass rounded-xl p-3 flex items-center gap-3 mt-3">
+            <img src={errorImage} alt="Error" className="w-12 h-12 rounded-lg object-cover" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground">Error image attached</p>
+              <p className="text-xs text-muted-foreground">Will be analyzed with your code</p>
             </div>
-          ) : fixedCode ? (
-            <CodeDiffView
-              originalCode={snapshotCode}
-              fixedCode={fixedCode}
-              errorMsg={errorMsg}
-              language={language}
-              copied={copied}
-              onCopy={copyFixedCode}
-            />
-          ) : analysis ? (
-            <div className="text-sm text-foreground leading-relaxed">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">Analyzing...</span>
-              </div>
-              <p className="text-muted-foreground whitespace-pre-wrap">{analysis}</p>
-            </div>
-          ) : isAnalyzing ? (
-            <ThinkingAnimation message="UniGenius code analyze kar raha hai..." />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center gap-3 py-8">
-              <Code className="w-10 h-10 text-muted-foreground/30" />
-              <div>
-                <p className="font-display font-semibold text-foreground">AI Code Analysis</p>
-                <p className="text-sm text-muted-foreground mt-1">Write code and click "Analyze" for split-screen error detection.</p>
-                <p className="text-xs text-muted-foreground mt-2">📷 Paste or upload error screenshots for instant debugging!</p>
-              </div>
-            </div>
-          )}
-        </div>
+            <button onClick={() => setErrorImage(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </PageShell>
   );

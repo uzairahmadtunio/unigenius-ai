@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Brain, ListChecks, Trophy, ArrowRight, CheckCircle, XCircle, Loader2, BarChart3, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useRef } from "react";
+import { Brain, ListChecks, Trophy, ArrowRight, CheckCircle, XCircle, Loader2, BarChart3, ChevronDown, ChevronUp, Upload, X, FileText, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
@@ -23,6 +23,8 @@ interface AnswerRecord {
   isCorrect: boolean;
 }
 
+const ALLOWED_QUIZ_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.docx,.doc,.txt,.pptx,.ppt";
+
 const PracticePage = () => {
   const { department } = useDepartment();
   const { user } = useAuth();
@@ -37,8 +39,26 @@ const PracticePage = () => {
   const [quizDone, setQuizDone] = useState(false);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const subjects = department ? getSubjects(department, semester) : [];
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large! Max 10MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadedFile({ name: file.name, type: file.type, dataUrl: reader.result as string });
+      toast.success(`${file.name} attached! Select a subject or click "Generate from File" to start.`);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   const startQuiz = async (subjectName: string) => {
     setLoading(true);
@@ -51,17 +71,26 @@ const PracticePage = () => {
     setShowBreakdown(false);
 
     try {
+      const body: any = {
+        subject: subjectName,
+        department: department ? departmentInfo[department].fullName : "Software Engineering",
+        count: 30,
+      };
+
+      // If file is uploaded, include file data for vision analysis
+      if (uploadedFile) {
+        body.fileData = uploadedFile.dataUrl;
+        body.fileType = uploadedFile.type;
+        body.fileName = uploadedFile.name;
+      }
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          subject: subjectName,
-          department: department ? departmentInfo[department].fullName : "Software Engineering",
-          count: 30,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!resp.ok) {
@@ -81,6 +110,14 @@ const PracticePage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startQuizFromFile = async () => {
+    if (!uploadedFile) {
+      toast.error("Please upload a file first!");
+      return;
+    }
+    await startQuiz(uploadedFile.name.replace(/\.[^/.]+$/, ""));
   };
 
   const handleAnswer = (key: string) => {
@@ -131,6 +168,7 @@ const PracticePage = () => {
     setShowResult(false);
     setAnswers([]);
     setShowBreakdown(false);
+    setUploadedFile(null);
   };
 
   const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
@@ -153,7 +191,6 @@ const PracticePage = () => {
             <div className="text-4xl font-bold gradient-text">{score}/{questions.length}</div>
             <p className="text-sm text-muted-foreground">Score: {percentage}%</p>
 
-            {/* Stats bar */}
             <div className="flex justify-center gap-6 pt-2">
               <div className="text-center">
                 <p className="text-2xl font-bold text-emerald-400">{answers.filter(a => a.isCorrect).length}</p>
@@ -183,7 +220,6 @@ const PracticePage = () => {
             </div>
           </motion.div>
 
-          {/* Detailed breakdown */}
           <AnimatePresence>
             {showBreakdown && (
               <motion.div
@@ -245,7 +281,6 @@ const PracticePage = () => {
         icon={<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center"><Brain className="w-5 h-5 text-primary-foreground" /></div>}
       >
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Progress bar */}
           <div className="flex items-center gap-3">
             <div className="flex-1 bg-muted rounded-full h-2">
               <div className="h-2 rounded-full gradient-primary transition-all" style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }} />
@@ -318,11 +353,55 @@ const PracticePage = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-muted-foreground">Generating 30 quiz questions with AI...</p>
+          <p className="text-muted-foreground">
+            {uploadedFile ? "AI is reading your file and generating MCQs..." : "Generating 30 quiz questions with AI..."}
+          </p>
           <p className="text-xs text-muted-foreground">This may take a moment</p>
         </div>
       ) : (
         <div className="space-y-6">
+          {/* File Upload for Vision MCQs */}
+          <div className="glass rounded-2xl p-4 border border-dashed border-primary/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Upload File for AI-Powered MCQs</span>
+              </div>
+              {uploadedFile && (
+                <button onClick={() => setUploadedFile(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            
+            {uploadedFile ? (
+              <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
+                {uploadedFile.type.startsWith("image/") ? (
+                  <img src={uploadedFile.dataUrl} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{uploadedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">AI will analyze this file to generate relevant MCQs</p>
+                </div>
+                <Button onClick={startQuizFromFile} size="sm" className="rounded-xl gradient-primary text-primary-foreground gap-1.5 flex-shrink-0">
+                  <Brain className="w-3.5 h-3.5" /> Generate
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-3">
+                <p className="text-xs text-muted-foreground">Upload a textbook page, lecture slide, or document — AI will read it and create MCQs</p>
+                <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="w-3.5 h-3.5" /> Choose File
+                </Button>
+              </div>
+            )}
+            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept={ALLOWED_QUIZ_EXTENSIONS} className="hidden" />
+          </div>
+
           {/* Semester selector */}
           <div className="flex gap-2 flex-wrap">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -356,6 +435,7 @@ const PracticePage = () => {
                 <h3 className="font-display font-semibold text-foreground text-sm">{sub.name}</h3>
                 <div className="flex items-center gap-1 text-xs text-primary">
                   <ListChecks className="w-3 h-3" /> 30 MCQs
+                  {uploadedFile && <span className="text-amber-400 ml-1">+ File Analysis</span>}
                 </div>
               </motion.button>
             ))}
