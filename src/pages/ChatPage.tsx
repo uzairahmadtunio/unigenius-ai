@@ -537,7 +537,7 @@ const ChatPage = () => {
           </div>
 
           {/* Fixed bottom input area */}
-          <div className="border-t border-border/30 bg-background/80 backdrop-blur-md px-4 py-3">
+          <div className="border-t border-border/30 bg-background/80 backdrop-blur-md px-4 py-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
             <div className="max-w-3xl mx-auto space-y-2">
               {/* Smart Buttons */}
               <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
