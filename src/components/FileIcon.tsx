@@ -1,4 +1,4 @@
-import { FileText, Image as ImageIcon, Presentation, Music, Video, File } from "lucide-react";
+import { FileText, Image as ImageIcon, Presentation, Music, Video, File, Archive } from "lucide-react";
 import { getFileCategory, FILE_CATEGORY_STYLES } from "@/lib/file-types";
 
 interface FileIconProps {
@@ -22,6 +22,7 @@ const FileIcon = ({ fileName = "", mimeType = "", size = "sm" }: FileIconProps) 
     case "audio":        return <Music className={cls} />;
     case "video":        return <Video className={cls} />;
     case "text":         return <FileText className={cls} />;
+    case "archive":      return <Archive className={cls} />;
     default:             return <File className={cls} />;
   }
 };
