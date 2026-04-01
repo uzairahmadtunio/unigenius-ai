@@ -8,6 +8,8 @@ export const ALLOWED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
   "application/msword", // .doc
   "text/plain", // .txt
+  "application/rtf", // .rtf
+  "text/rtf",
   // Presentations
   "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
   "application/vnd.ms-powerpoint", // .ppt
@@ -24,13 +26,18 @@ export const ALLOWED_MIME_TYPES = [
   // Video
   "video/mp4",
   "video/quicktime", // .mov
+  // Compressed
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/x-rar-compressed",
+  "application/vnd.rar",
 ];
 
 // File extensions for the accept attribute
-export const ACCEPT_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx,.doc,.txt,.pptx,.ppt,.mp3,.wav,.m4a,.mp4,.mov";
+export const ACCEPT_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.gif,.docx,.doc,.txt,.rtf,.pptx,.ppt,.mp3,.wav,.m4a,.mp4,.mov,.zip,.rar";
 
 // ── File type detection ───────────────────────────────────────
-export type FileCategory = "image" | "pdf" | "word" | "presentation" | "audio" | "video" | "text" | "document";
+export type FileCategory = "image" | "pdf" | "word" | "presentation" | "audio" | "video" | "text" | "document" | "archive";
 
 export function getFileCategory(typeOrName: string): FileCategory {
   const t = typeOrName.toLowerCase();
@@ -40,7 +47,8 @@ export function getFileCategory(typeOrName: string): FileCategory {
   if (t.includes("presentationml") || t === "application/vnd.ms-powerpoint" || /\.(pptx?|ppt)$/i.test(t)) return "presentation";
   if (t.startsWith("audio/") || /\.(mp3|wav|m4a)$/i.test(t)) return "audio";
   if (t.startsWith("video/") || /\.(mp4|mov)$/i.test(t)) return "video";
-  if (t === "text/plain" || /\.(txt|md)$/i.test(t)) return "text";
+  if (t === "text/plain" || t === "application/rtf" || t === "text/rtf" || /\.(txt|md|rtf)$/i.test(t)) return "text";
+  if (t.includes("zip") || t.includes("rar") || /\.(zip|rar)$/i.test(t)) return "archive";
   return "document";
 }
 
@@ -53,16 +61,22 @@ export const FILE_CATEGORY_STYLES: Record<FileCategory, { color: string; bgColor
   audio:        { color: "text-green-500",   bgColor: "bg-green-500/10",   label: "Audio" },
   video:        { color: "text-purple-500",  bgColor: "bg-purple-500/10",  label: "Video" },
   text:         { color: "text-muted-foreground", bgColor: "bg-muted",     label: "Text" },
+  archive:      { color: "text-yellow-500",  bgColor: "bg-yellow-500/10",  label: "Archive" },
   document:     { color: "text-primary",     bgColor: "bg-primary/10",     label: "File" },
 };
 
 // ── Check if a file is allowed ────────────────────────────────
 export function isFileAllowed(file: File): boolean {
-  return ALLOWED_MIME_TYPES.some(t => file.type === t || file.type.startsWith(t.split("/")[0] + "/"));
+  // Check by MIME type
+  if (ALLOWED_MIME_TYPES.some(t => file.type === t)) return true;
+  // Fallback: check by extension
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  const allowedExts = ["pdf","png","jpg","jpeg","webp","gif","docx","doc","txt","rtf","pptx","ppt","mp3","wav","m4a","mp4","mov","zip","rar"];
+  return ext ? allowedExts.includes(ext) : false;
 }
 
 // ── Get descriptive text for drop zone ────────────────────────
-export const DROP_ZONE_TEXT = "PDF, Images, Word, PPT, Audio, Video";
+export const DROP_ZONE_TEXT = "PDF, Images, Word, PPT, Audio, Video, ZIP, RAR";
 
 // ── Build AI-friendly content parts for a file ────────────────
 export function buildFileContentParts(
@@ -72,7 +86,7 @@ export function buildFileContentParts(
   subjectContext?: string,
 ): any[] {
   const parts: any[] = [];
-  const cat = getFileCategory(file.type);
+  const cat = getFileCategory(file.type || file.name);
   const ctx = subjectContext ? ` for ${subjectContext}` : "";
 
   switch (cat) {
@@ -99,6 +113,10 @@ export function buildFileContentParts(
     case "video":
       parts.push({ type: "file", file: { name: file.name, mime_type: file.type, data: file.dataUrl.split(",")[1] } });
       parts.push({ type: "text", text: `[Video ${index + 1}/${total}: ${file.name}] — This is a video recording. Analyze any extractable content (audio track, metadata)${ctx}.` });
+      break;
+    case "archive":
+      parts.push({ type: "file", file: { name: file.name, mime_type: file.type || "application/zip", data: file.dataUrl.split(",")[1] } });
+      parts.push({ type: "text", text: `[Archive ${index + 1}/${total}: ${file.name}] — This is a compressed archive file${ctx}. List contents if possible.` });
       break;
     default:
       parts.push({ type: "file", file: { name: file.name, mime_type: file.type, data: file.dataUrl.split(",")[1] } });
