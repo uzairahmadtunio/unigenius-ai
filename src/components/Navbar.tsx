@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/use-admin";
+import { useRole } from "@/hooks/use-role";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
