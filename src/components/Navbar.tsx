@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/use-admin";
+import { useRole } from "@/hooks/use-role";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +20,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { isTeacher } = useRole();
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -85,6 +87,17 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {isTeacher && !isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl text-xs gap-1.5 hidden sm:flex text-primary"
+              onClick={() => navigate("/teacher-dashboard")}
+            >
+              <GraduationCap className="w-3 h-3" />
+              Teacher Panel
+            </Button>
+          )}
           {isAdmin && (
             <Button
               variant="ghost"
