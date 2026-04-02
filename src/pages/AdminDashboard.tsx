@@ -264,9 +264,11 @@ const OverviewTab = () => {
 /* ===== USERS TAB ===== */
 const UsersTab = () => {
   const [users, setUsers] = useState<any[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     const { data } = await supabase.rpc("admin_get_all_users");
@@ -274,7 +276,33 @@ const UsersTab = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchRoles = async () => {
+    const { data } = await supabase.from("user_roles" as any).select("user_id, role");
+    const map: Record<string, string[]> = {};
+    (data || []).forEach((r: any) => {
+      if (!map[r.user_id]) map[r.user_id] = [];
+      map[r.user_id].push(r.role);
+    });
+    setUserRoles(map);
+  };
+
+  useEffect(() => { fetchUsers(); fetchRoles(); }, []);
+
+  const handleRoleChange = async (userId: string, action: "add" | "remove") => {
+    setRoleLoading(userId);
+    const { error } = await supabase.rpc("admin_manage_user_role" as any, {
+      _target_user_id: userId,
+      _role: "teacher",
+      _action: action,
+    });
+    if (error) {
+      toast.error("Failed: " + error.message);
+    } else {
+      toast.success(action === "add" ? "User promoted to Teacher" : "Teacher role removed");
+      await fetchRoles();
+    }
+    setRoleLoading(null);
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -297,12 +325,19 @@ const UsersTab = () => {
     );
   });
 
+  const getUserRole = (userId: string) => {
+    const roles = userRoles[userId] || [];
+    if (roles.includes("admin")) return "admin";
+    if (roles.includes("teacher")) return "teacher";
+    return "student";
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-display font-bold text-foreground">User Management</h2>
-          <p className="text-xs text-muted-foreground">{users.length} registered students</p>
+          <h2 className="text-xl font-display font-bold text-foreground">Manage Users</h2>
+          <p className="text-xs text-muted-foreground">{users.length} registered users</p>
         </div>
       </div>
 
@@ -320,34 +355,58 @@ const UsersTab = () => {
         <div className="text-center py-12 text-muted-foreground text-sm">Loading users...</div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((u) => (
-            <Card key={u.user_id} className="border-border/30 bg-card">
-              <CardContent className="p-3 flex items-center gap-3">
-                <Avatar className="w-9 h-9 border border-border">
-                  <AvatarImage src={u.avatar_url} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                    {(u.display_name || u.email || "?").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{u.display_name || "No Name"}</p>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="truncate">{u.email}</span>
-                    {u.roll_number && <><span>•</span><span>{u.roll_number}</span></>}
-                    {u.current_semester && <><span>•</span><span>Sem {u.current_semester}</span></>}
+          {filtered.map((u) => {
+            const role = getUserRole(u.user_id);
+            const isCurrentTeacher = role === "teacher";
+            const isAdminUser = role === "admin";
+            return (
+              <Card key={u.user_id} className="border-border/30 bg-card">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <Avatar className="w-9 h-9 border border-border">
+                    <AvatarImage src={u.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {(u.display_name || u.email || "?").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground truncate">{u.display_name || "No Name"}</p>
+                      <Badge variant={isAdminUser ? "default" : isCurrentTeacher ? "secondary" : "outline"} className="text-[9px] shrink-0">
+                        {role}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="truncate">{u.email}</span>
+                      {u.roll_number && <><span>•</span><span>{u.roll_number}</span></>}
+                    </div>
                   </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-lg w-8 h-8 text-destructive hover:bg-destructive/10"
-                  onClick={() => setDeleteTarget(u)}
-                >
-                  <UserX className="w-4 h-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!isAdminUser && (
+                      <Button
+                        variant={isCurrentTeacher ? "outline" : "default"}
+                        size="sm"
+                        className="rounded-lg text-[10px] h-7 px-2"
+                        disabled={roleLoading === u.user_id}
+                        onClick={() => handleRoleChange(u.user_id, isCurrentTeacher ? "remove" : "add")}
+                      >
+                        {roleLoading === u.user_id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : isCurrentTeacher ? "Remove Teacher" : "Make Teacher"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-lg w-8 h-8 text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget(u)}
+                    >
+                      <UserX className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
           {filtered.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">No users found.</p>
           )}
