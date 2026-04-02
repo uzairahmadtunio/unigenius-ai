@@ -20,6 +20,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const [isDark, setIsDark] = useState(true);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { isTeacher } = useRole();
   const { department, clearDepartment } = useDepartment();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState("");
