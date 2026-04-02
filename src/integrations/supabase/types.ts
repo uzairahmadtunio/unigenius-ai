@@ -729,6 +729,54 @@ export type Database = {
         }
         Relationships: []
       }
+      question_bank: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          created_by: string
+          explanation: string | null
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          semester: number | null
+          subject: string
+          topic: string
+        }
+        Insert: {
+          correct_answer?: string
+          created_at?: string
+          created_by: string
+          explanation?: string | null
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          semester?: number | null
+          subject: string
+          topic?: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          created_by?: string
+          explanation?: string | null
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question?: string
+          semester?: number | null
+          subject?: string
+          topic?: string
+        }
+        Relationships: []
+      }
       quiz_results: {
         Row: {
           created_at: string
@@ -759,6 +807,42 @@ export type Database = {
           subject?: string
           total?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      study_materials: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_url: string
+          id: string
+          semester: number | null
+          subject: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          semester?: number | null
+          subject: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          semester?: number | null
+          subject?: string
+          title?: string
+          uploaded_by?: string
         }
         Relationships: []
       }
@@ -1029,6 +1113,14 @@ export type Database = {
       }
       admin_handle_payment: {
         Args: { _action: string; _note?: string; _request_id: string }
+        Returns: undefined
+      }
+      admin_manage_user_role: {
+        Args: {
+          _action: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
         Returns: undefined
       }
       get_leaderboard_filtered: {
