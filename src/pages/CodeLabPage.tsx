@@ -48,6 +48,47 @@ const CodeLabPage = () => {
     return beforeCode.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim();
   }, []);
 
+  const simulateExecution = useCallback((sourceCode: string, lang: string): { stdout: string[]; stderr: string[] } => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    try {
+      if (lang === "javascript") {
+        const logs: string[] = [];
+        const mockConsole = { log: (...args: any[]) => logs.push(args.map(String).join(" ")), error: (...args: any[]) => stderr.push(args.map(String).join(" ")) };
+        const fn = new Function("console", sourceCode);
+        fn(mockConsole);
+        stdout.push(...logs);
+      } else if (lang === "python") {
+        const printRegex = /print\s*\(\s*(?:f?["'`](.*?)["'`]|([^)]+))\s*\)/g;
+        let match;
+        while ((match = printRegex.exec(sourceCode)) !== null) {
+          stdout.push(match[1] || match[2] || "");
+        }
+        if (stdout.length === 0 && !sourceCode.includes("print")) {
+          stdout.push("(No print output detected)");
+        }
+      } else if (lang === "cpp") {
+        const coutRegex = /cout\s*<<\s*(?:"([^"]*?)"|'([^']*?)'|(\w+))\s*(?:<<\s*endl)?/g;
+        let match;
+        const outputs: string[] = [];
+        while ((match = coutRegex.exec(sourceCode)) !== null) {
+          outputs.push(match[1] || match[2] || match[3] || "");
+        }
+        if (outputs.length > 0) {
+          stdout.push(outputs.join(""));
+        }
+        if (sourceCode.includes("return 0")) {
+          stdout.push("Process exited with code 0");
+        }
+      }
+    } catch (e: any) {
+      stderr.push(e.message || "Runtime error");
+    }
+
+    return { stdout, stderr };
+  }, []);
+
   const analyzeCode = async (imageData?: string) => {
     if (!code.trim() && !imageData) { toast.error("Write some code or upload an error image!"); return; }
 
@@ -60,9 +101,29 @@ const CodeLabPage = () => {
     setIsAnalyzing(true);
     setAnalysis("");
     setFetchError(false);
-    setActiveTab("diff");
-    setConsoleOutput(prev => [...prev, { type: "info", text: `> Analyzing ${language} code...` }]);
+    setActiveTab("console");
+    setConsoleOutput([{ type: "info", text: `> Running ${language === "cpp" ? "C++" : language === "python" ? "Python" : "JavaScript"} code...` }]);
 
+    // Step 1: Simulate execution
+    await new Promise(r => setTimeout(r, 300));
+    const { stdout, stderr } = simulateExecution(code, language);
+
+    setConsoleOutput(prev => {
+      const next = [...prev];
+      if (stderr.length > 0) {
+        stderr.forEach(line => next.push({ type: "error", text: `stderr: ${line}` }));
+      }
+      if (stdout.length > 0) {
+        stdout.forEach(line => next.push({ type: "success", text: line }));
+      }
+      if (stdout.length === 0 && stderr.length === 0) {
+        next.push({ type: "info", text: "(No output)" });
+      }
+      next.push({ type: "info", text: `> Sending to AI for analysis...` });
+      return next;
+    });
+
+    // Step 2: AI analysis
     try {
       const body: any = { code, language };
       if (imageData) body.errorImage = imageData;
