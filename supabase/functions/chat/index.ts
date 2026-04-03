@@ -5,87 +5,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Convert multimodal content parts to Gemini-compatible format
-function transformMessages(messages: any[]) {
-  return messages.map((msg: any) => {
-    if (typeof msg.content === "string") return msg;
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse";
 
-    if (Array.isArray(msg.content)) {
-      const transformedParts: any[] = [];
-
+function transformToGeminiFormat(messages: any[]) {
+  const contents: any[] = [];
+  
+  for (const msg of messages) {
+    const role = msg.role === "assistant" ? "model" : "user";
+    const parts: any[] = [];
+    
+    if (typeof msg.content === "string") {
+      parts.push({ text: msg.content });
+    } else if (Array.isArray(msg.content)) {
       for (const part of msg.content) {
         if (part.type === "text") {
-          transformedParts.push(part);
+          parts.push({ text: part.text });
         } else if (part.type === "image_url") {
-          transformedParts.push(part);
-        } else if (part.type === "file") {
-          const { name, mime_type, data } = part.file;
-          // PDFs and images: Gemini handles natively via data URL
-          if (mime_type === "application/pdf" || mime_type.startsWith("image/")) {
-            transformedParts.push({
-              type: "image_url",
-              image_url: { url: `data:${mime_type};base64,${data}` },
-            });
-          }
-          // Word documents
-          else if (mime_type.includes("wordprocessingml") || mime_type === "application/msword") {
-            transformedParts.push({
-              type: "image_url",
-              image_url: { url: `data:${mime_type};base64,${data}` },
-            });
-          }
-          // PowerPoint presentations
-          else if (mime_type.includes("presentationml") || mime_type === "application/vnd.ms-powerpoint") {
-            transformedParts.push({
-              type: "image_url",
-              image_url: { url: `data:${mime_type};base64,${data}` },
-            });
-          }
-          // Audio files (Gemini supports audio natively)
-          else if (mime_type.startsWith("audio/")) {
-            transformedParts.push({
-              type: "image_url",
-              image_url: { url: `data:${mime_type};base64,${data}` },
-            });
-          }
-          // Video files
-          else if (mime_type.startsWith("video/")) {
-            transformedParts.push({
-              type: "image_url",
-              image_url: { url: `data:${mime_type};base64,${data}` },
-            });
-          }
-          // Text files
-          else if (mime_type === "text/plain") {
-            // Decode text content inline
-            try {
-              const textContent = atob(data);
-              transformedParts.push({
-                type: "text",
-                text: `[Content of ${name}]:\n${textContent}`,
-              });
-            } catch {
-              transformedParts.push({
-                type: "text",
-                text: `[File attached: ${name} (${mime_type})] — Please analyze this document.`,
-              });
+          const url = part.image_url?.url || "";
+          if (url.startsWith("data:")) {
+            const match = url.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
             }
           }
-          // Fallback for other binary docs
-          else {
-            transformedParts.push({
-              type: "text",
-              text: `[File attached: ${name} (${mime_type})] — The user uploaded this document. Please help analyze its content based on the context provided.`,
-            });
-          }
+        } else if (part.type === "file") {
+          const { mime_type, data } = part.file;
+          parts.push({ inline_data: { mime_type, data } });
         }
       }
-
-      return { ...msg, content: transformedParts };
     }
-
-    return msg;
-  });
+    
+    if (parts.length > 0) {
+      contents.push({ role, parts });
+    }
+  }
+  
+  return contents;
 }
 
 serve(async (req) => {
@@ -93,23 +48,11 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-    const transformedMessages = transformMessages(messages);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a Senior Software Engineering Professor AI Tutor at a top university. Your name is UniGenius AI.
+    const systemInstruction = {
+      parts: [{ text: `You are a Senior Software Engineering Professor AI Tutor at a top university. Your name is UniGenius AI.
 
 Your expertise covers the complete BS Software Engineering curriculum including:
 - Programming (C++, OOP, Data Structures, Algorithms)
@@ -140,43 +83,89 @@ Response Guidelines:
 - Be encouraging and supportive
 - Format with markdown for readability
 - When given images, ALWAYS describe what you see and extract any text/code
-- For code errors in images, provide the corrected code in a code block`,
-          },
-          ...transformedMessages,
-        ],
-        stream: true,
+- For code errors in images, provide the corrected code in a code block` }]
+    };
+
+    const contents = transformToGeminiFormat(messages);
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: systemInstruction,
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        },
       }),
     });
 
     if (!response.ok) {
+      const t = await response.text();
+      console.error("Gemini API error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIdx;
+          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIdx).trim();
+            buffer = buffer.slice(newlineIdx + 1);
+
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6);
+            if (jsonStr === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                const openaiChunk = {
+                  choices: [{ delta: { content: text }, index: 0 }],
+                };
+                await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+              }
+            } catch {}
+          }
+        }
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+      } catch (e) {
+        console.error("Stream error:", e);
+      } finally {
+        writer.close();
+      }
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
