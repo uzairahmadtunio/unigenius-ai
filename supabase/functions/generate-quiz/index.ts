@@ -10,136 +10,94 @@ serve(async (req) => {
 
   try {
     const { subject, department, count = 30, fileData, fileType, fileName } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const numQuestions = Math.min(Math.max(count, 5), 30);
 
-    // Build messages based on whether file content is provided
-    const messages: any[] = [];
-    
+    const parts: any[] = [];
+    let systemText = "";
+
     if (fileData && fileType) {
-      // Vision-powered: analyze uploaded file content for MCQs
       const isImage = fileType.startsWith("image/");
-      
-      messages.push({
-        role: "system",
-        content: `You are a university exam question generator for ${department || "Software Engineering"} students. You MUST analyze the uploaded file content carefully and generate exactly ${numQuestions} MCQs based SPECIFICALLY on the content of this file. Do NOT use general knowledge — every question must be directly derived from the material in the uploaded file.
+      systemText = `You are a university exam question generator for ${department || "Software Engineering"} students. Analyze the uploaded file content carefully and generate exactly ${numQuestions} MCQs based SPECIFICALLY on the content of this file.`;
 
-Questions must:
-- Be directly based on the specific content in the uploaded file
-- Cover different sections/topics found in the file
-- Range from basic recall to analytical questions
-- Each have 4 options (A, B, C, D), one correct answer, and a brief explanation referencing the file content`,
-      });
-
-      const userParts: any[] = [];
-      
       if (isImage) {
-        userParts.push({ type: "image_url", image_url: { url: fileData.startsWith("data:") ? fileData : `data:${fileType};base64,${fileData}` } });
-        userParts.push({ type: "text", text: `This is an uploaded image (${fileName || "image"}). Read and analyze ALL text, diagrams, and content visible in this image. Then generate exactly ${numQuestions} MCQs based ONLY on this content.${subject ? ` Subject context: ${subject}.` : ""}` });
-      } else {
-        // PDF, Word, PPT etc.
         const base64 = fileData.startsWith("data:") ? fileData.split(",")[1] : fileData;
-        userParts.push({ type: "file", file: { name: fileName || "document", mime_type: fileType, data: base64 } });
-        userParts.push({ type: "text", text: `Analyze this uploaded document thoroughly. Generate exactly ${numQuestions} MCQs based ONLY on the specific content of this file.${subject ? ` Subject context: ${subject}.` : ""}` });
+        parts.push({ inline_data: { mime_type: fileType, data: base64 } });
+        parts.push({ text: `This is an uploaded image (${fileName || "image"}). Read and analyze ALL text, diagrams, and content visible in this image. Then generate exactly ${numQuestions} MCQs based ONLY on this content.${subject ? ` Subject context: ${subject}.` : ""}` });
+      } else {
+        const base64 = fileData.startsWith("data:") ? fileData.split(",")[1] : fileData;
+        parts.push({ inline_data: { mime_type: fileType, data: base64 } });
+        parts.push({ text: `Analyze this uploaded document thoroughly. Generate exactly ${numQuestions} MCQs based ONLY on the specific content of this file.${subject ? ` Subject context: ${subject}.` : ""}` });
       }
-      
-      messages.push({ role: "user", content: userParts });
     } else {
-      // Standard subject-based quiz generation
-      messages.push({
-        role: "system",
-        content: `You are a university exam question generator for ${department} students. Generate exactly ${numQuestions} diverse multiple choice questions about "${subject}". 
-
-Questions must:
-- Cover different topics within the subject
-- Range from basic to advanced difficulty
-- Include conceptual, applied, and analytical questions
-- Each have 4 options (A, B, C, D), one correct answer, and a brief explanation of why the correct answer is right
-
-Make questions university-level and exam-relevant.`,
-      });
-      messages.push({
-        role: "user",
-        content: `Generate ${numQuestions} diverse MCQs for the subject "${subject}" covering all important topics.`,
-      });
+      systemText = `You are a university exam question generator for ${department} students. Generate exactly ${numQuestions} diverse multiple choice questions about "${subject}".`;
+      parts.push({ text: `Generate ${numQuestions} diverse MCQs for the subject "${subject}" covering all important topics. Each question must have 4 options (A, B, C, D), one correct answer, and a brief explanation.` });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: fileData ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash",
-        messages,
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "return_mcqs",
-              description: `Return ${numQuestions} MCQs with options, correct answers, and explanations.`,
-              parameters: {
-                type: "object",
+    const toolDecl = {
+      function_declarations: [{
+        name: "return_mcqs",
+        description: `Return ${numQuestions} MCQs with options, correct answers, and explanations.`,
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            questions: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
                 properties: {
-                  questions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        question: { type: "string" },
-                        options: {
-                          type: "object",
-                          properties: {
-                            A: { type: "string" },
-                            B: { type: "string" },
-                            C: { type: "string" },
-                            D: { type: "string" },
-                          },
-                          required: ["A", "B", "C", "D"],
-                          additionalProperties: false,
-                        },
-                        correct: { type: "string", enum: ["A", "B", "C", "D"] },
-                        explanation: { type: "string" },
-                      },
-                      required: ["question", "options", "correct", "explanation"],
-                      additionalProperties: false,
+                  question: { type: "STRING" },
+                  options: {
+                    type: "OBJECT",
+                    properties: {
+                      A: { type: "STRING" },
+                      B: { type: "STRING" },
+                      C: { type: "STRING" },
+                      D: { type: "STRING" },
                     },
+                    required: ["A", "B", "C", "D"],
                   },
+                  correct: { type: "STRING" },
+                  explanation: { type: "STRING" },
                 },
-                required: ["questions"],
-                additionalProperties: false,
+                required: ["question", "options", "correct", "explanation"],
               },
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "return_mcqs" } },
+          required: ["questions"],
+        },
+      }],
+    };
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemText }] },
+        contents: [{ role: "user", parts }],
+        tools: [toolDecl],
+        tool_config: { function_calling_config: { mode: "ANY", allowed_function_names: ["return_mcqs"] } },
       }),
     });
 
     if (!response.ok) {
+      const t = await response.text();
+      console.error("Gemini error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI error:", response.status, t);
       throw new Error("AI service error");
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in response");
+    const fc = data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
+    if (!fc) throw new Error("No function call in response");
 
-    const questions = JSON.parse(toolCall.function.arguments);
+    const questions = fc.functionCall.args;
     return new Response(JSON.stringify(questions), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

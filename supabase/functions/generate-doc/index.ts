@@ -10,12 +10,10 @@ serve(async (req) => {
 
   try {
     const { type, subject, topic, additionalNotes, semester, studentInfo } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const extra = additionalNotes ? `\n\nAdditional instructions from student: ${additionalNotes}` : "";
-    
-    // Dynamic student info with fallback placeholders
     const sName = studentInfo?.name || "__________ (Enter Name)";
     const sRoll = studentInfo?.rollNumber || "__________ (Enter Roll No)";
     const sDept = studentInfo?.department || "Software Engineering";
@@ -25,8 +23,6 @@ serve(async (req) => {
       ? `Generate a complete Lab Manual for the subject "${subject}" on the topic "${topic}" in the EXACT style of the University of Larkano lab manuals.
 
 FORMAT — follow this EXACTLY:
-
-Start with this header block (use markdown):
 
 # UNIVERSITY OF LARKANO
 ## Department of ${sDept}
@@ -43,94 +39,98 @@ Start with this header block (use markdown):
 
 ---
 
-Then for EACH task in the lab, follow this structure:
+Then for EACH task:
 
 ## Task [Number]
-**Problem Statement:** Write a clear, simple one-line problem (e.g., "Write a program to calculate the area of a circle.")
-
-**Objective:** One-line goal of this task.
-
+**Problem Statement:** Write a clear, simple one-line problem.
+**Objective:** One-line goal.
 **Code:**
 \`\`\`cpp
-#include <iostream>
-using namespace std;
-// ... beginner-friendly C++ code with simple comments
+// beginner-friendly C++ code
 \`\`\`
-
 **Result/Output:**
 \`\`\`
-(Show the exact expected console output here)
+(expected console output)
 \`\`\`
 
 ---
 
-IMPORTANT RULES:
-- Generate 3-5 tasks per lab unless the topic only needs fewer.
-- Keep code beginner-friendly. Use standard headers like #include <iostream> and using namespace std;
-- Use simple variable names and straightforward logic.
-- Avoid complex AI explanations. Write like a student: "This program takes input from the user..." or "The output will be..."
-- If a flowchart is needed, describe it in simple numbered steps (not ASCII art).
-- Bold all headings: **Task**, **Code**, **Result**, **Objective**.
-- End with a ## Conclusion section summarizing what was learned in 3-4 simple sentences.${extra}`
-      : `Generate a complete Assignment for the subject "${subject}" on the topic "${topic}".
+Generate 3-5 tasks. End with a ## Conclusion section.${extra}`
+      : `Generate a complete Assignment for "${subject}" on "${topic}".
 
-IMPORTANT TONE & STYLE RULES — follow these strictly:
-- Write as an undergraduate student, NOT a professor or researcher.
-- Use simple, clear, everyday English. Avoid complex jargon or PhD-level theories.
-- Keep paragraphs short (3-4 sentences max). No long, winding sentences.
-- Use common words: say "Importance" not "Theoretical Underpinnings", say "Barriers" not "Cognitive Impediments", say "Types" not "Taxonomical Classifications".
-- Add a personal touch occasionally: phrases like "In my opinion,", "As a student, I think...", "From what I've learned...", "I believe that..." to make it sound human-written.
-- Use short bullet points and simple definitions (e.g., "Listening is more than just hearing sounds.").
-- Give practical, everyday examples that a student would think of.
-- If references are needed, keep them basic and standard (simple author-year format). Don't over-complicate citations.
+Write as an undergraduate student. Use simple English. Short paragraphs. Bullet points. Common vocabulary.
 
 STRUCTURE:
-1. **Title Page** (Subject, Assignment Title, Student Info placeholder)
+1. **Title Page**
 2. **Table of Contents**
-3. **Introduction** (Brief context — why this topic matters, 3-4 sentences)
-4. **Main Content** (Use clear subheadings, short paragraphs, bullet points, and simple definitions. Include practical examples.)
-5. **Examples** (Real-world, everyday examples a student would use)
-6. **Summary / Conclusion** (Brief personal reflection, what was learned)
-7. **References** (Simple, standard format — keep it minimal)
+3. **Introduction**
+4. **Main Content**
+5. **Examples**
+6. **Summary / Conclusion**
+7. **References**
 
-Use markdown formatting with headers and bullet points.${extra}`;
+Use markdown formatting.${extra}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const systemText = type === "lab"
+      ? `You are a lab manual generator for the University of Larkano. Generate lab manuals with header, student info table, and task-based structure. Use simple language. Markdown formatting.`
+      : `You are a document generator that writes like an undergraduate student. Simple, clear, human-like tone. Markdown formatting.`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: type === "lab"
-              ? `You are a lab manual generator for the University of Larkano, Department of Software Engineering. Generate lab manuals in the exact university format with header, student info table, and task-based structure. Each task must have: Problem Statement, Objective, C++ Code (beginner-level), and Result/Output. Write like a student — simple language, no complex jargon. Always end with a Conclusion. Use markdown formatting.`
-              : `You are a document generator that writes like an undergraduate university student. Write in a simple, clear, human-like student tone — short paragraphs, bullet points, common vocabulary, and occasional personal opinions. Never sound like a research paper or PhD thesis. Use markdown formatting.`,
-          },
-          { role: "user", content: prompt },
-        ],
-        stream: true,
+        system_instruction: { parts: [{ text: systemText }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
       }),
     });
 
     if (!response.ok) {
+      const t = await response.text();
+      console.error("Gemini error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       throw new Error("AI service error");
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE to OpenAI-compatible SSE
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 1);
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6);
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text }, index: 0 }] })}\n\n`));
+              }
+            } catch {}
+          }
+        }
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+      } finally { writer.close(); }
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
