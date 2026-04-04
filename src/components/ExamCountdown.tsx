@@ -16,13 +16,13 @@ const ExamCountdown = ({ semester }: { semester: number }) => {
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data } = await supabase
-        .from("exam_schedule" as any)
+        .from("exam_schedule")
         .select("*")
         .eq("semester", semester)
         .gte("exam_date", now)
         .order("exam_date", { ascending: true })
         .limit(1);
-      return data?.[0] || null;
+      return (data?.[0] as any) || null;
     },
   });
 
