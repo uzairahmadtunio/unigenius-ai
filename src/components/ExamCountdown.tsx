@@ -4,13 +4,16 @@ import { Clock, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const ExamCountdown = ({ semester }: { semester: number }) => {
-  const [nextExam, setNextExam] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
-  useEffect(() => {
-    const fetchExam = async () => {
+  const { data: nextExam = null } = useQuery({
+    queryKey: ["next-exam", semester],
+    staleTime: 30 * 60 * 1000, // 30 minutes — exam schedules rarely change
+    gcTime: 60 * 60 * 1000,
+    queryFn: async () => {
       const now = new Date().toISOString();
       const { data } = await supabase
         .from("exam_schedule" as any)
@@ -19,11 +22,9 @@ const ExamCountdown = ({ semester }: { semester: number }) => {
         .gte("exam_date", now)
         .order("exam_date", { ascending: true })
         .limit(1);
-
-      if (data && data.length > 0) setNextExam(data[0]);
-    };
-    fetchExam();
-  }, [semester]);
+      return data?.[0] || null;
+    },
+  });
 
   useEffect(() => {
     if (!nextExam) return;
@@ -61,10 +62,10 @@ const ExamCountdown = ({ semester }: { semester: number }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="font-display font-semibold text-xs text-foreground">Next Exam</p>
-                <Badge variant="outline" className="text-[9px]">{(nextExam as any).exam_type}</Badge>
+                <Badge variant="outline" className="text-[9px]">{nextExam.exam_type}</Badge>
               </div>
               <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                <BookOpen className="w-3 h-3" /> {(nextExam as any).subject}
+                <BookOpen className="w-3 h-3" /> {nextExam.subject}
               </p>
             </div>
             <div className="flex gap-1.5 text-center">
@@ -75,9 +76,7 @@ const ExamCountdown = ({ semester }: { semester: number }) => {
                 { val: timeLeft.seconds, label: "S" },
               ].map((t, i) => (
                 <div key={i} className="w-10 rounded-lg bg-muted/80 p-1.5">
-                  <p className={`text-sm font-bold font-mono ${urgency}`}>
-                    {String(t.val).padStart(2, "0")}
-                  </p>
+                  <p className={`text-sm font-bold font-mono ${urgency}`}>{String(t.val).padStart(2, "0")}</p>
                   <p className="text-[8px] text-muted-foreground">{t.label}</p>
                 </div>
               ))}

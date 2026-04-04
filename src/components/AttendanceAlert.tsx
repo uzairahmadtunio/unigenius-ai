@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface LowSubject {
   name: string;
@@ -13,21 +14,23 @@ const SESSION_KEY = "attendance_alert_shown";
 
 const AttendanceAlert = () => {
   const { user } = useAuth();
-  const [lowSubjects, setLowSubjects] = useState<LowSubject[]>([]);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
 
-  useEffect(() => {
-    if (!user || sessionStorage.getItem(SESSION_KEY)) return;
+  const alreadyShown = sessionStorage.getItem(SESSION_KEY);
 
-    const check = async () => {
+  const { data: lowSubjects = [] } = useQuery({
+    queryKey: ["attendance-alert", user?.id],
+    enabled: !!user && !alreadyShown,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    queryFn: async () => {
       const { data } = await supabase
         .from("attendance")
         .select("subject, status")
-        .eq("user_id", user.id);
+        .eq("user_id", user!.id);
 
-      if (!data || data.length === 0) return;
+      if (!data || data.length === 0) return [];
 
-      // Group by subject
       const map: Record<string, { total: number; present: number }> = {};
       data.forEach((r) => {
         if (!map[r.subject]) map[r.subject] = { total: 0, present: 0 };
@@ -44,17 +47,14 @@ const AttendanceAlert = () => {
       });
 
       if (low.length > 0) {
-        setLowSubjects(low);
-        setVisible(true);
         sessionStorage.setItem(SESSION_KEY, "true");
-
-        // Auto-dismiss after 7 seconds
         setTimeout(() => setVisible(false), 7000);
       }
-    };
+      return low;
+    },
+  });
 
-    check();
-  }, [user]);
+  if (!visible || lowSubjects.length === 0) return null;
 
   return (
     <AnimatePresence>
@@ -72,9 +72,7 @@ const AttendanceAlert = () => {
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
               </div>
               <div className="flex-1 space-y-1">
-                <h4 className="font-display font-bold text-foreground text-sm">
-                  Attendance Warning
-                </h4>
+                <h4 className="font-display font-bold text-foreground text-sm">Attendance Warning</h4>
                 {lowSubjects.map((s) => (
                   <p key={s.name} className="text-xs text-muted-foreground leading-relaxed">
                     ⚠️ Your attendance in{" "}
@@ -84,10 +82,7 @@ const AttendanceAlert = () => {
                   </p>
                 ))}
               </div>
-              <button
-                onClick={() => setVisible(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
-              >
+              <button onClick={() => setVisible(false)} className="rounded-lg p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>

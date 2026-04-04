@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, X, AlertTriangle, Calendar, GraduationCap, Info, PartyPopper } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const categoryIcons: Record<string, any> = {
   fee: AlertTriangle,
@@ -23,35 +24,44 @@ const priorityStyles: Record<string, string> = {
 
 const NoticeBoard = () => {
   const { user } = useAuth();
-  const [notices, setNotices] = useState<any[]>([]);
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchNotices = async () => {
+  const { data: notices = [] } = useQuery({
+    queryKey: ["university-notices"],
+    queryFn: async () => {
       const { data } = await supabase
         .from("university_notices" as any)
         .select("*")
         .order("priority", { ascending: true })
         .order("created_at", { ascending: false });
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
+  });
 
-      setNotices(data || []);
-
-      if (user) {
-        const { data: reads } = await supabase
-          .from("user_notice_reads" as any)
-          .select("notice_id")
-          .eq("user_id", user.id);
-        setReadIds(new Set((reads || []).map((r: any) => r.notice_id)));
-      }
-      setLoading(false);
-    };
-    fetchNotices();
-  }, [user]);
+  const { data: readIds = new Set<string>() } = useQuery({
+    queryKey: ["notice-reads", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: reads } = await supabase
+        .from("user_notice_reads" as any)
+        .select("notice_id")
+        .eq("user_id", user!.id);
+      return new Set((reads || []).map((r: any) => r.notice_id));
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const dismissNotice = async (noticeId: string) => {
     if (!user) return;
-    setReadIds(prev => new Set(prev).add(noticeId));
+    // Optimistic update
+    queryClient.setQueryData(["notice-reads", user.id], (old: Set<string> | undefined) => {
+      const next = new Set(old);
+      next.add(noticeId);
+      return next;
+    });
     await supabase.from("user_notice_reads" as any).insert({
       user_id: user.id,
       notice_id: noticeId,
@@ -62,7 +72,7 @@ const NoticeBoard = () => {
     (n: any) => !readIds.has(n.id) && (!n.expires_at || new Date(n.expires_at) > new Date())
   );
 
-  if (loading || activeNotices.length === 0) return null;
+  if (activeNotices.length === 0) return null;
 
   return (
     <div className="space-y-2">

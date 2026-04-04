@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, AlertTriangle, Info, AlertOctagon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const typeStyles: Record<string, { bg: string; icon: any; text: string }> = {
   info: { bg: "bg-primary/90", icon: Info, text: "text-primary-foreground" },
@@ -9,11 +10,13 @@ const typeStyles: Record<string, { bg: string; icon: any; text: string }> = {
 };
 
 const GlobalAlertBanner = () => {
-  const [alert, setAlert] = useState<any>(null);
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    const fetchAlert = async () => {
+  const { data: alert = null } = useQuery({
+    queryKey: ["global-alert"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    queryFn: async () => {
       const { data } = await supabase
         .from("global_alerts" as any)
         .select("*")
@@ -23,15 +26,12 @@ const GlobalAlertBanner = () => {
 
       if (data && data.length > 0) {
         const a = data[0] as any;
-        // Check if already dismissed this session
         const dismissedId = sessionStorage.getItem("dismissed-alert");
-        if (dismissedId !== a.id) {
-          setAlert(a);
-        }
+        if (dismissedId !== a.id) return a;
       }
-    };
-    fetchAlert();
-  }, []);
+      return null;
+    },
+  });
 
   if (!alert || dismissed) return null;
 
