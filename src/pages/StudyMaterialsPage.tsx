@@ -52,7 +52,7 @@ const StudyMaterialsPage = () => {
   };
 
   return (
-    <PageShell title="Study Materials" icon={BookOpen} subtitle="Browse and download shared study materials">
+    <PageShell title="Study Materials" icon={<BookOpen className="h-6 w-6" />} subtitle="Browse and download shared study materials">
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
