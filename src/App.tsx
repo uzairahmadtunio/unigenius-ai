@@ -29,6 +29,7 @@ import PlannerPage from "./pages/PlannerPage";
 import NotesPage from "./pages/NotesPage";
 import PresentationPage from "./pages/PresentationPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import StudyMaterialsPage from "./pages/StudyMaterialsPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
