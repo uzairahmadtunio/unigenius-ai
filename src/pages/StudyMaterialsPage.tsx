@@ -1,16 +1,22 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import PageShell from "@/components/PageShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Download, FileText, BookOpen, Filter } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, Download, FileText, BookOpen, Filter, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRole } from "@/hooks/use-role";
+import { toast } from "sonner";
 
 const StudyMaterialsPage = () => {
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState("all");
+  const { isAdmin, isTeacher } = useRole();
+  const queryClient = useQueryClient();
+  const canDelete = isAdmin || isTeacher;
 
   const { data: materials = [], isLoading } = useQuery({
     queryKey: ["study-materials"],
@@ -49,6 +55,28 @@ const StudyMaterialsPage = () => {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.click();
+  };
+
+  const handleDelete = async (id: string, fileUrl: string) => {
+    try {
+      // Extract storage path from URL
+      const match = fileUrl.match(/\/storage\/v1\/object\/public\/([^?]+)/);
+      if (match) {
+        const fullPath = decodeURIComponent(match[1]);
+        const bucketEnd = fullPath.indexOf("/");
+        const bucket = fullPath.substring(0, bucketEnd);
+        const path = fullPath.substring(bucketEnd + 1);
+        await supabase.storage.from(bucket).remove([path]);
+      }
+
+      const { error } = await supabase.from("study_materials").delete().eq("id", id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["study-materials"] });
+      toast.success("Material removed successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete material");
+    }
   };
 
   return (
@@ -102,6 +130,34 @@ const StudyMaterialsPage = () => {
               key={m.id}
               className="group relative rounded-xl border border-white/10 bg-card/40 backdrop-blur-md p-5 flex flex-col gap-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
             >
+              {/* Delete button for admin/teacher */}
+              {canDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="absolute top-3 right-3 p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete "{m.title}" and its file. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => handleDelete(m.id, m.file_url)}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
               {/* Subject badge */}
               <span className="text-[11px] font-semibold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-0.5 rounded-full w-fit">
                 {m.subject}
