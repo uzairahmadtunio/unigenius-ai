@@ -13,6 +13,7 @@ const actions = [
   { icon: Briefcase, label: "Career", desc: "Interviews & Internships", path: "/career", color: "from-sky-500 to-indigo-500" },
   { icon: Presentation, label: "Slides", desc: "AI Presentation Maker", path: "/presentations", color: "from-violet-500 to-fuchsia-500" },
   { icon: Users, label: "Groups", desc: "Team Collaboration", path: "/groups", color: "from-violet-500 to-purple-500" },
+  { icon: Archive, label: "Study Materials", desc: "Notes & Resources", path: "/study-materials", color: "from-teal-500 to-cyan-500" },
   { icon: Crown, label: "Premium", desc: "Unlock Pro Features", path: "/premium", color: "from-amber-400 to-orange-500" },
 ];
 
