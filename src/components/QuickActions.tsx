@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquare, Brain, Code, FileText, Briefcase, ClipboardList, CalendarCheck, Trophy, Users, Crown, Presentation } from "lucide-react";
+import { MessageSquare, Brain, Code, FileText, Briefcase, ClipboardList, CalendarCheck, Trophy, Users, Crown, Presentation, Archive } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const actions = [
