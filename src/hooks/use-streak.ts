@@ -52,12 +52,13 @@ export const useStreak = (): StreakData => {
         const row = result?.[0];
         if (!row) return;
 
-        setData({
+        const streakData = {
           currentStreak: row.current_streak,
           longestStreak: row.longest_streak,
           totalActiveDays: row.total_active_days,
-          loading: false,
-        });
+        };
+        setData({ ...streakData, loading: false });
+        sessionStorage.setItem(key, JSON.stringify(streakData));
 
         // Celebrate streak milestones
         if (row.streak_increased && STREAK_MILESTONES.includes(row.current_streak)) {
