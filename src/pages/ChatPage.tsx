@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, Upload, ArrowUp, ArrowDown, Volume2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";

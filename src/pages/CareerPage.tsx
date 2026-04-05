@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Code, FileText, Mic, MicOff, Send, Bot, User,

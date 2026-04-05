@@ -46,7 +46,7 @@ const PlannerPage = () => {
     const subjectList = subjects.map((s) => `${s.icon} ${s.name}${s.hasLab ? " (has Lab)" : ""}`).join("\n");
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
