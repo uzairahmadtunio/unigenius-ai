@@ -271,7 +271,7 @@ const ChatPage = () => {
   };
 
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetchWithRetry(CHAT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
       body: JSON.stringify({ messages: allMessages }),
