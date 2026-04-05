@@ -303,7 +303,7 @@ Start by greeting the student and asking your first viva question.`
 
   // ─── Chat streaming ─────────────────────────────────────────
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetchWithRetry(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
