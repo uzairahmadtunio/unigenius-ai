@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase, Code, FileText, Mic, MicOff, Send, Bot, User,
@@ -69,7 +70,7 @@ Start by greeting the candidate and asking your first question.`
 
     try {
       const apiMessages = [systemMsg];
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,7 +133,7 @@ Start by greeting the candidate and asking your first question.`
         ...newMsgs,
       ];
 
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -338,7 +339,7 @@ const DSAPractice = () => {
     setSelectedProblem(null);
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -414,7 +415,7 @@ FORMAT:
       : aiProblem;
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -713,7 +714,7 @@ Brief summary of the CV quality and next steps.
 Be specific, actionable, and encouraging. Use the actual content from the CV.`
       });
 
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

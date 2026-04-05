@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -303,7 +304,7 @@ Start by greeting the student and asking your first viva question.`
 
   // ─── Chat streaming ─────────────────────────────────────────
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetchWithRetry(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

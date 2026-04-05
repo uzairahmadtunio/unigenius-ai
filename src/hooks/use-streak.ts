@@ -28,6 +28,19 @@ export const useStreak = (): StreakData => {
       return;
     }
 
+    // Only run once per browser session
+    const key = `streak_recorded_${user.id}`;
+    if (sessionStorage.getItem(key)) {
+      // Use cached values from sessionStorage
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(key)!);
+        setData({ ...cached, loading: false });
+      } catch {
+        setData((prev) => ({ ...prev, loading: false }));
+      }
+      return;
+    }
+
     const recordActivity = async () => {
       try {
         const { data: result, error } = await supabase.rpc("record_daily_activity", {
@@ -39,12 +52,13 @@ export const useStreak = (): StreakData => {
         const row = result?.[0];
         if (!row) return;
 
-        setData({
+        const streakData = {
           currentStreak: row.current_streak,
           longestStreak: row.longest_streak,
           totalActiveDays: row.total_active_days,
-          loading: false,
-        });
+        };
+        setData({ ...streakData, loading: false });
+        sessionStorage.setItem(key, JSON.stringify(streakData));
 
         // Celebrate streak milestones
         if (row.streak_increased && STREAK_MILESTONES.includes(row.current_streak)) {

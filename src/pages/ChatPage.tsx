@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles, BookOpen, Code, ListChecks, FileQuestion, ArrowLeft, Paperclip, X, Upload, ArrowUp, ArrowDown, Volume2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -271,7 +272,7 @@ const ChatPage = () => {
   };
 
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetchWithRetry(CHAT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
       body: JSON.stringify({ messages: allMessages }),
