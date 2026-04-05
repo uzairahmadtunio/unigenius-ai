@@ -1025,12 +1025,15 @@ export type Database = {
           avatar_url: string | null
           avg_percentage: number | null
           best_cv_score: number | null
+          current_semester: number | null
           display_name: string | null
           dsa_solved: number | null
           interviews_done: number | null
           perfect_scores: number | null
           quizzes_taken: number | null
+          streak_days: number | null
           total_points: number | null
+          university: string | null
           user_id: string | null
         }
         Relationships: []
@@ -1123,21 +1126,40 @@ export type Database = {
         }
         Returns: undefined
       }
-      get_leaderboard_filtered: {
-        Args: { time_filter?: string }
-        Returns: {
-          avatar_url: string
-          avg_percentage: number
-          best_cv_score: number
-          display_name: string
-          dsa_solved: number
-          interviews_done: number
-          perfect_scores: number
-          quizzes_taken: number
-          total_points: number
-          user_id: string
-        }[]
-      }
+      get_leaderboard_filtered:
+        | {
+            Args: { time_filter?: string }
+            Returns: {
+              avatar_url: string
+              avg_percentage: number
+              best_cv_score: number
+              display_name: string
+              dsa_solved: number
+              interviews_done: number
+              perfect_scores: number
+              quizzes_taken: number
+              total_points: number
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { semester_filter?: number; time_filter?: string }
+            Returns: {
+              avatar_url: string
+              avg_percentage: number
+              best_cv_score: number
+              current_semester: number
+              display_name: string
+              dsa_solved: number
+              interviews_done: number
+              perfect_scores: number
+              quizzes_taken: number
+              streak_days: number
+              total_points: number
+              university: string
+              user_id: string
+            }[]
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
