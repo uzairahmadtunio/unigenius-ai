@@ -28,6 +28,19 @@ export const useStreak = (): StreakData => {
       return;
     }
 
+    // Only run once per browser session
+    const key = `streak_recorded_${user.id}`;
+    if (sessionStorage.getItem(key)) {
+      // Use cached values from sessionStorage
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(key)!);
+        setData({ ...cached, loading: false });
+      } catch {
+        setData((prev) => ({ ...prev, loading: false }));
+      }
+      return;
+    }
+
     const recordActivity = async () => {
       try {
         const { data: result, error } = await supabase.rpc("record_daily_activity", {
