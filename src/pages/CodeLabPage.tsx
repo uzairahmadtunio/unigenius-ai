@@ -55,10 +55,21 @@ const CodeLabPage = () => {
     try {
       if (lang === "javascript") {
         const logs: string[] = [];
-        const mockConsole = { log: (...args: any[]) => logs.push(args.map(String).join(" ")), error: (...args: any[]) => stderr.push(args.map(String).join(" ")) };
-        const fn = new Function("console", sourceCode);
-        fn(mockConsole);
-        stdout.push(...logs);
+        const errors: string[] = [];
+        const mockConsole = {
+          log: (...args: any[]) => logs.push(args.map(String).join(" ")),
+          error: (...args: any[]) => errors.push(args.map(String).join(" ")),
+          warn: (...args: any[]) => logs.push("[warn] " + args.map(String).join(" ")),
+          info: (...args: any[]) => logs.push(args.map(String).join(" ")),
+        };
+        try {
+          const fn = new Function("console", sourceCode);
+          fn(mockConsole);
+          stdout.push(...logs);
+          stderr.push(...errors);
+        } catch (e: any) {
+          stderr.push(e.message || "Runtime error");
+        }
       } else if (lang === "python") {
         const printRegex = /print\s*\(\s*(?:f?["'`](.*?)["'`]|([^)]+))\s*\)/g;
         let match;
@@ -69,14 +80,42 @@ const CodeLabPage = () => {
           stdout.push("(No print output detected)");
         }
       } else if (lang === "cpp") {
-        const coutRegex = /cout\s*<<\s*(?:"([^"]*?)"|'([^']*?)'|(\w+))\s*(?:<<\s*endl)?/g;
-        let match;
-        const outputs: string[] = [];
-        while ((match = coutRegex.exec(sourceCode)) !== null) {
-          outputs.push(match[1] || match[2] || match[3] || "");
+        // Parse each line with cout to handle chained << operators
+        const lines = sourceCode.split("\n");
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.includes("cout")) continue;
+          // Remove comments
+          const noComment = trimmed.replace(/\/\/.*$/, "");
+          // Extract everything after cout
+          const coutMatch = noComment.match(/cout\s*<<\s*(.*)/);
+          if (!coutMatch) continue;
+          let rest = coutMatch[1];
+          // Remove trailing semicolon
+          rest = rest.replace(/;\s*$/, "");
+          // Split by << and extract each part
+          const parts = rest.split(/\s*<<\s*/);
+          let lineOutput = "";
+          for (const part of parts) {
+            const trimPart = part.trim();
+            if (trimPart === "endl" || trimPart === "\"\\n\"" || trimPart === "'\\n'") {
+              lineOutput += "\n";
+            } else if (/^"(.*)"$/.test(trimPart)) {
+              lineOutput += trimPart.slice(1, -1);
+            } else if (/^'(.)'$/.test(trimPart)) {
+              lineOutput += trimPart.slice(1, -1);
+            } else if (trimPart) {
+              lineOutput += `[${trimPart}]`;
+            }
+          }
+          if (lineOutput) {
+            // Split by newlines to create separate output lines
+            const outputLines = lineOutput.split("\n").filter((l, i, arr) => i < arr.length - 1 || l !== "");
+            stdout.push(...outputLines);
+          }
         }
-        if (outputs.length > 0) {
-          stdout.push(outputs.join(""));
+        if (stdout.length === 0 && sourceCode.includes("cout")) {
+          stdout.push("(cout detected but could not parse output)");
         }
         if (sourceCode.includes("return 0")) {
           stdout.push("Process exited with code 0");
