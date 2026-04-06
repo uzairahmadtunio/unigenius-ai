@@ -167,17 +167,28 @@ const CodeLabPage = () => {
       const body: any = { code, language };
       if (imageData) body.errorImage = imageData;
 
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-code`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify(body),
-      });
+      let resp: Response | null = null;
+      const maxRetries = 3;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-code`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify(body),
+        });
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
+        if (resp.status === 429 && attempt < maxRetries - 1) {
+          setConsoleOutput(prev => [...prev, { type: "info", text: `> Rate limited, retrying in 2s... (${attempt + 1}/${maxRetries})` }]);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+        break;
+      }
+
+      if (!resp || !resp.ok) {
+        const err = await resp?.json().catch(() => ({})) || {};
         throw new Error(err.error || "Analysis failed");
       }
       if (!resp.body) throw new Error("No response body");
