@@ -31,6 +31,7 @@ const CodeLabPage = () => {
   const [snapshotCode, setSnapshotCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<{ type: "success" | "error" | "info"; text: string }[]>([]);
   const [activeTab, setActiveTab] = useState<"console" | "diff">("console");
+  const [stdinInput, setStdinInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lintErrors = useMemo(() => {
