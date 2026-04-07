@@ -31,6 +31,7 @@ const CodeLabPage = () => {
   const [snapshotCode, setSnapshotCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<{ type: "success" | "error" | "info"; text: string }[]>([]);
   const [activeTab, setActiveTab] = useState<"console" | "diff">("console");
+  const [stdinInput, setStdinInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lintErrors = useMemo(() => {
@@ -48,9 +49,11 @@ const CodeLabPage = () => {
     return beforeCode.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim();
   }, []);
 
-  const simulateExecution = useCallback((sourceCode: string, lang: string): { stdout: string[]; stderr: string[] } => {
+  const simulateExecution = useCallback((sourceCode: string, lang: string, stdin: string): { stdout: string[]; stderr: string[] } => {
     const stdout: string[] = [];
     const stderr: string[] = [];
+    const inputQueue = stdin.split("\n").filter(l => l.trim() !== "");
+    let inputIndex = 0;
 
     try {
       if (lang === "javascript") {
@@ -71,47 +74,83 @@ const CodeLabPage = () => {
           stderr.push(e.message || "Runtime error");
         }
       } else if (lang === "python") {
-        const printRegex = /print\s*\(\s*(?:f?["'`](.*?)["'`]|([^)]+))\s*\)/g;
-        let match;
-        while ((match = printRegex.exec(sourceCode)) !== null) {
-          stdout.push(match[1] || match[2] || "");
+        // Build variable map from input() calls
+        const variables: Record<string, string> = {};
+        const lines = sourceCode.split("\n");
+        for (const line of lines) {
+          const inputMatch = line.match(/(\w+)\s*=\s*(?:int|float|str)?\s*\(?\s*input\s*\(\s*(?:["'`](.*?)["'`])?\s*\)\s*\)?/);
+          if (inputMatch) {
+            const varName = inputMatch[1];
+            const prompt = inputMatch[2] || "";
+            if (prompt) stdout.push(prompt);
+            const val = inputQueue[inputIndex++] || "0";
+            variables[varName] = val;
+            continue;
+          }
+          const printMatch = line.match(/print\s*\(\s*(?:f?["'`](.*?)["'`]|([^)]+))\s*\)/);
+          if (printMatch) {
+            let output = printMatch[1] || printMatch[2] || "";
+            // Simple variable substitution
+            for (const [k, v] of Object.entries(variables)) {
+              output = output.replace(new RegExp(`\\{${k}\\}`, "g"), v);
+              output = output.replace(new RegExp(`\\b${k}\\b`, "g"), v);
+            }
+            stdout.push(output);
+          }
         }
         if (stdout.length === 0 && !sourceCode.includes("print")) {
           stdout.push("(No print output detected)");
         }
       } else if (lang === "cpp") {
-        // Parse each line with cout to handle chained << operators
+        // Build variable map from cin
+        const variables: Record<string, string> = {};
         const lines = sourceCode.split("\n");
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed.includes("cout")) continue;
-          // Remove comments
+          // Skip comments
           const noComment = trimmed.replace(/\/\/.*$/, "");
-          // Extract everything after cout
-          const coutMatch = noComment.match(/cout\s*<<\s*(.*)/);
-          if (!coutMatch) continue;
-          let rest = coutMatch[1];
-          // Remove trailing semicolon
-          rest = rest.replace(/;\s*$/, "");
-          // Split by << and extract each part
-          const parts = rest.split(/\s*<<\s*/);
-          let lineOutput = "";
-          for (const part of parts) {
-            const trimPart = part.trim();
-            if (trimPart === "endl" || trimPart === "\"\\n\"" || trimPart === "'\\n'") {
-              lineOutput += "\n";
-            } else if (/^"(.*)"$/.test(trimPart)) {
-              lineOutput += trimPart.slice(1, -1);
-            } else if (/^'(.)'$/.test(trimPart)) {
-              lineOutput += trimPart.slice(1, -1);
-            } else if (trimPart) {
-              lineOutput += `[${trimPart}]`;
+
+          // Handle cin >> var1 >> var2 ...
+          if (noComment.includes("cin")) {
+            const cinMatch = noComment.match(/cin\s*>>\s*(.*)/);
+            if (cinMatch) {
+              let rest = cinMatch[1].replace(/;\s*$/, "");
+              const vars = rest.split(/\s*>>\s*/);
+              for (const v of vars) {
+                const varName = v.trim();
+                if (varName) {
+                  variables[varName] = inputQueue[inputIndex++] || "0";
+                }
+              }
             }
+            continue;
           }
-          if (lineOutput) {
-            // Split by newlines to create separate output lines
-            const outputLines = lineOutput.split("\n").filter((l, i, arr) => i < arr.length - 1 || l !== "");
-            stdout.push(...outputLines);
+
+          // Handle cout
+          if (noComment.includes("cout")) {
+            const coutMatch = noComment.match(/cout\s*<<\s*(.*)/);
+            if (!coutMatch) continue;
+            let rest = coutMatch[1].replace(/;\s*$/, "");
+            const parts = rest.split(/\s*<<\s*/);
+            let lineOutput = "";
+            for (const part of parts) {
+              const trimPart = part.trim();
+              if (trimPart === "endl" || trimPart === "\"\\n\"" || trimPart === "'\\n'") {
+                lineOutput += "\n";
+              } else if (/^"(.*)"$/.test(trimPart)) {
+                lineOutput += trimPart.slice(1, -1);
+              } else if (/^'(.)'$/.test(trimPart)) {
+                lineOutput += trimPart.slice(1, -1);
+              } else if (variables[trimPart] !== undefined) {
+                lineOutput += variables[trimPart];
+              } else if (trimPart) {
+                lineOutput += `[${trimPart}]`;
+              }
+            }
+            if (lineOutput) {
+              const outputLines = lineOutput.split("\n").filter((l, i, arr) => i < arr.length - 1 || l !== "");
+              stdout.push(...outputLines);
+            }
           }
         }
         if (stdout.length === 0 && sourceCode.includes("cout")) {
@@ -145,7 +184,7 @@ const CodeLabPage = () => {
 
     // Step 1: Simulate execution
     await new Promise(r => setTimeout(r, 300));
-    const { stdout, stderr } = simulateExecution(code, language);
+    const { stdout, stderr } = simulateExecution(code, language, stdinInput);
 
     setConsoleOutput(prev => {
       const next = [...prev];
@@ -345,7 +384,7 @@ const CodeLabPage = () => {
                 main.{language === "cpp" ? "cpp" : language === "python" ? "py" : "js"}
               </span>
             </div>
-            <div style={{ height: "400px" }}>
+            <div style={{ height: "340px" }}>
               <Editor
                 height="100%"
                 language={language}
@@ -353,6 +392,20 @@ const CodeLabPage = () => {
                 value={code}
                 onChange={(v) => setCode(v || "")}
                 options={{ fontSize: 14, minimap: { enabled: false }, padding: { top: 12 }, scrollBeyondLastLine: false, automaticLayout: true, wordWrap: "on", lineNumbers: "on", renderLineHighlight: "all", cursorBlinking: "smooth" }}
+              />
+            </div>
+            {/* Stdin Input */}
+            <div className="border-t border-border/30 bg-background/80 px-3 py-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Terminal className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">stdin input</span>
+              </div>
+              <textarea
+                value={stdinInput}
+                onChange={(e) => setStdinInput(e.target.value)}
+                placeholder="Enter input values (one per line)..."
+                className="w-full bg-[hsl(220,15%,8%)] text-emerald-400 font-mono text-xs rounded-md border border-border/30 px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/40"
+                rows={2}
               />
             </div>
           </div>
