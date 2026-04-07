@@ -384,7 +384,7 @@ const CodeLabPage = () => {
                 main.{language === "cpp" ? "cpp" : language === "python" ? "py" : "js"}
               </span>
             </div>
-            <div style={{ height: "400px" }}>
+            <div style={{ height: "340px" }}>
               <Editor
                 height="100%"
                 language={language}
@@ -392,6 +392,20 @@ const CodeLabPage = () => {
                 value={code}
                 onChange={(v) => setCode(v || "")}
                 options={{ fontSize: 14, minimap: { enabled: false }, padding: { top: 12 }, scrollBeyondLastLine: false, automaticLayout: true, wordWrap: "on", lineNumbers: "on", renderLineHighlight: "all", cursorBlinking: "smooth" }}
+              />
+            </div>
+            {/* Stdin Input */}
+            <div className="border-t border-border/30 bg-background/80 px-3 py-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Terminal className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">stdin input</span>
+              </div>
+              <textarea
+                value={stdinInput}
+                onChange={(e) => setStdinInput(e.target.value)}
+                placeholder="Enter input values (one per line)..."
+                className="w-full bg-[hsl(220,15%,8%)] text-emerald-400 font-mono text-xs rounded-md border border-border/30 px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/40"
+                rows={2}
               />
             </div>
           </div>
