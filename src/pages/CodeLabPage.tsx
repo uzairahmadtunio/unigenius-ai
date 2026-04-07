@@ -184,7 +184,7 @@ const CodeLabPage = () => {
 
     // Step 1: Simulate execution
     await new Promise(r => setTimeout(r, 300));
-    const { stdout, stderr } = simulateExecution(code, language);
+    const { stdout, stderr } = simulateExecution(code, language, stdinInput);
 
     setConsoleOutput(prev => {
       const next = [...prev];
