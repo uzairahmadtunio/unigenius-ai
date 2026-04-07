@@ -298,8 +298,21 @@ const UsersTab = () => {
     if (error) {
       toast.error("Failed: " + error.message);
     } else {
-      toast.success(action === "add" ? "User promoted to Teacher" : "Teacher role removed");
-      await fetchRoles();
+      const newRole = action === "add" ? "Teacher" : "Student";
+      toast.success(`User role updated to ${newRole} successfully`);
+      // Instant UI sync: update local state immediately
+      setUserRoles(prev => {
+        const updated = { ...prev };
+        const current = [...(updated[userId] || [])];
+        if (action === "add") {
+          if (!current.includes("teacher")) current.push("teacher");
+        } else {
+          const idx = current.indexOf("teacher");
+          if (idx !== -1) current.splice(idx, 1);
+        }
+        updated[userId] = current;
+        return updated;
+      });
     }
     setRoleLoading(null);
   };
