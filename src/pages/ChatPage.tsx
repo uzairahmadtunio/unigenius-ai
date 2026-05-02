@@ -15,6 +15,8 @@ import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
 import { ACCEPT_EXTENSIONS, isFileAllowed, getFileCategory, FILE_CATEGORY_STYLES, buildFileContentParts, DROP_ZONE_TEXT } from "@/lib/file-types";
 import FileIcon from "@/components/FileIcon";
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 
 interface Message {
   id: string;
