@@ -85,7 +85,6 @@ const NotesPage = () => {
         file_url: urlData.publicUrl,
         file_name: file.name,
         user_id: user.id,
-        uploader_name: user.user_metadata?.full_name || user.email || "Anonymous",
       } as any);
 
       if (insertErr) throw insertErr;
