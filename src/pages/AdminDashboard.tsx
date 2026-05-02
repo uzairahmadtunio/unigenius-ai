@@ -1168,7 +1168,15 @@ const PaymentsTab = () => {
                       variant="ghost"
                       size="icon"
                       className="rounded-lg w-8 h-8"
-                      onClick={() => setPreviewUrl(r.screenshot_url)}
+                      onClick={async () => {
+                        const path = r.screenshot_url?.includes("payment-screenshots/")
+                          ? r.screenshot_url.split("payment-screenshots/")[1]
+                          : r.screenshot_url;
+                        const { data } = await supabase.storage
+                          .from("payment-screenshots")
+                          .createSignedUrl(path, 300);
+                        setPreviewUrl(data?.signedUrl || r.screenshot_url);
+                      }}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
