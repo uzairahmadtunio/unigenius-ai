@@ -30,6 +30,7 @@ import NotesPage from "./pages/NotesPage";
 import PresentationPage from "./pages/PresentationPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudyMaterialsPage from "./pages/StudyMaterialsPage";
+import QuestionBankPage from "./pages/QuestionBankPage";
 import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -81,6 +82,7 @@ const App = () => (
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/presentations" element={<PresentationPage />} />
                 <Route path="/study-materials" element={<StudyMaterialsPage />} />
+                <Route path="/question-bank" element={<QuestionBankPage />} />
                 <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="*" element={<NotFound />} />
