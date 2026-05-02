@@ -97,9 +97,8 @@ const PremiumPage = () => {
     const path = `${user.id}/${Date.now()}.${ext}`;
     const { error: uploadErr } = await supabase.storage.from("payment-screenshots").upload(path, file);
     if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from("payment-screenshots").getPublicUrl(path);
     const { error: insertErr } = await (supabase.from("payment_requests" as any) as any).insert({
-      user_id: user.id, screenshot_url: urlData.publicUrl, payment_method: paymentMethod,
+      user_id: user.id, screenshot_url: path, payment_method: paymentMethod,
       amount: finalPrice, promo_code: appliedPromo?.code || null, discount_percent: appliedPromo?.discount_percent || 0,
     });
     if (insertErr) { toast.error("Failed to submit: " + insertErr.message); }
