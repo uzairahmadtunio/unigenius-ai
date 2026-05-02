@@ -75,6 +75,7 @@ const ChatPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
 
   // Smart auto-scroll: only scroll if user hasn't manually scrolled up
