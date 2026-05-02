@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { streamChatWithFailover } from "../_shared/ai-failover.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-ai-tier, x-ai-key-index",
 };
-
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse";
 
 function transformToGeminiFormat(messages: any[]) {
   const contents: any[] = [];
@@ -48,11 +48,8 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-    const systemInstruction = {
-      parts: [{ text: `You are a Senior Software Engineering Professor AI Tutor at a top university. Your name is UniGenius AI.
+    const systemText = `You are a Senior Software Engineering Professor AI Tutor at a top university. Your name is UniGenius AI.
 
 Your expertise covers the complete BS Software Engineering curriculum including:
 - Programming (C++, OOP, Data Structures, Algorithms)
@@ -83,84 +80,20 @@ Response Guidelines:
 - Be encouraging and supportive
 - Format with markdown for readability
 - When given images, ALWAYS describe what you see and extract any text/code
-- For code errors in images, provide the corrected code in a code block` }]
-    };
+- For code errors in images, provide the corrected code in a code block`;
 
     const contents = transformToGeminiFormat(messages);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: systemInstruction,
+    return await streamChatWithFailover({
+      modelPath: "gemini-2.5-flash",
+      geminiBody: {
+        system_instruction: { parts: [{ text: systemText }] },
         contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("Gemini API error:", response.status, t);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          let newlineIdx;
-          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, newlineIdx).trim();
-            buffer = buffer.slice(newlineIdx + 1);
-
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6);
-            if (jsonStr === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                const openaiChunk = {
-                  choices: [{ delta: { content: text }, index: 0 }],
-                };
-                await writer.write(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-              }
-            } catch {}
-          }
-        }
-        await writer.write(encoder.encode("data: [DONE]\n\n"));
-      } catch (e) {
-        console.error("Stream error:", e);
-      } finally {
-        writer.close();
-      }
-    })();
-
-    return new Response(readable, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+      },
+      systemText,
+      contents,
+      corsHeaders,
     });
   } catch (e) {
     console.error("chat error:", e);

@@ -15,6 +15,8 @@ import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
 import { ACCEPT_EXTENSIONS, isFileAllowed, getFileCategory, FILE_CATEGORY_STYLES, buildFileContentParts, DROP_ZONE_TEXT } from "@/lib/file-types";
 import FileIcon from "@/components/FileIcon";
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 
 interface Message {
   id: string;
@@ -73,6 +75,7 @@ const ChatPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const { isDragOver, onDragOver, onDragLeave, onDrop } = useFileDrop(attachedFiles, setAttachedFiles, MAX_FILES, isStreaming);
 
   // Smart auto-scroll: only scroll if user hasn't manually scrolled up
@@ -278,6 +281,7 @@ const ChatPage = () => {
       body: JSON.stringify({ messages: allMessages }),
     });
     if (!resp.ok) { const errorData = await resp.json().catch(() => ({})); throw new Error(errorData.error || `Error: ${resp.status}`); }
+    notifyAiTier(resp, isAdmin);
     if (!resp.body) throw new Error("No stream body");
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
