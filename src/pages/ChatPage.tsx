@@ -281,6 +281,7 @@ const ChatPage = () => {
       body: JSON.stringify({ messages: allMessages }),
     });
     if (!resp.ok) { const errorData = await resp.json().catch(() => ({})); throw new Error(errorData.error || `Error: ${resp.status}`); }
+    notifyAiTier(resp, isAdmin);
     if (!resp.body) throw new Error("No stream body");
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
