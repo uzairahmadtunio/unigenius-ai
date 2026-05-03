@@ -657,6 +657,7 @@ export type Database = {
           section: string | null
           show_on_leaderboard: boolean | null
           skills: string[] | null
+          streak_pro_until: string | null
           university: string | null
           updated_at: string
           user_id: string
@@ -675,6 +676,7 @@ export type Database = {
           section?: string | null
           show_on_leaderboard?: boolean | null
           skills?: string[] | null
+          streak_pro_until?: string | null
           university?: string | null
           updated_at?: string
           user_id: string
@@ -693,6 +695,7 @@ export type Database = {
           section?: string | null
           show_on_leaderboard?: boolean | null
           skills?: string[] | null
+          streak_pro_until?: string | null
           university?: string | null
           updated_at?: string
           user_id?: string
@@ -1126,6 +1129,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      find_group_by_invite_code: {
+        Args: { _code: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          owner_id: string
+          semester: number
+        }[]
+      }
       get_leaderboard_filtered:
         | {
             Args: { time_filter?: string }
@@ -1160,6 +1175,7 @@ export type Database = {
               user_id: string
             }[]
           }
+      grant_streak_pro_day: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
