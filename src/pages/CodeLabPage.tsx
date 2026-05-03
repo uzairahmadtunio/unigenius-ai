@@ -19,6 +19,7 @@ const defaultCode: Record<string, { lang: string; code: string }> = {
 
 const CodeLabPage = () => {
   const { department } = useDepartment();
+  const { isAdmin } = useAdmin();
   const dept = department || "se";
   const config = defaultCode[dept];
   const [code, setCode] = useState(config.code);
