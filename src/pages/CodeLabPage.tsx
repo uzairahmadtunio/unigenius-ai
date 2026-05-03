@@ -233,6 +233,7 @@ const CodeLabPage = () => {
         throw new Error(err.error || "Analysis failed");
       }
       if (!resp.body) throw new Error("No response body");
+      notifyAiTier(resp, isAdmin);
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
