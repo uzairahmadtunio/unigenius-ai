@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import PageShell from "@/components/PageShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 
 // Dynamic Lucide icon
 const DynamicIcon = ({ name, ...props }: { name: string } & Omit<LucideProps, "ref">) => {
@@ -167,7 +168,7 @@ const PresentationPage = () => {
     try {
       const resp = await fetch(IMAGE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `${await authHeader()}` },
         body: JSON.stringify({ prompt: description, slideIndex, sessionId }),
       });
       if (!resp.ok) {
@@ -218,7 +219,7 @@ const PresentationPage = () => {
       }
       const resp = await fetch(SLIDES_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `${await authHeader()}` },
         body: JSON.stringify(body),
       });
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || "Failed to generate slides"); }

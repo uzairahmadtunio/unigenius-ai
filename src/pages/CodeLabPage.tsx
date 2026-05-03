@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
@@ -215,7 +216,7 @@ const CodeLabPage = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `${await authHeader()}`,
           },
           body: JSON.stringify(body),
         });

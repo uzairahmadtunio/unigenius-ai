@@ -11,6 +11,7 @@ import { getSubjects } from "@/data/subjects";
 import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
 
@@ -71,7 +72,7 @@ const DocsGenPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `${await authHeader()}`,
         },
         body: JSON.stringify({
           type: docType,

@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { useFileDrop } from "@/hooks/use-file-drop";
 import ChatSidebar from "@/components/ChatSidebar";
@@ -171,7 +172,7 @@ Start by greeting the student and asking your first viva question.`
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `${await authHeader()}`,
         },
         body: JSON.stringify({
           messages: msgs.filter(m => !m.id.startsWith("welcome")).map(m => ({ role: m.role, content: m.content })),
@@ -308,7 +309,7 @@ Start by greeting the student and asking your first viva question.`
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `${await authHeader()}`,
       },
       body: JSON.stringify({
         messages: [{ role: "system", content: systemPrompt }, ...allMessages],

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Progress } from "@/components/ui/progress";
 import { useFileDrop } from "@/hooks/use-file-drop";
@@ -191,7 +192,7 @@ const ChatPage = () => {
     try {
       const resp = await fetch(TITLE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `${await authHeader()}` },
         body: JSON.stringify({ messages: msgs.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })) }),
       });
       const { title } = await resp.json();
@@ -277,7 +278,7 @@ const ChatPage = () => {
   const streamChat = async (allMessages: { role: string; content: string | any[] }[]) => {
     const resp = await fetchWithRetry(CHAT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `${await authHeader()}` },
       body: JSON.stringify({ messages: allMessages }),
     });
     if (!resp.ok) { const errorData = await resp.json().catch(() => ({})); throw new Error(errorData.error || `Error: ${resp.status}`); }
