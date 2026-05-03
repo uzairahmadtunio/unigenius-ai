@@ -16,8 +16,6 @@ serve(async (req) => {
 
   try {
     const { subject, department, count = 30, fileData, fileType, fileName } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const numQuestions = Math.min(Math.max(count, 5), 30);
 
