@@ -75,35 +75,29 @@ serve(async (req) => {
       }],
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const result = await generateContentWithFailover({
+      modelPath: "gemini-2.5-flash",
+      geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents: [{ role: "user", parts }],
         tools: [toolDecl],
         tool_config: { function_calling_config: { mode: "ANY", allowed_function_names: ["return_mcqs"] } },
-      }),
+      },
+      corsHeaders,
     });
+    if (result instanceof Response) return result;
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("Gemini error:", response.status, t);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("AI service error");
-    }
-
-    const data = await response.json();
-    const fc = data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
+    const fc = result.data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
     if (!fc) throw new Error("No function call in response");
 
     const questions = fc.functionCall.args;
     return new Response(JSON.stringify(questions), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "x-ai-tier": result.tier,
+        "x-ai-key-index": String(result.keyIndex),
+      },
     });
   } catch (e) {
     console.error("generate-quiz error:", e);
