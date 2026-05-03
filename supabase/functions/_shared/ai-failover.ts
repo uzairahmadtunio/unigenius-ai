@@ -42,6 +42,7 @@ async function callGeminiWithRotation(
   isStream: boolean,
 ): Promise<{ response: Response; keyIndex: number } | null> {
   const totalKeys = GEMINI_KEYS.length;
+  if (totalKeys === 0) return null;
   const startIdx = lastWorkingKeyIndex % totalKeys;
   const baseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
   const action = isStream
