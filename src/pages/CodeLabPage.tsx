@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
 import CodeDiffView from "@/components/CodeDiffView";
-
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 const defaultCode: Record<string, { lang: string; code: string }> = {
   se: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
   cs: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
@@ -18,6 +20,7 @@ const defaultCode: Record<string, { lang: string; code: string }> = {
 
 const CodeLabPage = () => {
   const { department } = useDepartment();
+  const { isAdmin } = useAdmin();
   const dept = department || "se";
   const config = defaultCode[dept];
   const [code, setCode] = useState(config.code);
@@ -213,7 +216,7 @@ const CodeLabPage = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `${await authHeader()}`,
           },
           body: JSON.stringify(body),
         });
@@ -231,6 +234,7 @@ const CodeLabPage = () => {
         throw new Error(err.error || "Analysis failed");
       }
       if (!resp.body) throw new Error("No response body");
+      notifyAiTier(resp, isAdmin);
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();

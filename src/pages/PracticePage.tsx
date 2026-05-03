@@ -7,6 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getSubjects } from "@/data/subjects";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 import PageShell from "@/components/PageShell";
 
 interface MCQ {
@@ -26,6 +29,7 @@ interface AnswerRecord {
 const ALLOWED_QUIZ_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.docx,.doc,.txt,.pptx,.ppt";
 
 const PracticePage = () => {
+  const { isAdmin } = useAdmin();
   const { department } = useDepartment();
   const { user } = useAuth();
   const [semester, setSemester] = useState(1);
@@ -88,7 +92,7 @@ const PracticePage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `${await authHeader()}`,
         },
         body: JSON.stringify(body),
       });
@@ -98,6 +102,7 @@ const PracticePage = () => {
         throw new Error(err.error || "Failed to generate quiz");
       }
 
+      notifyAiTier(resp, isAdmin);
       const data = await resp.json();
       if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions);

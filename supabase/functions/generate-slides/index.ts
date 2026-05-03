@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
+import { generateContentWithFailover } from "../_shared/ai-failover.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-ai-tier, x-ai-key-index",
 };
 
 serve(async (req) => {
@@ -14,8 +16,6 @@ serve(async (req) => {
 
   try {
     const { topic, slideCount } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const count = Math.min(Math.max(slideCount || 8, 3), 20);
 
@@ -31,29 +31,18 @@ Each object: { "title": string, "subtitle": string (optional), "bullets": string
 
     const systemText = `You are a strict presentation designer. Make clean, minimal slides. Each content slide has EXACTLY 3 bullet points under 8 words. First slide = title only. Last slide = THANK YOU. Output ONLY valid JSON array.`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const result = await generateContentWithFailover({
+      modelPath: "gemini-2.5-flash",
+      geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-      }),
+      },
+      corsHeaders,
     });
+    if (result instanceof Response) return result;
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("Gemini error:", response.status, t);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("AI service error");
-    }
-
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const content = result.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     let slides;
     try {
@@ -74,7 +63,12 @@ Each object: { "title": string, "subtitle": string (optional), "bullets": string
     }));
 
     return new Response(JSON.stringify({ slides }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "x-ai-tier": result.tier,
+        "x-ai-key-index": String(result.keyIndex),
+      },
     });
   } catch (e) {
     console.error("generate-slides error:", e);

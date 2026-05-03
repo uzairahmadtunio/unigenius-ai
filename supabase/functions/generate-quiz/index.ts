@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
+import { generateContentWithFailover } from "../_shared/ai-failover.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-ai-tier, x-ai-key-index",
 };
 
 serve(async (req) => {
@@ -14,8 +16,6 @@ serve(async (req) => {
 
   try {
     const { subject, department, count = 30, fileData, fileType, fileName } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const numQuestions = Math.min(Math.max(count, 5), 30);
 
@@ -75,35 +75,29 @@ serve(async (req) => {
       }],
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const result = await generateContentWithFailover({
+      modelPath: "gemini-2.5-flash",
+      geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents: [{ role: "user", parts }],
         tools: [toolDecl],
         tool_config: { function_calling_config: { mode: "ANY", allowed_function_names: ["return_mcqs"] } },
-      }),
+      },
+      corsHeaders,
     });
+    if (result instanceof Response) return result;
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("Gemini error:", response.status, t);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("AI service error");
-    }
-
-    const data = await response.json();
-    const fc = data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
+    const fc = result.data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall);
     if (!fc) throw new Error("No function call in response");
 
     const questions = fc.functionCall.args;
     return new Response(JSON.stringify(questions), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "x-ai-tier": result.tier,
+        "x-ai-key-index": String(result.keyIndex),
+      },
     });
   } catch (e) {
     console.error("generate-quiz error:", e);
