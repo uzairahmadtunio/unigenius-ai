@@ -3,18 +3,19 @@
 // Tier 2: Direct Gemini API with rotation across 10 user-provided keys
 // Tier 3: Groq Cloud (Llama-3.3-70b) — last-resort backup
 
-export const GEMINI_KEYS = [
-  "AIzaSyBHJxwtB0HeuRO21NyGcVzmBnbsXXQ2BVQ",
-  "AIzaSyCzFZ0xHqoRx4AbxCYNF_eIDDE73Fq2QC4",
-  "AIzaSyDtWF21jj4nhnLRcNbXoZuulmb38OhsRb8",
-  "AIzaSyDmMpx2nalmN-8zKOaWQ9Yjdlr0LsHn-P8",
-  "AIzaSyASGMkCUHM3XAd69P79r6UnrixJ38N1p1E",
-  "AIzaSyC29Um1jcursKIdK02JY5oz4YiDTRa16JM",
-  "AIzaSyAU6FN3fYZmGmeB-zo3_DDzk_7HYyFAb4o",
-  "AIzaSyBphHmi7ntSnw36gpRtDQ7cffWXm92wl-U",
-  "AIzaSyAugp2WOUbTKM5Hjq9csBy3ebrxc-2EB68",
-  "AIzaSyBHcG5oxdiM5U7i3zVAGMsDTFeFMgax1AQ",
-];
+export const GEMINI_KEYS: string[] = (() => {
+  const keys: string[] = [];
+  for (let i = 1; i <= 10; i++) {
+    const k = Deno.env.get(`GEMINI_KEY_${i}`);
+    if (k) keys.push(k);
+  }
+  // Backward compat: fall back to single key if no rotated keys configured
+  if (keys.length === 0) {
+    const fallback = Deno.env.get("GEMINI_API_KEY");
+    if (fallback) keys.push(fallback);
+  }
+  return keys;
+})();
 
 // Module-level memory of the last-working key index. Persists per worker instance.
 let lastWorkingKeyIndex = 0;
@@ -41,6 +42,7 @@ async function callGeminiWithRotation(
   isStream: boolean,
 ): Promise<{ response: Response; keyIndex: number } | null> {
   const totalKeys = GEMINI_KEYS.length;
+  if (totalKeys === 0) return null;
   const startIdx = lastWorkingKeyIndex % totalKeys;
   const baseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
   const action = isStream

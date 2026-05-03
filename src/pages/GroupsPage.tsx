@@ -141,11 +141,9 @@ const GroupsPage = () => {
     if (!user || !inviteSearch.trim()) { toast.error("Enter an invite code"); return; }
     setJoining(true);
     try {
-      const { data: group, error: findErr } = await supabase
-        .from("groups")
-        .select("id, name")
-        .eq("invite_code", inviteSearch.trim().toLowerCase())
-        .single();
+      const { data: groupRows, error: findErr } = await supabase
+        .rpc("find_group_by_invite_code" as any, { _code: inviteSearch.trim().toLowerCase() });
+      const group: any = Array.isArray(groupRows) ? groupRows[0] : groupRows;
       if (findErr || !group) throw new Error("Invalid invite code");
 
       const { error: joinErr } = await supabase.from("group_members").insert({
