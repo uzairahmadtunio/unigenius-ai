@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Flame, Trophy, Calendar, TrendingUp, Gift } from "lucide-react";
 import { useStreak } from "@/hooks/use-streak";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -10,9 +11,21 @@ import confetti from "canvas-confetti";
 const DailyStreakWidget = () => {
   const { user } = useAuth();
   const { currentStreak, longestStreak, totalActiveDays, loading } = useStreak();
-  const [claimed, setClaimed] = useState(() => {
-    return !!localStorage.getItem("streak-pro-claimed-" + new Date().toDateString());
-  });
+  const [claimed, setClaimed] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("streak_pro_until")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        const until = (data as any)?.streak_pro_until;
+        if (until && new Date(until) > new Date()) setClaimed(true);
+      });
+  }, [user]);
 
   if (!user || loading) return null;
 
