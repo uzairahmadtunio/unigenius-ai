@@ -9,7 +9,8 @@ import { lintCppCode } from "@/lib/cpp-linter";
 import CodeLintWarnings from "@/components/CodeLintWarnings";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
 import CodeDiffView from "@/components/CodeDiffView";
-
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 const defaultCode: Record<string, { lang: string; code: string }> = {
   se: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
   cs: { lang: "cpp", code: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, UniGenius!" << endl;\n    return 0;\n}\n` },
