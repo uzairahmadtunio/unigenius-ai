@@ -12,6 +12,8 @@ import PageShell from "@/components/PageShell";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { toast } from "sonner";
 import { authHeader } from "@/lib/auth-header";
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 import { generateProfessionalPDF, generateDOCX } from "@/lib/pdf-generator";
 import ThinkingAnimation from "@/components/ThinkingAnimation";
 
@@ -19,6 +21,7 @@ import { usePro } from "@/hooks/use-pro";
 import ProPaywall from "@/components/ProPaywall";
 
 const DocsGenPage = () => {
+  const { isAdmin } = useAdmin();
   const { isPro, loading: proLoading } = usePro();
   const { department } = useDepartment();
   const { user } = useAuth();
@@ -94,6 +97,7 @@ const DocsGenPage = () => {
         const err = await resp.json().catch(() => ({}));
         throw new Error(err.error || "Generation failed");
       }
+      notifyAiTier(resp, isAdmin);
       if (!resp.body) throw new Error("No response body");
 
       const reader = resp.body.getReader();

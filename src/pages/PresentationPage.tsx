@@ -11,9 +11,12 @@ import PageShell from "@/components/PageShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { authHeader } from "@/lib/auth-header";
+import { notifyAiTier } from "@/lib/ai-tier-notifier";
+import { useAdmin } from "@/hooks/use-admin";
 
 // Dynamic Lucide icon
 const DynamicIcon = ({ name, ...props }: { name: string } & Omit<LucideProps, "ref">) => {
+  const { isAdmin } = useAdmin();
   const iconName = name as keyof typeof dynamicIconImports;
   const safeName = dynamicIconImports[iconName] ? iconName : "presentation";
   const LucideIcon = lazy(dynamicIconImports[safeName as keyof typeof dynamicIconImports]);
@@ -223,6 +226,7 @@ const PresentationPage = () => {
         body: JSON.stringify(body),
       });
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || "Failed to generate slides"); }
+      notifyAiTier(resp, isAdmin);
       const data = await resp.json();
       if (!data.slides || !Array.isArray(data.slides)) throw new Error("Invalid response");
       const enriched: Slide[] = data.slides.map((s: any) => ({
