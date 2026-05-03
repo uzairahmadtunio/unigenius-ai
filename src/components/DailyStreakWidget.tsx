@@ -48,8 +48,15 @@ const DailyStreakWidget = () => {
 
   const canClaimProDay = currentStreak >= 7 && !claimed;
 
-  const claimProDay = () => {
-    localStorage.setItem("streak-pro-claimed-" + new Date().toDateString(), "true");
+  const claimProDay = async () => {
+    if (claiming) return;
+    setClaiming(true);
+    const { error } = await supabase.rpc("grant_streak_pro_day" as any);
+    setClaiming(false);
+    if (error) {
+      toast.error("Couldn't claim Pro Day. Keep your streak going!");
+      return;
+    }
     setClaimed(true);
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     toast.success("🎉 Free Pro Day claimed! Enjoy all Pro features today!");
