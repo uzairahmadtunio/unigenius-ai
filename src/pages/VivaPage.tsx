@@ -10,6 +10,7 @@ import { useDepartment } from "@/contexts/DepartmentContext";
 import { getSubjects } from "@/data/subjects";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { authHeader } from "@/lib/auth-header";
 
 interface Message {
   role: "user" | "assistant";
@@ -54,7 +55,7 @@ const VivaPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `${await authHeader()}`,
         },
         body: JSON.stringify({ messages: allMessages, subject: selectedSubject, difficulty }),
       });
