@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
+import { generateContentWithFailover } from "../_shared/ai-failover.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Expose-Headers": "x-ai-tier, x-ai-key-index",
 };
 
 serve(async (req) => {
@@ -14,34 +16,36 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const contents = messages.slice(0, 4).map((m: any) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: typeof m.content === "string" ? m.content.slice(0, 200) : "File analysis request" }],
     }));
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const result = await generateContentWithFailover({
+      modelPath: "gemini-2.5-flash-lite",
+      geminiBody: {
         system_instruction: { parts: [{ text: "Generate a very short chat title (3-6 words max) summarizing the conversation topic. Return ONLY the title, no quotes, no punctuation at the end. Examples: 'C++ Linked List Help', 'Calculus Integration Practice', 'OOP Assignment Debugging'" }] },
         contents,
-      }),
+      },
+      corsHeaders,
     });
-
-    if (!response.ok) {
+    if (result instanceof Response) {
+      // Graceful fallback: never block the UI on title generation
       return new Response(JSON.stringify({ title: "New Chat" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-    const title = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "New Chat";
+    const title = result.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "New Chat";
 
     return new Response(JSON.stringify({ title: title.slice(0, 60) }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "x-ai-tier": result.tier,
+        "x-ai-key-index": String(result.keyIndex),
+      },
     });
   } catch (e) {
     console.error("generate-title error:", e);
