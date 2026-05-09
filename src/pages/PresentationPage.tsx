@@ -16,7 +16,6 @@ import { useAdmin } from "@/hooks/use-admin";
 
 // Dynamic Lucide icon
 const DynamicIcon = ({ name, ...props }: { name: string } & Omit<LucideProps, "ref">) => {
-  const { isAdmin } = useAdmin();
   const iconName = name as keyof typeof dynamicIconImports;
   const safeName = dynamicIconImports[iconName] ? iconName : "presentation";
   const LucideIcon = lazy(dynamicIconImports[safeName as keyof typeof dynamicIconImports]);
