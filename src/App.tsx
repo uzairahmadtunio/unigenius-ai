@@ -87,6 +87,8 @@ const App = () => (
                 <Route path="/question-bank" element={<QuestionBankPage />} />
                 <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <MobileBottomNav />
