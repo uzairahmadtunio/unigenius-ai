@@ -110,6 +110,7 @@ const LeaderboardPage = () => {
             {([
               { id: "global" as ScopeFilter, label: "Global", icon: Globe },
               { id: "class" as ScopeFilter, label: "My Class", icon: Users },
+              { id: "me" as ScopeFilter, label: "My Rank", icon: Target },
             ]).map((s) => (
               <button
                 key={s.id}
