@@ -161,6 +161,13 @@ const AuthPage = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {isLogin && (
+              <div className="flex justify-end">
+                <a href="/forgot-password" className="text-xs text-primary hover:underline font-medium">
+                  Forgot Password?
+                </a>
+              </div>
+            )}
             <Button type="submit" className="w-full rounded-xl h-11 gradient-primary text-primary-foreground" disabled={loading}>
               {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
             </Button>

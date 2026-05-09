@@ -16,7 +16,6 @@ import { useAdmin } from "@/hooks/use-admin";
 
 // Dynamic Lucide icon
 const DynamicIcon = ({ name, ...props }: { name: string } & Omit<LucideProps, "ref">) => {
-  const { isAdmin } = useAdmin();
   const iconName = name as keyof typeof dynamicIconImports;
   const safeName = dynamicIconImports[iconName] ? iconName : "presentation";
   const LucideIcon = lazy(dynamicIconImports[safeName as keyof typeof dynamicIconImports]);
@@ -143,6 +142,7 @@ const PresentationPage = () => {
   const [inputMode, setInputMode] = useState<InputMode>("ai");
   const [generatingImages, setGeneratingImages] = useState<Set<number>>(new Set());
   const [sessionId] = useState(() => crypto.randomUUID());
+  const { isAdmin } = useAdmin();
 
   const slidesContainerRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
