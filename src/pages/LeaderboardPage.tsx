@@ -23,7 +23,7 @@ interface LeaderboardEntry {
 }
 
 type TimeFilter = "all" | "week";
-type ScopeFilter = "global" | "class";
+type ScopeFilter = "global" | "class" | "me";
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
@@ -63,8 +63,12 @@ const LeaderboardPage = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const top10 = entries.slice(0, 10);
   const currentUserRank = user ? entries.findIndex((e) => e.user_id === user.id) : -1;
+  // "Me" view: show 5 above and 5 below the current user
+  const displayEntries = scopeFilter === "me" && currentUserRank >= 0
+    ? entries.slice(Math.max(0, currentUserRank - 5), currentUserRank + 6)
+    : entries.slice(0, 10);
+  const top10 = displayEntries;
 
   return (
     <PageShell
@@ -106,6 +110,7 @@ const LeaderboardPage = () => {
             {([
               { id: "global" as ScopeFilter, label: "Global", icon: Globe },
               { id: "class" as ScopeFilter, label: "My Class", icon: Users },
+              { id: "me" as ScopeFilter, label: "My Rank", icon: Target },
             ]).map((s) => (
               <button
                 key={s.id}
