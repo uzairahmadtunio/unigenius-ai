@@ -23,7 +23,7 @@ interface LeaderboardEntry {
 }
 
 type TimeFilter = "all" | "week";
-type ScopeFilter = "global" | "class";
+type ScopeFilter = "global" | "class" | "me";
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
