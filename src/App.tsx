@@ -8,6 +8,8 @@ import { DepartmentProvider } from "@/contexts/DepartmentContext";
 import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
 import AuthPage from "./pages/AuthPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import PracticePage from "./pages/PracticePage";
 import CodeLabPage from "./pages/CodeLabPage";
 import DocsGenPage from "./pages/DocsGenPage";
