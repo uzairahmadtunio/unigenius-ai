@@ -1,7 +1,7 @@
-import { Linkedin, Github, MessageCircle, Share2 } from "lucide-react";
+import { Linkedin, Github, MessageCircle, Share2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const SHARE_MESSAGE = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
 
@@ -15,16 +15,35 @@ const Footer = () => {
     toast.success("Share link opened!");
   };
 
+  const footerLinks = [
+    { label: "About", to: "/about" },
+    { label: "Contact", to: "/contact" },
+    { label: "Privacy Policy", to: "/privacy" },
+    { label: "Terms of Service", to: "/terms" },
+  ];
+
   return (
     <footer className={`border-t border-border/50 py-6 text-center px-4 ${isDashboard ? "pb-32 md:pb-6" : "pb-20 md:pb-6"}`}>
       <div className="flex flex-col items-center gap-3">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+          {footerLinks.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
         <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
-          <span className="text-xs md:text-sm text-muted-foreground">© 2026 UniGenius AI</span>
-          <span className="hidden sm:inline text-muted-foreground mx-2">|</span>
-          <span className="text-xs md:text-sm text-muted-foreground">
-            Built by <span className="font-semibold text-foreground">Uzair Ahmad</span>
+          <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
+            Built with <Heart className="w-3 h-3 fill-destructive text-destructive" /> for students by{" "}
+            <span className="font-semibold text-foreground">Uzair Ahmad</span>
           </span>
         </div>
+        <p className="text-[10px] text-muted-foreground">Helping students study smarter with AI.</p>
 
         {isDashboard && (
           <div className="flex items-center gap-3">
@@ -64,7 +83,7 @@ const Footer = () => {
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground">All Rights Reserved</p>
+        <p className="text-[10px] text-muted-foreground">© 2026 UniGenius AI · All Rights Reserved</p>
       </div>
     </footer>
   );
