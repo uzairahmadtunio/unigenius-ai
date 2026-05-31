@@ -41,6 +41,7 @@ import NotFound from "./pages/NotFound";
 import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
 import MobileBottomNav from "./components/MobileBottomNav";
+import ScrollToTop from "./components/ScrollToTop";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <GlobalAlertBanner />
             <SupportChatWidget />
             <BrowserRouter>
+              <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/ai-tutor" element={<ChatPage />} />
