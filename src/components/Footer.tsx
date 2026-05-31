@@ -5,6 +5,20 @@ const Footer = () => {
   const location = useLocation();
   const isDashboard = location.pathname === "/";
 
+  // Minimal footer on all non-home pages
+  if (!isDashboard) {
+    return (
+      <footer className="border-t border-border/40 mt-auto pb-20 md:pb-0">
+        <div className="container mx-auto px-4 md:px-6 py-5">
+          <p className="text-[11px] text-center text-muted-foreground/60 tracking-wide">
+            © 2026 UniGenius AI. All rights reserved. Designed &amp; Developed by{" "}
+            <span className="text-muted-foreground/80 font-medium">Uzair Ahmad</span>.
+          </p>
+        </div>
+      </footer>
+    );
+  }
+
   const productLinks = [
     { label: "AI Tutor", to: "/ai-tutor" },
     { label: "Code Lab", to: "/code-lab" },
@@ -24,10 +38,9 @@ const Footer = () => {
   ];
 
   return (
-    <footer className={`border-t border-border/40 mt-auto ${isDashboard ? "pb-28 md:pb-0" : "pb-20 md:pb-0"}`}>
+    <footer className="border-t border-border/40 mt-auto pb-28 md:pb-0">
       <div className="container mx-auto px-4 md:px-6 lg:px-10 py-8 md:py-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
-          {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center shadow-card">
@@ -40,7 +53,6 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Product */}
           <div className="space-y-3">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Product</h4>
             <ul className="space-y-2">
@@ -54,7 +66,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Company + Legal */}
           <div className="space-y-3">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Company</h4>
             <ul className="space-y-2">
@@ -68,7 +79,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Legal + Social */}
           <div className="space-y-3">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Legal</h4>
             <ul className="space-y-2">
@@ -112,7 +122,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom bar */}
         <div className="mt-8 pt-5 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground/60 tracking-wide">
             © 2026 UniGenius AI. Designed &amp; Developed by{" "}
