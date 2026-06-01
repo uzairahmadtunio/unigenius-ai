@@ -155,6 +155,19 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* Defensive global responsiveness */
+  img, video, canvas, svg, iframe {
+    max-width: 100%;
+    height: auto;
+  }
+  /* Prevent long unbroken strings (URLs, tokens) from blowing layouts on mobile */
+  p, span, h1, h2, h3, h4, h5, h6, a, li, td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  /* Tables scroll horizontally inside their parent on mobile instead of pushing the page */
+  table { max-width: 100%; }
+
   @media (min-width: 768px) {
     body {
       font-size: 15px;
