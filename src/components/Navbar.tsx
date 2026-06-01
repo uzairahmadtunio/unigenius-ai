@@ -20,6 +20,7 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const [isDark, setIsDark] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { isTeacher } = useRole();
