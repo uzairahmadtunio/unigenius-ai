@@ -30,14 +30,21 @@ const ContactPage = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.from("contact_messages" as any).insert(parsed.data);
-    setLoading(false);
-    if (error) {
-      toast.error("Could not send message. Please try again.");
-      return;
+    try {
+      const { error } = await supabase.from("contact_messages" as any).insert([parsed.data]);
+      if (error) {
+        console.error("[Contact] insert failed:", error);
+        toast.error("Could not send message. Please try again.");
+        return;
+      }
+      toast.success("Message sent! We'll get back to you soon.");
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      console.error("[Contact] unexpected error:", err);
+      toast.error("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    toast.success("Message sent! We'll get back to you soon.");
-    setForm({ name: "", email: "", subject: "", message: "" });
   };
 
   return (
