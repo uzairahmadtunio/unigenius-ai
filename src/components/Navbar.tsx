@@ -95,23 +95,23 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
 
   return (
     <nav className="sticky top-0 z-40 glass border-b border-border/50">
-      <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <div className="flex items-center gap-2">
+      <div className="container mx-auto flex items-center justify-between h-16 px-4 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {onMenuToggle && (
-            <Button variant="ghost" size="icon" className="rounded-xl md:hidden" onClick={onMenuToggle}>
+            <Button variant="ghost" size="icon" className="rounded-xl md:hidden shrink-0" onClick={onMenuToggle}>
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
+          <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => navigate("/")}>
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0">
               <GraduationCap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-display font-bold text-foreground">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base sm:text-lg font-display font-bold text-foreground truncate">
                 UniGenius <span className="gradient-text">AI</span>
               </span>
               {department && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
+                <span className="text-xs text-muted-foreground hidden lg:inline truncate">
                   — {departmentInfo[department].name}
                 </span>
               )}
@@ -119,7 +119,8 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Desktop / tablet inline actions */}
           <Button variant="ghost" size="sm" className="rounded-xl text-xs hidden sm:flex" onClick={() => navigate("/about")}>
             About
           </Button>
@@ -127,21 +128,21 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
             Contact
           </Button>
           {isTeacher && !isAdmin && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden sm:flex text-primary" onClick={() => navigate("/teacher-dashboard")}>
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/teacher-dashboard")}>
               <GraduationCap className="w-3 h-3" /> Teacher Panel
             </Button>
           )}
           {isAdmin && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden sm:flex text-primary" onClick={() => navigate("/admin")}>
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/admin")}>
               <Shield className="w-3 h-3" /> Admin
             </Button>
           )}
           {department && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden sm:flex" onClick={clearDepartment}>
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden lg:flex" onClick={clearDepartment}>
               <RefreshCw className="w-3 h-3" /> Change Dept
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}>
+          <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className="rounded-xl hidden sm:flex">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
@@ -157,7 +158,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0 rounded-xl" align="end">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl" align="end">
                 <div className="p-3 border-b border-border">
                   <p className="font-display font-semibold text-sm">Notifications</p>
                 </div>
@@ -184,7 +185,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`}
+                      className="rounded-xl hidden md:flex"
                       onClick={() => {
                         const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
@@ -196,28 +197,123 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   <TooltipContent><p className="text-xs">Invite Friends</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button variant="ghost" size="icon" className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`} onClick={() => navigate("/profile")}>
+              <Button variant="ghost" size="icon" className="rounded-xl hidden md:flex" onClick={() => navigate("/profile")}>
                 <Settings className="w-4 h-4" />
               </Button>
-              <Avatar className={`w-8 h-8 cursor-pointer border border-primary/20 ${showMenu ? "hidden sm:flex" : ""}`} onClick={() => navigate("/profile")}>
+              <Avatar className="w-8 h-8 cursor-pointer border border-primary/20 hidden sm:flex" onClick={() => navigate("/profile")}>
                 <AvatarImage src={avatarUrl} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
                   {user.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button variant="ghost" size="icon" className={`rounded-xl ${showMenu ? "hidden sm:flex" : ""}`} onClick={signOut}>
+              <Button variant="ghost" size="icon" className="rounded-xl hidden md:flex" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={() => navigate("/auth")}>
+            <Button variant="ghost" size="sm" className="rounded-xl hidden sm:flex" onClick={() => navigate("/auth")}>
               <User className="w-4 h-4 mr-1" /> Sign In
             </Button>
           )}
+
+          {/* Mobile burger menu */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-xl sm:hidden" aria-label="Open menu">
+                <Menu className="w-5 h-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[85vw] max-w-sm p-0 flex flex-col">
+              <SheetHeader className="p-5 border-b border-border text-left">
+                <SheetTitle className="font-display text-base flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-primary" /> Menu
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {user && (
+                  <button
+                    onClick={() => { setMobileOpen(false); navigate("/profile"); }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                  >
+                    <Avatar className="w-9 h-9 border border-primary/20">
+                      <AvatarImage src={avatarUrl} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">My Profile</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </button>
+                )}
+
+                <MobileMenuItem icon={Info} label="About" onClick={() => { setMobileOpen(false); navigate("/about"); }} />
+                <MobileMenuItem icon={MessageCircleIcon} label="Contact" onClick={() => { setMobileOpen(false); navigate("/contact"); }} />
+                {isTeacher && !isAdmin && (
+                  <MobileMenuItem icon={GraduationCap} label="Teacher Panel" highlight onClick={() => { setMobileOpen(false); navigate("/teacher-dashboard"); }} />
+                )}
+                {isAdmin && (
+                  <MobileMenuItem icon={Shield} label="Admin Dashboard" highlight onClick={() => { setMobileOpen(false); navigate("/admin"); }} />
+                )}
+                {department && (
+                  <MobileMenuItem icon={RefreshCw} label="Change Department" onClick={() => { setMobileOpen(false); clearDepartment(); }} />
+                )}
+                {user && (
+                  <MobileMenuItem icon={Settings} label="Settings" onClick={() => { setMobileOpen(false); navigate("/profile"); }} />
+                )}
+                <MobileMenuItem
+                  icon={Share2}
+                  label="Invite Friends"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+                  }}
+                />
+                <MobileMenuItem
+                  icon={isDark ? Sun : Moon}
+                  label={isDark ? "Light Mode" : "Dark Mode"}
+                  onClick={() => setIsDark(!isDark)}
+                />
+              </div>
+              <div className="p-3 border-t border-border">
+                {user ? (
+                  <Button variant="outline" className="w-full rounded-xl text-xs" onClick={() => { setMobileOpen(false); signOut(); }}>
+                    <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                  </Button>
+                ) : (
+                  <Button className="w-full rounded-xl text-xs gradient-primary" onClick={() => { setMobileOpen(false); navigate("/auth"); }}>
+                    <User className="w-4 h-4 mr-2" /> Sign In
+                  </Button>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>
   );
 };
+
+const MobileMenuItem = ({
+  icon: Icon,
+  label,
+  onClick,
+  highlight,
+}: {
+  icon: any;
+  label: string;
+  onClick: () => void;
+  highlight?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left ${highlight ? "text-primary" : "text-foreground"}`}
+  >
+    <Icon className="w-4 h-4 shrink-0" />
+    <span className="text-sm font-medium">{label}</span>
+  </button>
+);
 
 export default Navbar;
