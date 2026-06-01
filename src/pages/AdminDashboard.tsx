@@ -5,7 +5,8 @@ import {
   Shield, Users, Megaphone, BarChart3, Radio, FolderOpen,
   Plus, Trash2, Edit2, UserX, Search, AlertTriangle, X,
   Headset, Send, CheckCircle2, MessageCircle, CreditCard, Eye, XCircle,
-  Tag, ToggleLeft, ToggleRight, Loader2, MessageSquareHeart, Star, Bug, Lightbulb
+  Tag, ToggleLeft, ToggleRight, Loader2, MessageSquareHeart, Star, Bug, Lightbulb,
+  Mail, RefreshCw, Inbox
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 const categories = ["general", "fee", "exam", "academic", "event"];
 const priorities = ["normal", "high", "urgent"];
 
-type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments" | "promos" | "feedback";
+type AdminTab = "overview" | "users" | "notices" | "groups" | "alerts" | "support" | "payments" | "promos" | "feedback" | "contact";
 
 const tabItems = [
   { id: "overview" as AdminTab, label: "Overview", icon: BarChart3 },
@@ -36,6 +37,7 @@ const tabItems = [
   { id: "payments" as AdminTab, label: "Payments", icon: CreditCard },
   { id: "promos" as AdminTab, label: "Promo Manager", icon: Tag },
   { id: "feedback" as AdminTab, label: "Feedback", icon: MessageSquareHeart },
+  { id: "contact" as AdminTab, label: "Contact Inbox", icon: Inbox },
 ];
 
 const AdminDashboard = () => {
@@ -188,6 +190,7 @@ const AdminDashboard = () => {
           {activeTab === "payments" && <PaymentsTab />}
           {activeTab === "promos" && <PromoManagerTab />}
           {activeTab === "feedback" && <FeedbackTab onCountChange={setFeedbackUnread} />}
+          {activeTab === "contact" && <ContactInboxTab />}
         </div>
       </main>
     </div>
@@ -1593,6 +1596,138 @@ const FeedbackTab = ({ onCountChange }: { onCountChange: (n: number) => void }) 
           </div>
         </DialogContent>
       </Dialog>
+    </motion.div>
+  );
+};
+
+
+/* ===== CONTACT INBOX TAB ===== */
+const ContactInboxTab = () => {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "pending" | "resolved">("all");
+
+  const fetchMessages = async () => {
+    setLoading(true);
+    let query = supabase
+      .from("contact_messages" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (filter !== "all") query = query.eq("status", filter);
+    const { data, error } = await query;
+    if (error) {
+      console.error("[ContactInbox] fetch error:", error);
+      toast.error("Could not load messages");
+    } else {
+      setMessages(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchMessages(); }, [filter]);
+
+  // Realtime new submissions
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-contact-inbox")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "contact_messages" }, () => {
+        fetchMessages();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter]);
+
+  const updateStatus = async (id: string, status: "pending" | "resolved") => {
+    const { error } = await (supabase.from("contact_messages" as any) as any)
+      .update({ status })
+      .eq("id", id);
+    if (error) {
+      toast.error("Could not update status");
+      return;
+    }
+    toast.success(status === "resolved" ? "Marked as resolved" : "Reopened");
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <Inbox className="w-5 h-5 text-primary" /> Contact Inbox
+          </h2>
+          <p className="text-xs text-muted-foreground">Messages submitted through the public Contact page.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+            <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="rounded-xl" onClick={fetchMessages} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      ) : messages.length === 0 ? (
+        <Card className="glass border-dashed">
+          <CardContent className="py-16 text-center">
+            <Mail className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-sm text-muted-foreground">No contact messages yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {messages.map((m) => (
+            <Card key={m.id} className="glass">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-foreground truncate">{m.name}</p>
+                      <Badge variant={m.status === "resolved" ? "secondary" : "default"} className="text-[10px]">
+                        {m.status}
+                      </Badge>
+                    </div>
+                    <a href={`mailto:${m.email}`} className="text-xs text-primary hover:underline break-all">{m.email}</a>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground shrink-0">
+                    {new Date(m.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-foreground">{m.subject}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap mt-1">{m.message}</p>
+                </div>
+                <div className="flex gap-2 justify-end pt-1">
+                  <Button variant="outline" size="sm" className="rounded-xl text-xs h-8" asChild>
+                    <a href={`mailto:${m.email}?subject=Re: ${encodeURIComponent(m.subject)}`}>
+                      <Send className="w-3.5 h-3.5 mr-1.5" /> Reply
+                    </a>
+                  </Button>
+                  {m.status === "resolved" ? (
+                    <Button variant="ghost" size="sm" className="rounded-xl text-xs h-8" onClick={() => updateStatus(m.id, "pending")}>
+                      Reopen
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="rounded-xl text-xs h-8 gradient-primary" onClick={() => updateStatus(m.id, "resolved")}>
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Mark Resolved
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };
