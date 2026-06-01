@@ -190,6 +190,7 @@ const AdminDashboard = () => {
           {activeTab === "payments" && <PaymentsTab />}
           {activeTab === "promos" && <PromoManagerTab />}
           {activeTab === "feedback" && <FeedbackTab onCountChange={setFeedbackUnread} />}
+          {activeTab === "contact" && <ContactInboxTab />}
         </div>
       </main>
     </div>
