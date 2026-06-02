@@ -12,6 +12,9 @@ import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNotifications } from "@/hooks/use-notifications";
+import { formatDistanceToNow } from "date-fns";
+import { Trash2, CheckCheck } from "lucide-react";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
