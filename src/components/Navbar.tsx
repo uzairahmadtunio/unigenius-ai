@@ -78,22 +78,23 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const unreadNotices = allNotices.filter(
     (n: any) => !readIds.has(n.id) && (!n.expires_at || new Date(n.expires_at) > new Date())
   );
-  const unreadCount = unreadNotices.length;
+  const unreadNoticeCount = unreadNotices.length;
+  const { notifications, unreadCount: unreadPersonal, markAllRead, remove: removeNotif } = useNotifications();
+  const unreadCount = unreadNoticeCount + unreadPersonal;
 
   const handleBellOpen = (open: boolean) => {
-    if (open && unreadCount > 0 && user) {
+    if (!open || !user) return;
+    if (unreadNoticeCount > 0) {
       const toMark = [...unreadNotices];
-      // Optimistic update
       queryClient.setQueryData(["notice-reads", user.id], (old: Set<string> | undefined) => {
         const next = new Set(old);
         toMark.forEach((n: any) => next.add(n.id));
         return next;
       });
       const inserts = toMark.map((n: any) => ({ user_id: user.id, notice_id: n.id }));
-      if (inserts.length > 0) {
-        supabase.from("user_notice_reads").insert(inserts as any);
-      }
+      if (inserts.length > 0) supabase.from("user_notice_reads").insert(inserts as any);
     }
+    if (unreadPersonal > 0) markAllRead();
   };
 
   return (
