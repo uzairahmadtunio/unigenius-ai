@@ -77,6 +77,19 @@ const DailyStreakWidget = () => {
     toast.success("🎉 Free Pro Day claimed! Enjoy all Pro features today!");
   };
 
+  const recoverStreak = async () => {
+    if (!user || recovering) return;
+    setRecovering(true);
+    const { error } = await supabase.from("streak_recoveries" as any).insert({ user_id: user.id } as any);
+    setRecovering(false);
+    if (error) { toast.error("Couldn't recover streak"); return; }
+    setCanRecover(false);
+    sessionStorage.removeItem(`streak_recorded_${user.id}`);
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+    toast.success("❤️ Streak revived! Keep going today.");
+    setTimeout(() => window.location.reload(), 800);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
