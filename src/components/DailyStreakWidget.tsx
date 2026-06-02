@@ -135,6 +135,18 @@ const DailyStreakWidget = () => {
               Free Pro Day
             </Button>
           )}
+          {currentStreak === 0 && canRecover && (
+            <Button
+              size="sm"
+              onClick={recoverStreak}
+              disabled={recovering}
+              variant="outline"
+              className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500"
+            >
+              <Heart className="w-3.5 h-3.5" />
+              Revive Streak
+            </Button>
+          )}
           <div className="text-center">
             <div className="flex items-center gap-1 justify-center">
               <Trophy className="w-3 h-3 text-yellow-500" />
