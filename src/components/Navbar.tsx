@@ -12,6 +12,9 @@ import { useDepartment, departmentInfo } from "@/contexts/DepartmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNotifications } from "@/hooks/use-notifications";
+import { formatDistanceToNow } from "date-fns";
+import { Trash2, CheckCheck } from "lucide-react";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
@@ -75,22 +78,23 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   const unreadNotices = allNotices.filter(
     (n: any) => !readIds.has(n.id) && (!n.expires_at || new Date(n.expires_at) > new Date())
   );
-  const unreadCount = unreadNotices.length;
+  const unreadNoticeCount = unreadNotices.length;
+  const { notifications, unreadCount: unreadPersonal, markAllRead, remove: removeNotif } = useNotifications();
+  const unreadCount = unreadNoticeCount + unreadPersonal;
 
   const handleBellOpen = (open: boolean) => {
-    if (open && unreadCount > 0 && user) {
+    if (!open || !user) return;
+    if (unreadNoticeCount > 0) {
       const toMark = [...unreadNotices];
-      // Optimistic update
       queryClient.setQueryData(["notice-reads", user.id], (old: Set<string> | undefined) => {
         const next = new Set(old);
         toMark.forEach((n: any) => next.add(n.id));
         return next;
       });
       const inserts = toMark.map((n: any) => ({ user_id: user.id, notice_id: n.id }));
-      if (inserts.length > 0) {
-        supabase.from("user_notice_reads").insert(inserts as any);
-      }
+      if (inserts.length > 0) supabase.from("user_notice_reads").insert(inserts as any);
     }
+    if (unreadPersonal > 0) markAllRead();
   };
 
   return (
@@ -158,20 +162,51 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl" align="end">
-                <div className="p-3 border-b border-border">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-0 rounded-xl" align="end">
+                <div className="p-3 border-b border-border flex items-center justify-between">
                   <p className="font-display font-semibold text-sm">Notifications</p>
+                  {unreadCount > 0 && (
+                    <button onClick={() => handleBellOpen(true)} className="text-[10px] text-primary hover:underline flex items-center gap-1">
+                      <CheckCheck className="w-3 h-3" /> Mark all read
+                    </button>
+                  )}
                 </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {unreadNotices.length === 0 ? (
-                    <p className="p-4 text-xs text-muted-foreground text-center">All caught up! 🎉</p>
+                <div className="max-h-80 overflow-y-auto">
+                  {unreadNotices.length === 0 && notifications.length === 0 ? (
+                    <p className="p-6 text-xs text-muted-foreground text-center">All caught up! 🎉</p>
                   ) : (
-                    unreadNotices.slice(0, 5).map((n: any) => (
-                      <div key={n.id} className="p-3 border-b border-border/30 hover:bg-muted/50 transition-colors">
-                        <p className="text-xs font-semibold text-foreground">{n.title}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.content}</p>
-                      </div>
-                    ))
+                    <>
+                      {unreadNotices.slice(0, 5).map((n: any) => (
+                        <div key={n.id} className="p-3 border-b border-border/30 hover:bg-muted/50 transition-colors">
+                          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">📢 {n.title}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.content}</p>
+                        </div>
+                      ))}
+                      {notifications.slice(0, 15).map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => { if (n.link) navigate(n.link); }}
+                          className={`p-3 border-b border-border/30 hover:bg-muted/50 transition-colors group ${n.link ? "cursor-pointer" : ""} ${!n.read_at ? "bg-primary/5" : ""}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                {!n.read_at && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                {n.title}
+                              </p>
+                              {n.body && <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>}
+                              <p className="text-[9px] text-muted-foreground/70 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeNotif(n.id); }}
+                              className="opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive shrink-0"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
               </PopoverContent>

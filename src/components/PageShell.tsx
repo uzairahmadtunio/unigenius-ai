@@ -31,6 +31,8 @@ const routeLabels: Record<string, string> = {
   "/groups": "Groups",
   "/premium": "Premium",
   "/planner": "Planner",
+  "/progress": "Progress",
+  "/calendar": "Calendar",
   "/notes": "Notes",
   "/presentations": "Slides",
   "/admin": "Admin",

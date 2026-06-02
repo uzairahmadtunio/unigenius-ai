@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Trophy, Calendar, TrendingUp, Gift } from "lucide-react";
+import { Flame, Trophy, Calendar, TrendingUp, Gift, Heart } from "lucide-react";
 import { useStreak } from "@/hooks/use-streak";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ const DailyStreakWidget = () => {
   const { currentStreak, longestStreak, totalActiveDays, loading } = useStreak();
   const [claimed, setClaimed] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [canRecover, setCanRecover] = useState(false);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -24,6 +26,19 @@ const DailyStreakWidget = () => {
       .then(({ data }) => {
         const until = (data as any)?.streak_pro_until;
         if (until && new Date(until) > new Date()) setClaimed(true);
+      });
+    // Check recovery eligibility: streak is 0 but they had one before, and no recovery in last 7 days
+    supabase
+      .from("streak_recoveries" as any)
+      .select("recovered_at")
+      .eq("user_id", user.id)
+      .order("recovered_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        const last = (data as any)?.recovered_at;
+        const okByCooldown = !last || Date.now() - new Date(last).getTime() > 7 * 86400000;
+        setCanRecover(okByCooldown);
       });
   }, [user]);
 
@@ -60,6 +75,19 @@ const DailyStreakWidget = () => {
     setClaimed(true);
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     toast.success("🎉 Free Pro Day claimed! Enjoy all Pro features today!");
+  };
+
+  const recoverStreak = async () => {
+    if (!user || recovering) return;
+    setRecovering(true);
+    const { error } = await supabase.from("streak_recoveries" as any).insert({ user_id: user.id } as any);
+    setRecovering(false);
+    if (error) { toast.error("Couldn't recover streak"); return; }
+    setCanRecover(false);
+    sessionStorage.removeItem(`streak_recorded_${user.id}`);
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+    toast.success("❤️ Streak revived! Keep going today.");
+    setTimeout(() => window.location.reload(), 800);
   };
 
   return (
@@ -105,6 +133,18 @@ const DailyStreakWidget = () => {
             >
               <Gift className="w-3.5 h-3.5" />
               Free Pro Day
+            </Button>
+          )}
+          {currentStreak === 0 && canRecover && (
+            <Button
+              size="sm"
+              onClick={recoverStreak}
+              disabled={recovering}
+              variant="outline"
+              className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500"
+            >
+              <Heart className="w-3.5 h-3.5" />
+              Revive Streak
             </Button>
           )}
           <div className="text-center">

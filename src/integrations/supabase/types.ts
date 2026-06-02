@@ -588,6 +588,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       past_papers: {
         Row: {
           created_at: string
@@ -843,6 +876,66 @@ export type Database = {
         }
         Relationships: []
       }
+      semester_events: {
+        Row: {
+          completed: boolean
+          created_at: string
+          event_date: string
+          event_time: string | null
+          event_type: string
+          id: string
+          notes: string | null
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          event_date: string
+          event_time?: string | null
+          event_type: string
+          id?: string
+          notes?: string | null
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          event_date?: string
+          event_time?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      streak_recoveries: {
+        Row: {
+          id: string
+          recovered_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          recovered_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          recovered_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_materials: {
         Row: {
           created_at: string
@@ -876,6 +969,72 @@ export type Database = {
           subject?: string
           title?: string
           uploaded_by?: string
+        }
+        Relationships: []
+      }
+      study_plans: {
+        Row: {
+          created_at: string
+          exam_date: string | null
+          id: string
+          schedule: string | null
+          semester: number
+          subjects: string[]
+          updated_at: string
+          user_id: string
+          weekly_hours: number
+        }
+        Insert: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          schedule?: string | null
+          semester: number
+          subjects?: string[]
+          updated_at?: string
+          user_id: string
+          weekly_hours?: number
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          schedule?: string | null
+          semester?: number
+          subjects?: string[]
+          updated_at?: string
+          user_id?: string
+          weekly_hours?: number
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          notes: string | null
+          studied_at: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          notes?: string | null
+          studied_at?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          studied_at?: string
+          subject?: string
+          user_id?: string
         }
         Relationships: []
       }
