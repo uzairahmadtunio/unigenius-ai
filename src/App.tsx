@@ -28,6 +28,8 @@ import PublicProfilePage from "./pages/PublicProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import PremiumPage from "./pages/PremiumPage";
 import PlannerPage from "./pages/PlannerPage";
+import ProgressPage from "./pages/ProgressPage";
+import CalendarPage from "./pages/CalendarPage";
 import NotesPage from "./pages/NotesPage";
 import PresentationPage from "./pages/PresentationPage";
 import TeacherDashboard from "./pages/TeacherDashboard";
