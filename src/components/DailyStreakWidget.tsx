@@ -13,6 +13,8 @@ const DailyStreakWidget = () => {
   const { currentStreak, longestStreak, totalActiveDays, loading } = useStreak();
   const [claimed, setClaimed] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [canRecover, setCanRecover] = useState(false);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -24,6 +26,19 @@ const DailyStreakWidget = () => {
       .then(({ data }) => {
         const until = (data as any)?.streak_pro_until;
         if (until && new Date(until) > new Date()) setClaimed(true);
+      });
+    // Check recovery eligibility: streak is 0 but they had one before, and no recovery in last 7 days
+    supabase
+      .from("streak_recoveries" as any)
+      .select("recovered_at")
+      .eq("user_id", user.id)
+      .order("recovered_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        const last = (data as any)?.recovered_at;
+        const okByCooldown = !last || Date.now() - new Date(last).getTime() > 7 * 86400000;
+        setCanRecover(okByCooldown);
       });
   }, [user]);
 
