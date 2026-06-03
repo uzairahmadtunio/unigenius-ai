@@ -132,7 +132,10 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
           } catch {}
         }
       }
+      console.log("[Planner] Stream complete, chars:", text.length);
+      if (!text.trim()) toast.error("Empty response — please retry");
     } catch (e: any) {
+      console.error("[Planner] Generation exception:", e);
       toast.error(e.message || "Failed to generate plan");
     } finally {
       setLoading(false);
@@ -142,12 +145,18 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
   const savePlan = async () => {
     if (!user || !schedule) return;
     setSaving(true);
+    console.log("[Planner] Save to database start");
     const { error } = await supabase.from("study_plans" as any).insert({
       user_id: user.id, semester, subjects: selected,
       exam_date: examDate || null, weekly_hours: weeklyHours, schedule,
     } as any);
     setSaving(false);
-    if (error) { toast.error("Couldn't save plan"); return; }
+    if (error) {
+      console.error("[Planner] Save error:", error);
+      toast.error(`Couldn't save plan: ${error.message}`);
+      return;
+    }
+    console.log("[Planner] Save success");
     toast.success("Plan saved!");
   };
 
