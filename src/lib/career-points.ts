@@ -16,17 +16,15 @@ export const fireCelebration = (points: number) => {
 };
 
 export const recordCareerActivity = async (
-  userId: string,
+  _userId: string,
   activityType: "dsa_solve" | "interview_complete" | "cv_score",
-  points: number,
+  _points: number,
   metadata: Record<string, any> = {}
 ) => {
-  const { error } = await supabase.from("career_activity" as any).insert({
-    user_id: userId,
-    activity_type: activityType,
-    points,
-    metadata,
-  });
+  const { error } = await supabase.rpc("record_career_activity" as any, {
+    _activity_type: activityType,
+    _metadata: metadata,
+  } as any);
 
   if (error) {
     console.error("Failed to record career activity:", error);
@@ -82,11 +80,8 @@ export const checkAndAwardBadges = async (userId: string) => {
 
   for (const badge of badgesToAward) {
     if (!existingIds.has(badge.id)) {
-      const { error } = await supabase.from("user_badges" as any).upsert(
-        { user_id: userId, badge_id: badge.id, badge_name: badge.name, badge_icon: badge.icon },
-        { onConflict: "user_id,badge_id" }
-      );
-      if (!error) {
+      const { data, error } = await supabase.rpc("award_badge" as any, { _badge_id: badge.id } as any);
+      if (!error && data === true) {
         toast.success(`🏅 New Badge Unlocked: ${badge.icon} ${badge.name}!`, { duration: 5000 });
       }
     }
@@ -120,11 +115,8 @@ export const checkProfileBadge = async (userId: string) => {
 
     if (!existing) {
       const badge = BADGES.profile_pro;
-      const { error } = await supabase.from("user_badges" as any).upsert(
-        { user_id: userId, badge_id: badge.id, badge_name: badge.name, badge_icon: badge.icon },
-        { onConflict: "user_id,badge_id" }
-      );
-      if (!error) {
+      const { data, error } = await supabase.rpc("award_badge" as any, { _badge_id: badge.id } as any);
+      if (!error && data === true) {
         toast.success(`🏅 New Badge Unlocked: ${badge.icon} ${badge.name}!`, { duration: 5000 });
       }
     }

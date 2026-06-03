@@ -72,18 +72,12 @@ const PremiumPage = () => {
     if (!promoCode.trim()) return;
     setPromoLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("promo_codes" as any)
-        .select("*")
-        .eq("code", promoCode.trim().toUpperCase())
-        .eq("is_active", true)
-        .single();
-      if (error || !data) { toast.error("Invalid or expired promo code"); setAppliedPromo(null); return; }
-      const promo = data as any;
-      const remaining = promo.usage_limit - promo.used_count;
-      if (remaining <= 0) { toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai."); setAppliedPromo(null); return; }
-      setAppliedPromo({ code: promo.code, discount_percent: promo.discount_percent, remaining });
-      toast.success("🎉 Mubarak! " + promo.discount_percent + "% discount applied!", { duration: 5000 });
+      const { data, error } = await supabase.rpc("validate_promo_code" as any, { _code: promoCode.trim() } as any);
+      const row: any = Array.isArray(data) ? data[0] : data;
+      if (error || !row) { toast.error("Invalid or expired promo code"); setAppliedPromo(null); return; }
+      if ((row.remaining ?? 0) <= 0) { toast.error("Sorry! Ye promo code ki limit khatam ho chuki hai."); setAppliedPromo(null); return; }
+      setAppliedPromo({ code: row.code, discount_percent: row.discount_percent, remaining: row.remaining });
+      toast.success("🎉 Mubarak! " + row.discount_percent + "% discount applied!", { duration: 5000 });
     } catch { toast.error("Failed to validate promo code"); } finally { setPromoLoading(false); }
   };
 

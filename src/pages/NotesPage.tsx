@@ -104,11 +104,13 @@ const NotesPage = () => {
     if (!user) { toast.error("Login to upvote"); return; }
     if (userVotes.has(noteId)) { toast.info("Already upvoted"); return; }
 
-    await supabase.from("note_votes" as any).insert({ note_id: noteId, user_id: user.id } as any);
-    await supabase.from("notes" as any).update({ upvotes: notes.find((n) => n.id === noteId)!.upvotes + 1 } as any).eq("id", noteId);
+    const { data, error } = await supabase.rpc("toggle_note_upvote" as any, { _note_id: noteId } as any);
+    if (error) { toast.error("Failed to upvote"); return; }
+    const row: any = Array.isArray(data) ? data[0] : data;
+    const total = row?.total ?? notes.find((n) => n.id === noteId)!.upvotes + 1;
 
     setUserVotes((prev) => new Set([...prev, noteId]));
-    setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, upvotes: n.upvotes + 1 } : n)));
+    setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, upvotes: total } : n)));
   };
 
   return (
