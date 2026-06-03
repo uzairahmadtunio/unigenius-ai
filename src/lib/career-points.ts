@@ -16,17 +16,15 @@ export const fireCelebration = (points: number) => {
 };
 
 export const recordCareerActivity = async (
-  userId: string,
+  _userId: string,
   activityType: "dsa_solve" | "interview_complete" | "cv_score",
-  points: number,
+  _points: number,
   metadata: Record<string, any> = {}
 ) => {
-  const { error } = await supabase.from("career_activity" as any).insert({
-    user_id: userId,
-    activity_type: activityType,
-    points,
-    metadata,
-  });
+  const { error } = await supabase.rpc("record_career_activity" as any, {
+    _activity_type: activityType,
+    _metadata: metadata,
+  } as any);
 
   if (error) {
     console.error("Failed to record career activity:", error);
