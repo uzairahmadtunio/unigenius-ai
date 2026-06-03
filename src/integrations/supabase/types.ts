@@ -1318,6 +1318,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      award_badge: { Args: { _badge_id: string }; Returns: boolean }
       find_group_by_invite_code: {
         Args: { _code: string }
         Returns: {
@@ -1380,6 +1381,10 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      record_career_activity: {
+        Args: { _activity_type: string; _metadata?: Json }
+        Returns: string
+      }
       record_daily_activity: {
         Args: { _user_id: string }
         Returns: {
@@ -1387,6 +1392,21 @@ export type Database = {
           longest_streak: number
           streak_increased: boolean
           total_active_days: number
+        }[]
+      }
+      toggle_note_upvote: {
+        Args: { _note_id: string }
+        Returns: {
+          total: number
+          upvoted: boolean
+        }[]
+      }
+      validate_promo_code: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          discount_percent: number
+          remaining: number
         }[]
       }
     }
