@@ -710,6 +710,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           current_semester: number | null
+          department: string | null
           display_name: string | null
           github_url: string | null
           headline: string | null
@@ -729,6 +730,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           current_semester?: number | null
+          department?: string | null
           display_name?: string | null
           github_url?: string | null
           headline?: string | null
@@ -748,6 +750,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           current_semester?: number | null
+          department?: string | null
           display_name?: string | null
           github_url?: string | null
           headline?: string | null
@@ -1331,40 +1334,30 @@ export type Database = {
           semester: number
         }[]
       }
-      get_leaderboard_filtered:
-        | {
-            Args: { time_filter?: string }
-            Returns: {
-              avatar_url: string
-              avg_percentage: number
-              best_cv_score: number
-              display_name: string
-              dsa_solved: number
-              interviews_done: number
-              perfect_scores: number
-              quizzes_taken: number
-              total_points: number
-              user_id: string
-            }[]
-          }
-        | {
-            Args: { semester_filter?: number; time_filter?: string }
-            Returns: {
-              avatar_url: string
-              avg_percentage: number
-              best_cv_score: number
-              current_semester: number
-              display_name: string
-              dsa_solved: number
-              interviews_done: number
-              perfect_scores: number
-              quizzes_taken: number
-              streak_days: number
-              total_points: number
-              university: string
-              user_id: string
-            }[]
-          }
+      get_leaderboard_filtered: {
+        Args: {
+          department_filter?: string
+          semester_filter?: number
+          time_filter?: string
+        }
+        Returns: {
+          avatar_url: string
+          avg_percentage: number
+          best_cv_score: number
+          current_semester: number
+          current_streak: number
+          department: string
+          display_name: string
+          dsa_solved: number
+          interviews_done: number
+          longest_streak: number
+          perfect_scores: number
+          quizzes_taken: number
+          total_points: number
+          university: string
+          user_id: string
+        }[]
+      }
       grant_streak_pro_day: { Args: never; Returns: string }
       has_role: {
         Args: {

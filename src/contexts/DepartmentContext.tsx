@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Department = "se" | "cs" | "ai";
 
@@ -30,9 +31,38 @@ export const DepartmentProvider = ({ children }: { children: ReactNode }) => {
     return (stored as Department) || null;
   });
 
+  // Sync from profile on auth load, and persist any local choice back to profile.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const remote = (data as any)?.department as Department | null;
+      if (remote && remote !== department) {
+        localStorage.setItem(STORAGE_KEY, remote);
+        setDepartmentState(remote);
+      } else if (!remote && department) {
+        await supabase.from("profiles").update({ department } as any).eq("user_id", user.id);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const setDepartment = useCallback((dept: Department) => {
     localStorage.setItem(STORAGE_KEY, dept);
     setDepartmentState(dept);
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("profiles").update({ department: dept } as any).eq("user_id", user.id);
+      }
+    })();
   }, []);
 
   const clearDepartment = useCallback(() => {
