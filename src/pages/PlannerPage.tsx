@@ -35,9 +35,11 @@ const PlannerPage = () => {
         if ((data as any)?.current_semester) setSemester((data as any).current_semester);
       });
     supabase.from("study_plans" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error("[Planner] Load error:", error); return; }
         const p: any = data;
         if (p) {
+          console.log("[Planner] Loaded saved plan from database");
           setSemester(p.semester);
           setSelected(p.subjects || []);
           setWeeklyHours(p.weekly_hours || 14);
