@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { authHeader } from "@/lib/auth-header";
 import { CalendarDays, Sparkles, Loader2, RefreshCw, Save, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
