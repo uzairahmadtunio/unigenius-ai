@@ -115,11 +115,8 @@ export const checkProfileBadge = async (userId: string) => {
 
     if (!existing) {
       const badge = BADGES.profile_pro;
-      const { error } = await supabase.from("user_badges" as any).upsert(
-        { user_id: userId, badge_id: badge.id, badge_name: badge.name, badge_icon: badge.icon },
-        { onConflict: "user_id,badge_id" }
-      );
-      if (!error) {
+      const { data, error } = await supabase.rpc("award_badge" as any, { _badge_id: badge.id } as any);
+      if (!error && data === true) {
         toast.success(`🏅 New Badge Unlocked: ${badge.icon} ${badge.name}!`, { duration: 5000 });
       }
     }
