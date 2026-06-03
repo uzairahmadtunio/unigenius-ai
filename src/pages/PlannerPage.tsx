@@ -78,9 +78,11 @@ const PlannerPage = () => {
       .join("\n");
 
     try {
+      console.log("[Planner] AI request start", { semester, subjects: selected, weeklyHours, examDate });
+      const auth = await authHeader();
       const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: auth },
         body: JSON.stringify({
           messages: [
             {
@@ -97,10 +99,15 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
         }),
       });
 
+      console.log("[Planner] AI response received", { status: resp.status, tier: resp.headers.get("x-ai-tier") });
+
       if (!resp.ok) {
-        if (resp.status === 429) toast.error("Rate limited, try again shortly");
-        else if (resp.status === 402) toast.error("Credits needed — top up in workspace settings");
-        else toast.error("Generation failed");
+        const errText = await resp.text().catch(() => "");
+        console.error("[Planner] AI error", resp.status, errText);
+        if (resp.status === 401) toast.error("Session expired — please sign in again");
+        else if (resp.status === 429) toast.error("Rate limited, try again shortly");
+        else if (resp.status === 402) toast.error("AI credits exhausted");
+        else toast.error(`Generation failed (${resp.status})`);
         return;
       }
 
