@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { authHeader } from "@/lib/auth-header";
 import { CalendarDays, Sparkles, Loader2, RefreshCw, Save, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +35,11 @@ const PlannerPage = () => {
         if ((data as any)?.current_semester) setSemester((data as any).current_semester);
       });
     supabase.from("study_plans" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error("[Planner] Load error:", error); return; }
         const p: any = data;
         if (p) {
+          console.log("[Planner] Loaded saved plan from database");
           setSemester(p.semester);
           setSelected(p.subjects || []);
           setWeeklyHours(p.weekly_hours || 14);
@@ -77,9 +80,11 @@ const PlannerPage = () => {
       .join("\n");
 
     try {
+      console.log("[Planner] AI request start", { semester, subjects: selected, weeklyHours, examDate });
+      const auth = await authHeader();
       const resp = await fetchWithRetry(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: auth },
         body: JSON.stringify({
           messages: [
             {
@@ -96,10 +101,15 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
         }),
       });
 
+      console.log("[Planner] AI response received", { status: resp.status, tier: resp.headers.get("x-ai-tier") });
+
       if (!resp.ok) {
-        if (resp.status === 429) toast.error("Rate limited, try again shortly");
-        else if (resp.status === 402) toast.error("Credits needed — top up in workspace settings");
-        else toast.error("Generation failed");
+        const errText = await resp.text().catch(() => "");
+        console.error("[Planner] AI error", resp.status, errText);
+        if (resp.status === 401) toast.error("Session expired — please sign in again");
+        else if (resp.status === 429) toast.error("Rate limited, try again shortly");
+        else if (resp.status === 402) toast.error("AI credits exhausted");
+        else toast.error(`Generation failed (${resp.status})`);
         return;
       }
 
@@ -124,7 +134,10 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
           } catch {}
         }
       }
+      console.log("[Planner] Stream complete, chars:", text.length);
+      if (!text.trim()) toast.error("Empty response — please retry");
     } catch (e: any) {
+      console.error("[Planner] Generation exception:", e);
       toast.error(e.message || "Failed to generate plan");
     } finally {
       setLoading(false);
@@ -134,12 +147,18 @@ Distribute time fairly with extra slots for lab subjects. Include morning, after
   const savePlan = async () => {
     if (!user || !schedule) return;
     setSaving(true);
+    console.log("[Planner] Save to database start");
     const { error } = await supabase.from("study_plans" as any).insert({
       user_id: user.id, semester, subjects: selected,
       exam_date: examDate || null, weekly_hours: weeklyHours, schedule,
     } as any);
     setSaving(false);
-    if (error) { toast.error("Couldn't save plan"); return; }
+    if (error) {
+      console.error("[Planner] Save error:", error);
+      toast.error(`Couldn't save plan: ${error.message}`);
+      return;
+    }
+    console.log("[Planner] Save success");
     toast.success("Plan saved!");
   };
 
