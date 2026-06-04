@@ -1,4 +1,5 @@
-import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2, Menu, Info, MessageCircle as MessageCircleIcon } from "lucide-react";
+import { GraduationCap, User, Moon, Sun, LogOut, RefreshCw, Settings, Bell, Shield, Share2, Menu, Info, MessageCircle as MessageCircleIcon, Download } from "lucide-react";
+import { usePWA } from "@/hooks/use-pwa";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,6 +23,7 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
+  const { canInstall, isInstalled, install } = usePWA();
   const [isDark, setIsDark] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -311,6 +313,15 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   label={isDark ? "Light Mode" : "Dark Mode"}
                   onClick={() => setIsDark(!isDark)}
                 />
+                {!isInstalled && (
+                  <MobileMenuItem
+                    icon={Download}
+                    label={canInstall ? "Install App" : "How to Install"}
+                    highlight
+                    onClick={() => { setMobileOpen(false); install(); }}
+                  />
+                )}
+
               </div>
               <div className="p-3 border-t border-border">
                 {user ? (

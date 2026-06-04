@@ -326,6 +326,9 @@ const ProfilePage = () => {
         )}
       </motion.div>
 
+      {/* PWA Status */}
+      <PWAStatusCard />
+
       {/* Tabbed Content */}
       <Tabs defaultValue="personal" className="space-y-4">
         <TabsList className="w-full justify-start bg-muted/50 rounded-xl p-1">
