@@ -16,6 +16,7 @@ import PageShell from "@/components/PageShell";
 import { toast } from "sonner";
 import { checkProfileBadge } from "@/lib/career-points";
 import SmartGPACalculator from "@/components/SmartGPACalculator";
+import PWAStatusCard from "@/components/PWAStatusCard";
 
 interface QuizResult {
   id: string;
