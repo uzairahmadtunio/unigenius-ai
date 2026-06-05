@@ -1358,6 +1358,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_public_profile_by_roll: {
+        Args: { _roll_number: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          github_url: string
+          headline: string
+          is_pro: boolean
+          linkedin_url: string
+          roll_number: string
+          skills: string[]
+          university: string
+          user_id: string
+        }[]
+      }
       grant_streak_pro_day: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -1386,6 +1401,10 @@ export type Database = {
           streak_increased: boolean
           total_active_days: number
         }[]
+      }
+      shares_group_with: {
+        Args: { _target: string; _viewer: string }
+        Returns: boolean
       }
       toggle_note_upvote: {
         Args: { _note_id: string }
