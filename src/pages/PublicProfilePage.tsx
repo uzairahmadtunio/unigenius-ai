@@ -20,12 +20,10 @@ const PublicProfilePage = () => {
     if (!rollNumber) return;
     const fetchProfile = async () => {
       setLoading(true);
-      // Find profile by roll number
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("roll_number", rollNumber)
-        .maybeSingle();
+      // Lookup safe public portfolio fields via SECURITY DEFINER RPC
+      const { data: rows } = await supabase
+        .rpc("get_public_profile_by_roll" as any, { _roll_number: rollNumber });
+      const profileData = Array.isArray(rows) ? rows[0] : rows;
 
       if (!profileData) {
         setNotFound(true);
