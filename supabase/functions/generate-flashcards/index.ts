@@ -15,8 +15,14 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
+  const tooBig = enforceBodySize(req, corsHeaders, 200_000);
+  if (tooBig) return tooBig;
+
   try {
-    const { subject, content, count } = await req.json();
+    const body = await req.json();
+    const subject = clampString(body.subject, 200);
+    const content = clampString(body.content, 30_000);
+    const count = Math.min(Math.max(Number(body.count) || 10, 1), 30);
 
     const systemText = `You are a flashcard generator for university students. Generate exactly ${count || 10} flashcards for the subject "${subject}".
 ${content ? `Use the following uploaded material as the PRIMARY source:\n${content}\n\nExtract key definitions, formulas, concepts, and important points from this material.` : `Generate flashcards covering the most important concepts, definitions, and formulas for "${subject}".`}`;
