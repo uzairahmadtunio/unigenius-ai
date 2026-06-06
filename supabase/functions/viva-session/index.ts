@@ -15,8 +15,14 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
+  const tooBig = enforceBodySize(req, corsHeaders, 1_000_000);
+  if (tooBig) return tooBig;
+
   try {
-    const { messages, subject, difficulty } = await req.json();
+    const body = await req.json();
+    const messages = clampArray<any>(body.messages, 40);
+    const subject = clampString(body.subject, 120);
+    const difficulty = clampString(body.difficulty, 20);
 
     const systemText = `You are a strict but fair university examiner conducting a VIVA VOCE examination for the subject: "${subject}".
 
