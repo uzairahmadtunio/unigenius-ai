@@ -183,26 +183,92 @@ const CodeLabPage = () => {
     setAnalysis("");
     setFetchError(false);
     setActiveTab("console");
-    setConsoleOutput([{ type: "info", text: `> Running ${language === "cpp" ? "C++" : language === "python" ? "Python" : "JavaScript"} code...` }]);
+    const langLabel = language === "cpp" ? "C++" : language === "python" ? "Python" : "JavaScript";
+    setConsoleOutput([{ type: "info", text: `> Running ${langLabel} code in sandbox...` }]);
 
-    // Step 1: Simulate execution
-    await new Promise(r => setTimeout(r, 300));
-    const { stdout, stderr } = simulateExecution(code, language, stdinInput);
+    // Step 1: Execute code
+    let hadRuntimeError = false;
+    if (language === "cpp" || language === "python") {
+      // Real sandboxed execution via Piston (edge function)
+      try {
+        const execResp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/execute-code`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `${await authHeader()}`,
+          },
+          body: JSON.stringify({ code, language, stdin: stdinInput }),
+        });
 
-    setConsoleOutput(prev => {
-      const next = [...prev];
-      if (stderr.length > 0) {
-        stderr.forEach(line => next.push({ type: "error", text: `stderr: ${line}` }));
+        if (!execResp.ok) {
+          const err = await execResp.json().catch(() => ({}));
+          throw new Error(err.error || `Execution failed (${execResp.status})`);
+        }
+        const result = await execResp.json();
+
+        setConsoleOutput(prev => {
+          const next = [...prev];
+          // Compile errors first (C++)
+          if (result.compile?.stderr) {
+            hadRuntimeError = true;
+            next.push({ type: "error", text: "─── Compiler Errors ───" });
+            result.compile.stderr.split("\n").forEach((l: string) => {
+              if (l.trim()) next.push({ type: "error", text: l });
+            });
+          }
+          if (result.run?.stdout) {
+            next.push({ type: "info", text: "─── Output ───" });
+            result.run.stdout.split("\n").forEach((l: string, i: number, arr: string[]) => {
+              if (l || i < arr.length - 1) next.push({ type: "success", text: l });
+            });
+          }
+          if (result.run?.stderr) {
+            hadRuntimeError = true;
+            next.push({ type: "error", text: "─── Runtime Errors ───" });
+            result.run.stderr.split("\n").forEach((l: string) => {
+              if (l.trim()) next.push({ type: "error", text: l });
+            });
+          }
+          if (result.run?.signal) {
+            hadRuntimeError = true;
+            next.push({ type: "error", text: `Killed by signal: ${result.run.signal}` });
+          }
+          if (!result.compile?.stderr && !result.run?.stdout && !result.run?.stderr) {
+            next.push({ type: "info", text: "(No output)" });
+          }
+          const exitCode = result.run?.code;
+          next.push({
+            type: exitCode === 0 ? "info" : "error",
+            text: `> Exit code: ${exitCode ?? "?"}  •  Time: ${result.executionTimeMs}ms`,
+          });
+          return next;
+        });
+      } catch (err: any) {
+        hadRuntimeError = true;
+        setConsoleOutput(prev => [...prev, { type: "error", text: `✗ Execution failed: ${err.message}` }]);
       }
-      if (stdout.length > 0) {
-        stdout.forEach(line => next.push({ type: "success", text: line }));
-      }
-      if (stdout.length === 0 && stderr.length === 0) {
-        next.push({ type: "info", text: "(No output)" });
-      }
-      next.push({ type: "info", text: `> Sending to AI for analysis...` });
-      return next;
-    });
+    } else {
+      // JavaScript runs locally in the browser
+      await new Promise(r => setTimeout(r, 100));
+      const { stdout, stderr } = simulateExecution(code, language, stdinInput);
+      setConsoleOutput(prev => {
+        const next = [...prev];
+        if (stderr.length > 0) {
+          hadRuntimeError = true;
+          stderr.forEach(line => next.push({ type: "error", text: `stderr: ${line}` }));
+        }
+        if (stdout.length > 0) {
+          stdout.forEach(line => next.push({ type: "success", text: line }));
+        }
+        if (stdout.length === 0 && stderr.length === 0) {
+          next.push({ type: "info", text: "(No output)" });
+        }
+        return next;
+      });
+    }
+
+    setConsoleOutput(prev => [...prev, { type: "info", text: "> Sending to AI for analysis..." }]);
+
 
     // Step 2: AI analysis
     try {
