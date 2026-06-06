@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
 import { streamChatWithFailover } from "../_shared/ai-failover.ts";
+import { enforceBodySize, clampString } from "../_shared/limits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,8 +15,14 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
+  const tooBig = enforceBodySize(req, corsHeaders, 8_000_000);
+  if (tooBig) return tooBig;
+
   try {
-    const { code, language, errorImage } = await req.json();
+    const body = await req.json();
+    const code = clampString(body.code, 50_000);
+    const language = clampString(body.language, 32) || "text";
+    const errorImage = typeof body.errorImage === "string" && body.errorImage.length < 7_000_000 ? body.errorImage : null;
 
     const systemText = `You are a coding assistant for Pakistani university students. Be extremely concise. Respond ONLY with:
 

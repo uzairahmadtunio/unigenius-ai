@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
 import { streamChatWithFailover } from "../_shared/ai-failover.ts";
+import { enforceBodySize, clampString } from "../_shared/limits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,8 +15,17 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
+  const tooBig = enforceBodySize(req, corsHeaders, 200_000);
+  if (tooBig) return tooBig;
+
   try {
-    const { type, subject, topic, additionalNotes, semester, studentInfo } = await req.json();
+    const body = await req.json();
+    const type = clampString(body.type, 32);
+    const subject = clampString(body.subject, 200);
+    const topic = clampString(body.topic, 500);
+    const additionalNotes = clampString(body.additionalNotes, 2_000);
+    const semester = clampString(body.semester, 50);
+    const studentInfo = body.studentInfo && typeof body.studentInfo === "object" ? body.studentInfo : {};
 
     const extra = additionalNotes ? `\n\nAdditional instructions from student: ${additionalNotes}` : "";
     const sName = studentInfo?.name || "__________ (Enter Name)";

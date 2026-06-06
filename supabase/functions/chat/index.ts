@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
 import { streamChatWithFailover } from "../_shared/ai-failover.ts";
+import { enforceBodySize, clampArray } from "../_shared/limits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,8 +51,12 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
+  const tooBig = enforceBodySize(req, corsHeaders, 8_000_000); // 8 MB (allow image uploads)
+  if (tooBig) return tooBig;
+
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
+    const messages = clampArray<any>(body.messages, 30);
 
     const systemText = `You are a Senior Software Engineering Professor AI Tutor at a top university. Your name is UniGenius AI.
 
