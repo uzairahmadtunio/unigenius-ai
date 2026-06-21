@@ -98,12 +98,55 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    // ---- Auth: accept either internal shared secret (from DB trigger) or an admin JWT ----
+    const providedSecret = req.headers.get('x-push-secret') || '';
+    const authHeader = req.headers.get('Authorization') || '';
+    let authorized = false;
+
+    if (providedSecret) {
+      const { data: secretRow } = await supabase
+        .from('app_secrets' as any)
+        .select('value')
+        .eq('key', 'send_push_secret')
+        .schema('private' as any)
+        .maybeSingle();
+      const expected = (secretRow as any)?.value as string | undefined;
+      if (expected && providedSecret.length === expected.length) {
+        // constant-time-ish compare
+        let diff = 0;
+        for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ providedSecret.charCodeAt(i);
+        authorized = diff === 0;
+      }
+    }
+
+    if (!authorized && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const { data: userData } = await supabase.auth.getUser(token);
+      const uid = userData?.user?.id;
+      if (uid) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', uid)
+          .eq('role', 'admin')
+          .maybeSingle();
+        if (roleRow) authorized = true;
+      }
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await req.json() as SendPushBody;
     if (!body?.target || !body?.title || !body?.category) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     // Resolve target user_ids
     let userIds: string[] = [];
