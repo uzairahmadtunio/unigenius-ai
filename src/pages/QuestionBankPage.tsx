@@ -255,8 +255,9 @@ const QuestionBankPage = () => {
             </div>
             <div className="space-y-2">
               {opts.map((o) => {
-                const isCorrect = pShow && o.key === currentQ.correct_answer;
-                const isWrong = pShow && pSelected === o.key && o.key !== currentQ.correct_answer;
+                const correct = pResult?.correct_answer ?? currentQ.correct_answer ?? "";
+                const isCorrect = pShow && o.key === correct;
+                const isWrong = pShow && pSelected === o.key && o.key !== correct;
                 return (
                   <button
                     key={o.key}
@@ -282,10 +283,10 @@ const QuestionBankPage = () => {
                 );
               })}
             </div>
-            {pShow && currentQ.explanation && (
+            {pShow && (pResult?.explanation || currentQ.explanation) && (
               <div className="p-4 rounded-lg bg-muted/50 border-l-4 border-primary">
                 <p className="text-sm font-semibold mb-1">Explanation</p>
-                <p className="text-sm text-muted-foreground">{currentQ.explanation}</p>
+                <p className="text-sm text-muted-foreground">{pResult?.explanation || currentQ.explanation}</p>
               </div>
             )}
             <div className="flex justify-between">
@@ -295,7 +296,9 @@ const QuestionBankPage = () => {
                   {pIdx + 1 >= practiceQs.length ? "Finish" : "Next"} <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submitAnswer} disabled={!pSelected}>Submit</Button>
+                <Button onClick={submitAnswer} disabled={!pSelected || pChecking}>
+                  {pChecking && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}Submit
+                </Button>
               )}
             </div>
           </Card>
