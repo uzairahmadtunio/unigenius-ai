@@ -37,8 +37,10 @@ interface QuestionRow {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_answer: string;
-  explanation: string | null;
+  // Only present for teachers/admins (direct table read).
+  correct_answer?: string | null;
+  explanation?: string | null;
+  has_explanation?: boolean;
   semester: number | null;
   created_by: string;
 }
@@ -62,18 +64,27 @@ const QuestionBankPage = () => {
   const [pShow, setPShow] = useState(false);
   const [pScore, setPScore] = useState(0);
   const [pDone, setPDone] = useState(false);
+  const [pResult, setPResult] = useState<{ is_correct: boolean; correct_answer: string; explanation: string } | null>(null);
+  const [pChecking, setPChecking] = useState(false);
 
   // Edit/delete
   const [editing, setEditing] = useState<QuestionRow | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const canManage = isAdmin || isTeacher;
+
   const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["question-bank-all"],
+    queryKey: ["question-bank-all", canManage],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("question_bank")
-        .select("*")
-        .order("created_at", { ascending: false });
+      if (canManage) {
+        const { data, error } = await supabase
+          .from("question_bank")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return (data || []) as QuestionRow[];
+      }
+      const { data, error } = await supabase.rpc("list_question_bank_safe" as any);
       if (error) throw error;
       return (data || []) as QuestionRow[];
     },
@@ -126,10 +137,30 @@ const QuestionBankPage = () => {
     setPracticeMode(true);
   };
 
-  const submitAnswer = () => {
+  const submitAnswer = async () => {
     if (!pSelected) return;
-    if (pSelected === practiceQs[pIdx].correct_answer) setPScore((s) => s + 1);
-    setPShow(true);
+    const q = practiceQs[pIdx];
+    setPChecking(true);
+    try {
+      const { data, error } = await supabase.rpc("check_question_answer" as any, {
+        _question_id: q.id,
+        _answer: pSelected,
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      const result = {
+        is_correct: !!row?.is_correct,
+        correct_answer: row?.correct_answer ?? "",
+        explanation: row?.explanation ?? "",
+      };
+      setPResult(result);
+      if (result.is_correct) setPScore((s) => s + 1);
+      setPShow(true);
+    } catch (e: any) {
+      toast.error(e.message || "Could not check answer");
+    } finally {
+      setPChecking(false);
+    }
   };
 
   const nextQuestion = () => {
@@ -140,6 +171,7 @@ const QuestionBankPage = () => {
     setPIdx((i) => i + 1);
     setPSelected(null);
     setPShow(false);
+    setPResult(null);
   };
 
   const handleDelete = async (q: QuestionRow) => {
@@ -223,8 +255,9 @@ const QuestionBankPage = () => {
             </div>
             <div className="space-y-2">
               {opts.map((o) => {
-                const isCorrect = pShow && o.key === currentQ.correct_answer;
-                const isWrong = pShow && pSelected === o.key && o.key !== currentQ.correct_answer;
+                const correct = pResult?.correct_answer ?? currentQ.correct_answer ?? "";
+                const isCorrect = pShow && o.key === correct;
+                const isWrong = pShow && pSelected === o.key && o.key !== correct;
                 return (
                   <button
                     key={o.key}
@@ -250,10 +283,10 @@ const QuestionBankPage = () => {
                 );
               })}
             </div>
-            {pShow && currentQ.explanation && (
+            {pShow && (pResult?.explanation || currentQ.explanation) && (
               <div className="p-4 rounded-lg bg-muted/50 border-l-4 border-primary">
                 <p className="text-sm font-semibold mb-1">Explanation</p>
-                <p className="text-sm text-muted-foreground">{currentQ.explanation}</p>
+                <p className="text-sm text-muted-foreground">{pResult?.explanation || currentQ.explanation}</p>
               </div>
             )}
             <div className="flex justify-between">
@@ -263,7 +296,9 @@ const QuestionBankPage = () => {
                   {pIdx + 1 >= practiceQs.length ? "Finish" : "Next"} <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submitAnswer} disabled={!pSelected}>Submit</Button>
+                <Button onClick={submitAnswer} disabled={!pSelected || pChecking}>
+                  {pChecking && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}Submit
+                </Button>
               )}
             </div>
           </Card>
@@ -374,26 +409,28 @@ const QuestionBankPage = () => {
                       );
                     })}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setRevealed((r) => ({ ...r, [q.id]: !r[q.id] }))}
-                    >
-                      {showAns ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                      {showAns ? "Hide Answer" : "Show Answer"}
-                    </Button>
-                    {q.explanation && (
+                  {canManage && (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setExplained((r) => ({ ...r, [q.id]: !r[q.id] }))}
+                        onClick={() => setRevealed((r) => ({ ...r, [q.id]: !r[q.id] }))}
                       >
-                        <Lightbulb className="w-4 h-4 mr-1" />
-                        {showExp ? "Hide Explanation" : "Show Explanation"}
+                        {showAns ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
+                        {showAns ? "Hide Answer" : "Show Answer"}
                       </Button>
-                    )}
-                  </div>
+                      {q.explanation && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setExplained((r) => ({ ...r, [q.id]: !r[q.id] }))}
+                        >
+                          <Lightbulb className="w-4 h-4 mr-1" />
+                          {showExp ? "Hide Explanation" : "Show Explanation"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {showExp && q.explanation && (
                     <div className="p-3 rounded-lg bg-muted/50 border-l-4 border-primary text-sm text-muted-foreground">
                       {q.explanation}

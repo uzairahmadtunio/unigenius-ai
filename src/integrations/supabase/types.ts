@@ -1388,6 +1388,14 @@ export type Database = {
         Returns: undefined
       }
       award_badge: { Args: { _badge_id: string }; Returns: boolean }
+      check_question_answer: {
+        Args: { _answer: string; _question_id: string }
+        Returns: {
+          correct_answer: string
+          explanation: string
+          is_correct: boolean
+        }[]
+      }
       find_group_by_invite_code: {
         Args: { _code: string }
         Returns: {
@@ -1454,6 +1462,23 @@ export type Database = {
       is_group_owner: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
+      }
+      list_question_bank_safe: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          has_explanation: boolean
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          semester: number
+          subject: string
+          topic: string
+        }[]
       }
       record_career_activity: {
         Args: { _activity_type: string; _metadata?: Json }
