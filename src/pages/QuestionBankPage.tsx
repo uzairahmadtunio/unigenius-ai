@@ -409,26 +409,28 @@ const QuestionBankPage = () => {
                       );
                     })}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setRevealed((r) => ({ ...r, [q.id]: !r[q.id] }))}
-                    >
-                      {showAns ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                      {showAns ? "Hide Answer" : "Show Answer"}
-                    </Button>
-                    {q.explanation && (
+                  {canManage && (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setExplained((r) => ({ ...r, [q.id]: !r[q.id] }))}
+                        onClick={() => setRevealed((r) => ({ ...r, [q.id]: !r[q.id] }))}
                       >
-                        <Lightbulb className="w-4 h-4 mr-1" />
-                        {showExp ? "Hide Explanation" : "Show Explanation"}
+                        {showAns ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
+                        {showAns ? "Hide Answer" : "Show Answer"}
                       </Button>
-                    )}
-                  </div>
+                      {q.explanation && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setExplained((r) => ({ ...r, [q.id]: !r[q.id] }))}
+                        >
+                          <Lightbulb className="w-4 h-4 mr-1" />
+                          {showExp ? "Hide Explanation" : "Show Explanation"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {showExp && q.explanation && (
                     <div className="p-3 rounded-lg bg-muted/50 border-l-4 border-primary text-sm text-muted-foreground">
                       {q.explanation}
