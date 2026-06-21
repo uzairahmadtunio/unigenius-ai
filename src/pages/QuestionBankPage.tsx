@@ -64,6 +64,8 @@ const QuestionBankPage = () => {
   const [pShow, setPShow] = useState(false);
   const [pScore, setPScore] = useState(0);
   const [pDone, setPDone] = useState(false);
+  const [pResult, setPResult] = useState<{ is_correct: boolean; correct_answer: string; explanation: string } | null>(null);
+  const [pChecking, setPChecking] = useState(false);
 
   // Edit/delete
   const [editing, setEditing] = useState<QuestionRow | null>(null);
@@ -135,10 +137,30 @@ const QuestionBankPage = () => {
     setPracticeMode(true);
   };
 
-  const submitAnswer = () => {
+  const submitAnswer = async () => {
     if (!pSelected) return;
-    if (pSelected === practiceQs[pIdx].correct_answer) setPScore((s) => s + 1);
-    setPShow(true);
+    const q = practiceQs[pIdx];
+    setPChecking(true);
+    try {
+      const { data, error } = await supabase.rpc("check_question_answer" as any, {
+        _question_id: q.id,
+        _answer: pSelected,
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      const result = {
+        is_correct: !!row?.is_correct,
+        correct_answer: row?.correct_answer ?? "",
+        explanation: row?.explanation ?? "",
+      };
+      setPResult(result);
+      if (result.is_correct) setPScore((s) => s + 1);
+      setPShow(true);
+    } catch (e: any) {
+      toast.error(e.message || "Could not check answer");
+    } finally {
+      setPChecking(false);
+    }
   };
 
   const nextQuestion = () => {
@@ -149,6 +171,7 @@ const QuestionBankPage = () => {
     setPIdx((i) => i + 1);
     setPSelected(null);
     setPShow(false);
+    setPResult(null);
   };
 
   const handleDelete = async (q: QuestionRow) => {
