@@ -1447,6 +1447,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_send_push_secret: { Args: never; Returns: string }
       grant_streak_pro_day: { Args: never; Returns: string }
       has_role: {
         Args: {
