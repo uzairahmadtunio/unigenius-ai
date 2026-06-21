@@ -37,8 +37,10 @@ interface QuestionRow {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_answer: string;
-  explanation: string | null;
+  // Only present for teachers/admins (direct table read).
+  correct_answer?: string | null;
+  explanation?: string | null;
+  has_explanation?: boolean;
   semester: number | null;
   created_by: string;
 }
@@ -67,13 +69,20 @@ const QuestionBankPage = () => {
   const [editing, setEditing] = useState<QuestionRow | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const canManage = isAdmin || isTeacher;
+
   const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["question-bank-all"],
+    queryKey: ["question-bank-all", canManage],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("question_bank")
-        .select("*")
-        .order("created_at", { ascending: false });
+      if (canManage) {
+        const { data, error } = await supabase
+          .from("question_bank")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return (data || []) as QuestionRow[];
+      }
+      const { data, error } = await supabase.rpc("list_question_bank_safe" as any);
       if (error) throw error;
       return (data || []) as QuestionRow[];
     },
