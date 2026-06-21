@@ -1,3 +1,4 @@
+// v2 - tolerant parser
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -14,8 +15,22 @@ Deno.serve((req) => {
     });
   }
   let parsed: any;
-  try { parsed = JSON.parse(cfg); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG JSON' }), {
+  const tryParse = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
+  parsed = tryParse(cfg);
+  if (!parsed) {
+    // Extract object literal and normalize JS-object form -> JSON
+    const m = cfg.match(/\{[\s\S]*\}/);
+    if (m) {
+      let s = m[0]
+        .replace(/\/\/.*$/gm, "")                  // strip line comments
+        .replace(/'/g, '"')                         // single -> double quotes
+        .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":') // quote unquoted keys
+        .replace(/,(\s*[}\]])/g, "$1");             // strip trailing commas
+      parsed = tryParse(s);
+    }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG — paste the firebaseConfig object as JSON with apiKey, authDomain, projectId, messagingSenderId, appId' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
