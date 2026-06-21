@@ -798,6 +798,72 @@ export type Database = {
         }
         Relationships: []
       }
+      push_analytics: {
+        Row: {
+          category: string
+          created_at: string
+          event: string
+          fcm_token: string | null
+          id: string
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          event: string
+          fcm_token?: string | null
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          event?: string
+          fcm_token?: string | null
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_name: string | null
+          enabled: boolean
+          fcm_token: string
+          id: string
+          notification_preferences: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string | null
+          enabled?: boolean
+          fcm_token: string
+          id?: string
+          notification_preferences?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string | null
+          enabled?: boolean
+          fcm_token?: string
+          id?: string
+          notification_preferences?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_bank: {
         Row: {
           correct_answer: string
