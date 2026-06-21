@@ -212,6 +212,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                     </>
                   )}
                 </div>
+                <PushSettingsPanel />
               </PopoverContent>
             </Popover>
           )}
