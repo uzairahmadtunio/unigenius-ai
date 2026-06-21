@@ -104,20 +104,14 @@ Deno.serve(async (req) => {
     let authorized = false;
 
     if (providedSecret) {
-      const { data: secretRow } = await supabase
-        .from('app_secrets' as any)
-        .select('value')
-        .eq('key', 'send_push_secret')
-        .schema('private' as any)
-        .maybeSingle();
-      const expected = (secretRow as any)?.value as string | undefined;
-      if (expected && providedSecret.length === expected.length) {
-        // constant-time-ish compare
+      const { data: expected } = await supabase.rpc('get_send_push_secret');
+      if (typeof expected === 'string' && expected.length === providedSecret.length) {
         let diff = 0;
         for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ providedSecret.charCodeAt(i);
         authorized = diff === 0;
       }
     }
+
 
     if (!authorized && authHeader.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
