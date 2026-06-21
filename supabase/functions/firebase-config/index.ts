@@ -14,19 +14,24 @@ Deno.serve((req) => {
     });
   }
   let parsed: any;
-  try {
-    parsed = JSON.parse(cfg);
-  } catch {
-    // Tolerate JS-object form (unquoted keys, single quotes, trailing commas).
-    try {
-      const m = cfg.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error("no object");
-      parsed = (new Function("return (" + m[0] + ")"))();
-    } catch {
-      return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG — must be a JSON object with apiKey, authDomain, projectId, messagingSenderId, appId' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+  const tryParse = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
+  parsed = tryParse(cfg);
+  if (!parsed) {
+    // Extract object literal and normalize JS-object form -> JSON
+    const m = cfg.match(/\{[\s\S]*\}/);
+    if (m) {
+      let s = m[0]
+        .replace(/\/\/.*$/gm, "")                  // strip line comments
+        .replace(/'/g, '"')                         // single -> double quotes
+        .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":') // quote unquoted keys
+        .replace(/,(\s*[}\]])/g, "$1");             // strip trailing commas
+      parsed = tryParse(s);
     }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG — paste the firebaseConfig object as JSON with apiKey, authDomain, projectId, messagingSenderId, appId' }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
   return new Response(JSON.stringify({ config: parsed, vapidKey: vapid }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
