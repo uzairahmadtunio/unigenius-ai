@@ -1,45 +1,40 @@
-## Plan: Teacher Panel System
+## Deliverable
 
-### Overview
-Add a complete Teacher Panel to UniGenius AI without modifying any existing features. This includes role-based routing, admin user management, and a full teacher dashboard.
+One file: `/mnt/documents/UniGeniusAI_Internal_Audit.md` (downloadable from chat), written as a real startup due-diligence report — brutal, specific, evidence-backed with file paths, table names, and policy references. No filler, no "looks good."
 
-### 1. Database Changes (Migration)
-- Add `teacher` to the existing `app_role` enum
-- Create `question_bank` table (subject, topic, question, options A-D, correct_answer, explanation, created_by)
-- Create `study_materials` table (subject, title, description, file_url, file_name, uploaded_by, semester)
-- Add RLS policies:
-  - Teachers can CRUD their own questions & materials
-  - Students can read study materials
-  - Admins have full access via existing `has_role` function
+## How I'll produce it
 
-### 2. Admin Dashboard Update
-- Add "Manage Users" tab in `AdminDashboard.tsx`
-- Table showing Name, Email, Role with "Make Teacher" / "Remove Teacher" actions
-- Create `admin_manage_role` database function (SECURITY DEFINER) for safe role changes
+Plan-mode is read-only, so I cannot create the file yet. Once you approve this plan and I switch to build mode, I will:
 
-### 3. New Pages & Components
-- **`/teacher-dashboard`** — Teacher landing page with 4 cards: Create Quiz, Upload Material, Question Bank, Student Results
-- **Teacher Quiz Creator** — Form to add questions to `question_bank`
-- **Teacher Material Upload** — File upload form saving to storage + `study_materials` table
-- **Teacher Results Viewer** — Table of student quiz results
-- **Route guard** — Redirect unauthorized users
+1. **Inventory pass (read-only exploration)**
+   - Enumerate routes from `src/App.tsx`, every file under `src/pages`, `src/components`, `src/hooks`, `src/lib`.
+   - Enumerate all edge functions under `supabase/functions/*`.
+   - Query the live DB for: every table's columns, every RLS policy, every index, every trigger, every RPC. Cross-check against `src/integrations/supabase/types.ts`.
+   - Enumerate storage buckets, secrets (names only), external APIs (Gemini keys 1–10, Groq, Firebase, Lovable AI).
+   - Pull `pg_stat_statements` slow queries and the Supabase linter output.
 
-### 4. Login Routing
-- Update `Index.tsx` to check role after login:
-  - `student` → normal dashboard
-  - `teacher` → `/teacher-dashboard`
-  - `admin` → `/admin`
+2. **Targeted deep dives (parallel sub-agents)** for the heaviest sections so my own context stays focused:
+   - DB + RLS + indexes audit
+   - Edge functions + AI cost/abuse audit
+   - Frontend perf + bundle + React anti-patterns
+   - Auth/roles/admin/teacher privilege model
+   - PWA + Push notifications end-to-end
+   - Payments + premium + promo + monetization
 
-### 5. Files to Create
-- `src/pages/TeacherDashboard.tsx`
-- `src/hooks/use-role.ts` (generic role hook)
+3. **Write the report** in the exact 16 sections you listed, with:
+   - Concrete file:line / table.policy references
+   - Severity tags (🔴 Critical / 🟠 High / 🟡 Medium / 🟢 Low)
+   - Numeric scores in Section 15
+   - A blunt verdict in Section 16 — what's real, what's fake progress, what scales, what doesn't, would-I-invest, what I'd ship first as CTO
 
-### 6. Files to Modify
-- `src/pages/AdminDashboard.tsx` (add Manage Users tab)
-- `src/App.tsx` (add teacher route)
-- `src/components/MobileBottomNav.tsx` (hide on teacher routes)
+4. **Emit** the file with a `<presentation-artifact>` tag so you can open/download it directly.
 
-### Technical Notes
-- Uses existing `app_role` enum, `has_role()` function, and `user_roles` table
-- No existing features are modified or removed
-- Storage bucket `study-materials` created for teacher uploads
+## Scope boundaries
+
+- Read-only. I will not change code, schema, or settings during the audit.
+- Any fixes get listed in Sections 13/14 with priority and effort; actual implementation is a separate follow-up turn you approve.
+- Estimated size: 25k–40k characters of report. Expect 8–15 minutes of exploration before the file appears.
+
+## What I need from you
+
+Just approve. If you want any section dropped or expanded (e.g. "skip investor section", "go harder on security"), say so now and I'll fold it in before writing.
