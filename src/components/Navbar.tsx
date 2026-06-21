@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNotifications } from "@/hooks/use-notifications";
 import { formatDistanceToNow } from "date-fns";
 import { Trash2, CheckCheck } from "lucide-react";
+import { PushSettingsPanel } from "@/components/PushSettingsPanel";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
