@@ -14,10 +14,19 @@ Deno.serve((req) => {
     });
   }
   let parsed: any;
-  try { parsed = JSON.parse(cfg); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG JSON' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  try {
+    parsed = JSON.parse(cfg);
+  } catch {
+    // Tolerate JS-object form (unquoted keys, single quotes, trailing commas).
+    try {
+      const m = cfg.match(/\{[\s\S]*\}/);
+      if (!m) throw new Error("no object");
+      parsed = (new Function("return (" + m[0] + ")"))();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid FIREBASE_WEB_CONFIG — must be a JSON object with apiKey, authDomain, projectId, messagingSenderId, appId' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
   return new Response(JSON.stringify({ config: parsed, vapidKey: vapid }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
