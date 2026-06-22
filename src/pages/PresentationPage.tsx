@@ -666,7 +666,7 @@ const PresentationPage = () => {
             <div className="flex items-center gap-2">
               <Palette className="w-4 h-4 text-muted-foreground" />
               <Select value={theme} onValueChange={(v) => setTheme(v as ThemeKey)}>
-                <SelectTrigger className="w-[180px] rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[200px] rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
                     <SelectItem key={key} value={key}>
@@ -676,7 +676,44 @@ const PresentationPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Dialog open={themePreviewOpen} onOpenChange={setThemePreviewOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 h-9 text-xs">
+                    <Eye className="w-3.5 h-3.5" /> Preview
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Choose a Theme — Live Preview</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                    {(Object.keys(THEMES) as ThemeKey[]).map((key) => {
+                      const tk = THEMES[key];
+                      const selected = theme === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => { setTheme(key); setThemePreviewOpen(false); toast.success(`Theme set: ${tk.label}`); }}
+                          className={`text-left rounded-xl p-2 border-2 transition-all ${
+                            selected ? "border-primary shadow-lg shadow-primary/20 bg-primary/5" : "border-border/40 hover:border-primary/40"
+                          }`}
+                        >
+                          <MiniSlide themeKey={key} />
+                          <div className="px-1 pt-2 pb-1 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">{tk.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{tk.desc}</p>
+                            </div>
+                            {selected && <Check className="w-4 h-4 text-primary" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
+
 
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">Slides:</label>
