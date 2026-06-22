@@ -33,6 +33,7 @@ const DocsGenPage = () => {
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [attachments, setAttachments] = useState<Array<{ name: string; mimeType: string; data: string; size: number }>>([]);
 
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
