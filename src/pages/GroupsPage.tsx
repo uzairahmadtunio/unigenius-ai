@@ -74,7 +74,7 @@ const GroupsPage = () => {
       // Also check owned groups
       const { data: owned } = await supabase
         .from("groups")
-        .select("*")
+        .select(GROUP_COLS)
         .eq("owner_id", user.id);
       setGroups((owned as Group[]) || []);
       setLoading(false);
@@ -84,13 +84,13 @@ const GroupsPage = () => {
     const groupIds = memberships.map(m => m.group_id);
     const { data } = await supabase
       .from("groups")
-      .select("*")
+      .select(GROUP_COLS)
       .in("id", groupIds);
 
     // Also get owned groups not yet in memberships
     const { data: owned } = await supabase
       .from("groups")
-      .select("*")
+      .select(GROUP_COLS)
       .eq("owner_id", user.id);
 
     const allGroups = new Map<string, Group>();
