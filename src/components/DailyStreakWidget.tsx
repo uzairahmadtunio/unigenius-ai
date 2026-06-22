@@ -13,8 +13,21 @@ const DailyStreakWidget = () => {
   const { currentStreak, longestStreak, totalActiveDays, loading } = useStreak();
   const [claimed, setClaimed] = useState(false);
   const [claiming, setClaiming] = useState(false);
-  const [canRecover, setCanRecover] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [recoveryRemaining, setRecoveryRemaining] = useState<number | null>(null);
+  const [isUnlimited, setIsUnlimited] = useState(false);
+  const [monthlyLimit, setMonthlyLimit] = useState(5);
+
+  const loadRecoveryStatus = async () => {
+    if (!user) return;
+    const { data } = await supabase.rpc("get_streak_recovery_status" as any);
+    const row: any = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setRecoveryRemaining(row.remaining ?? 0);
+      setIsUnlimited(!!row.is_unlimited);
+      setMonthlyLimit(row.monthly_limit ?? 5);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -27,19 +40,7 @@ const DailyStreakWidget = () => {
         const until = (data as any)?.streak_pro_until;
         if (until && new Date(until) > new Date()) setClaimed(true);
       });
-    // Check recovery eligibility: streak is 0 but they had one before, and no recovery in last 7 days
-    supabase
-      .from("streak_recoveries" as any)
-      .select("recovered_at")
-      .eq("user_id", user.id)
-      .order("recovered_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        const last = (data as any)?.recovered_at;
-        const okByCooldown = !last || Date.now() - new Date(last).getTime() > 7 * 86400000;
-        setCanRecover(okByCooldown);
-      });
+    loadRecoveryStatus();
   }, [user]);
 
   if (!user || loading) return null;
@@ -62,6 +63,7 @@ const DailyStreakWidget = () => {
   };
 
   const canClaimProDay = currentStreak >= 7 && !claimed;
+  const canRecover = isUnlimited || (recoveryRemaining ?? 0) > 0;
 
   const claimProDay = async () => {
     if (claiming) return;
@@ -80,15 +82,29 @@ const DailyStreakWidget = () => {
   const recoverStreak = async () => {
     if (!user || recovering) return;
     setRecovering(true);
-    const { error } = await supabase.from("streak_recoveries" as any).insert({ user_id: user.id } as any);
+    const { data, error } = await supabase.rpc("recover_streak" as any);
     setRecovering(false);
-    if (error) { toast.error("Couldn't recover streak"); return; }
-    setCanRecover(false);
+    if (error) {
+      toast.error("Couldn't restore streak. Please try again.");
+      return;
+    }
+    const row: any = Array.isArray(data) ? data[0] : data;
+    if (!row?.success) {
+      toast.error(`Monthly limit reached (${row?.monthly_limit ?? monthlyLimit}/month). Resets next month.`);
+      setRecoveryRemaining(0);
+      return;
+    }
+    setRecoveryRemaining(row.remaining ?? 0);
+    setIsUnlimited(!!row.is_unlimited);
     sessionStorage.removeItem(`streak_recorded_${user.id}`);
     confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-    toast.success("❤️ Streak revived! Keep going today.");
-    setTimeout(() => window.location.reload(), 800);
+    const remainingMsg = row.is_unlimited
+      ? "Unlimited restores available."
+      : `${row.remaining} restore${row.remaining === 1 ? "" : "s"} left this month.`;
+    toast.success(`Streak restored. ${remainingMsg}`);
+    setTimeout(() => window.location.reload(), 900);
   };
+
 
   return (
     <motion.div
@@ -136,16 +152,23 @@ const DailyStreakWidget = () => {
             </Button>
           )}
           {currentStreak === 0 && canRecover && (
-            <Button
-              size="sm"
-              onClick={recoverStreak}
-              disabled={recovering}
-              variant="outline"
-              className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500"
-            >
-              <Heart className="w-3.5 h-3.5" />
-              Revive Streak
-            </Button>
+            <div className="flex flex-col items-end gap-0.5">
+              <Button
+                size="sm"
+                onClick={recoverStreak}
+                disabled={recovering}
+                variant="outline"
+                className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500 hover:bg-rose-500/10"
+              >
+                <Heart className="w-3.5 h-3.5" />
+                {recovering ? "Restoring..." : "Restore Streak"}
+              </Button>
+              <span className="text-[9px] text-muted-foreground font-medium">
+                {isUnlimited
+                  ? "Admin · Unlimited"
+                  : `${recoveryRemaining ?? 0} of ${monthlyLimit} left this month`}
+              </span>
+            </div>
           )}
           <div className="text-center">
             <div className="flex items-center gap-1 justify-center">

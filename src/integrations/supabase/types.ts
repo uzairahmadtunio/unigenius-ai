@@ -1448,6 +1448,15 @@ export type Database = {
         }[]
       }
       get_send_push_secret: { Args: never; Returns: string }
+      get_streak_recovery_status: {
+        Args: never
+        Returns: {
+          is_unlimited: boolean
+          monthly_limit: number
+          remaining: number
+          used_this_month: number
+        }[]
+      }
       grant_streak_pro_day: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -1492,6 +1501,16 @@ export type Database = {
           longest_streak: number
           streak_increased: boolean
           total_active_days: number
+        }[]
+      }
+      recover_streak: {
+        Args: never
+        Returns: {
+          is_unlimited: boolean
+          monthly_limit: number
+          remaining: number
+          success: boolean
+          used_this_month: number
         }[]
       }
       shares_group_with: {
