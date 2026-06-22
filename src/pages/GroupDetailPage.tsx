@@ -103,8 +103,10 @@ const GroupDetailPage = () => {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const isOwner = user && group?.owner_id === user.id;
+
 
   useEffect(() => {
     if (user && groupId) {
