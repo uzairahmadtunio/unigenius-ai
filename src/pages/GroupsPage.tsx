@@ -19,7 +19,6 @@ interface Group {
   id: string;
   name: string;
   description: string | null;
-  invite_code: string;
   owner_id: string;
   semester: number;
   created_at: string;
@@ -27,6 +26,9 @@ interface Group {
   member_count?: number;
   is_owner?: boolean;
 }
+
+const GROUP_COLS = "id, name, description, owner_id, semester, created_at, avatar_url";
+
 
 const GroupAvatar = ({ url, name, size = "md" }: { url?: string | null; name?: string; size?: "sm" | "md" }) => {
   const sizes = { sm: "w-8 h-8", md: "w-10 h-10" };
