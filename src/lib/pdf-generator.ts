@@ -138,9 +138,9 @@ function renderCoverPage(doc: jsPDF, opts: PDFOptions) {
   drawLine(doc, PAGE_H - 40, 0.3, [20, 60, 120]);
   drawLine(doc, PAGE_H - 38, 1.2, [20, 60, 120]);
   doc.setFont("times", "italic");
-  doc.setFontSize(8);
-  doc.setTextColor(140, 140, 140);
-  doc.text("Generated with UniGenius AI — For Academic Purposes Only", CENTER_X, PAGE_H - 30, { align: "center" });
+  doc.setFontSize(9);
+  doc.setTextColor(120, 120, 120);
+  doc.text("Submitted in partial fulfillment of academic coursework", CENTER_X, PAGE_H - 30, { align: "center" });
 }
 
 // ── Parse markdown into structured sections ──
