@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles, Target, Eye, Trophy, Linkedin, Github, Heart } from "lucide-react";
+import { Sparkles, Target, Eye, Trophy, Linkedin, Github, Heart, Globe } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { Card } from "@/components/ui/card";
 import founderImg from "@/assets/founder-uzair.png";
@@ -103,6 +103,14 @@ const AboutPage = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-xs hover:bg-primary/10 transition-colors"
                   >
                     <Github className="w-3.5 h-3.5" /> GitHub
+                  </a>
+                  <a
+                    href="https://uzairahmadtunio.netlify.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-xs hover:bg-primary/10 transition-colors bg-primary/5"
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Portfolio
                   </a>
                 </div>
               </div>
