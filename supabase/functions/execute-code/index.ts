@@ -51,7 +51,11 @@ serve(async (req) => {
 
     const pistonResp = await fetch(PISTON_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "UniGeniusAI/1.0 (+https://unigenius.lovable.app)",
+      },
       body: JSON.stringify({
         language: target.language,
         version: target.version,

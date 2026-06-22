@@ -150,8 +150,29 @@ interface Section {
   content: string;
 }
 
+// Strip stray markdown / table artifacts that don't render in PDF.
+function sanitizeLine(s: string): string {
+  return s
+    // drop markdown table separator rows (|---|---|)
+    .replace(/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/g, "")
+    // convert "| a | b | c |" → "a    b    c"
+    .replace(/^\s*\|(.+)\|\s*$/g, (_m, inner) =>
+      inner
+        .split("|")
+        .map((c: string) => c.replace(/\*\*/g, "").trim())
+        .filter(Boolean)
+        .join("    ")
+    )
+    // remove stray horizontal rules
+    .replace(/^\s*-{3,}\s*$/g, "")
+    // remove stray backticks around single words (e.g. `do-while`)
+    .replace(/`([^`\n]{1,40})`/g, "$1")
+    // collapse leftover bold markers
+    .replace(/\*\*/g, "");
+}
+
 function parseMarkdownSections(markdown: string): Section[] {
-  const lines = markdown.split("\n");
+  const lines = markdown.split("\n").map(sanitizeLine);
   const sections: Section[] = [];
   let current: Section | null = null;
 
@@ -452,8 +473,7 @@ export function generateProfessionalPDF(content: string, opts: PDFOptions): void
   doc.addPage();
   renderContent(doc, content);
 
-  // Originality Report (new page)
-  renderOriginalityReport(doc);
+  // (Originality Report removed per user request)
 
   // Page numbers on every page (except cover)
   const totalPages = doc.getNumberOfPages();
