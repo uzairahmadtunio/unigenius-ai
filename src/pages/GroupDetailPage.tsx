@@ -429,10 +429,12 @@ const GroupDetailPage = () => {
             <h1 className="font-display font-bold text-foreground text-lg">{group?.name || "Loading..."}</h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{members.length} members</span>
-              <button onClick={copyCode} className="flex items-center gap-1 hover:text-primary transition-colors">
-                <Hash className="w-3 h-3" />{inviteCode}
-                <Copy className="w-2.5 h-2.5" />
-              </button>
+              {isOwner && inviteCode && (
+                <button onClick={copyCode} className="flex items-center gap-1 hover:text-primary transition-colors">
+                  <Hash className="w-3 h-3" />{inviteCode}
+                  <Copy className="w-2.5 h-2.5" />
+                </button>
+              )}
             </div>
           </div>
 
