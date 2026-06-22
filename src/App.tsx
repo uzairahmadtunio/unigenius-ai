@@ -105,6 +105,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <MobileBottomNav />
+              <SupportChatWidget />
             </BrowserRouter>
           </DarkModeInit>
         </DepartmentProvider>
