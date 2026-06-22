@@ -140,7 +140,7 @@ function renderCoverPage(doc: jsPDF, opts: PDFOptions) {
   doc.setFont("times", "italic");
   doc.setFontSize(9);
   doc.setTextColor(120, 120, 120);
-  doc.text("Submitted in partial fulfillment of academic coursework", CENTER_X, PAGE_H - 30, { align: "center" });
+  // (footer tagline removed per user request)
 }
 
 // ── Parse markdown into structured sections ──
@@ -585,11 +585,8 @@ export function generateDOCX(content: string, opts: PDFOptions): void {
   </table>
 </div>
 ${html}
-<div class="originality">
-  <h3>Originality Report</h3>
-  <p>This document was composed using AI-assisted technology (UniGenius AI). Content is uniquely generated and not directly copied from any single source. Students should review, personalize, and verify all content.</p>
-  <p><b style="color:#1E6420;">Estimated Originality: 85–95%</b></p>
-  <p style="font-size:9pt;color:#888;">Generated: ${new Date().toLocaleString("en-PK")}</p>
+<div class="originality" style="margin-top:30px;font-size:9pt;color:#888;text-align:center;">
+  <p>Date: ${new Date().toLocaleDateString("en-PK", { year: "numeric", month: "long", day: "numeric" })}</p>
 </div>
 </body></html>`;
 

@@ -43,7 +43,7 @@ serve(async (req) => {
     const hasMedia = media.length > 0;
 
     const mediaClause = hasMedia
-      ? `\n\nIMPORTANT: The teacher's original assignment / lab brief is attached as ${media.length} file(s) above. Read every page carefully. Extract every task, question, objective, instruction, and constraint EXACTLY as written. Do not invent tasks the teacher did not ask for. Do not skip any task. Use the SAME task numbering and wording the teacher used.`
+      ? `\n\nCRITICAL — TEACHER'S BRIEF ATTACHED: The teacher's original lab/assignment brief is attached as ${media.length} file(s) above (images/PDF). Read EVERY page from top to bottom. Identify EVERY numbered task (Task 1, Task 2, Task 3, ... right up to the last one). You MUST generate one full section for EACH AND EVERY task found in the brief — DO NOT stop after Task 1, DO NOT merge tasks, DO NOT skip any task even if it looks similar to another. Use the teacher's exact wording and the same task numbers (Task 1, Task 2, ...). Count the tasks first, then write that many sections.`
       : "";
 
     const prompt = type === "lab"
@@ -55,13 +55,16 @@ STRICT FORMATTING RULES:
 - DO NOT use horizontal rules (---).
 - DO NOT wrap normal keywords like do-while, for, while, if in backticks. Only use \`\`\`cpp ... \`\`\` fenced blocks for actual code, and \`\`\` ... \`\`\` for output. Never inline-backtick single words.
 - Use plain prose. Short, clear sentences. Beginner-friendly.
+- Keep each task's code concise (15-30 lines) so all tasks fit. Do NOT pad with comments.
 
 STRUCTURE — start directly with:
 
 ## Lab Objectives
 A short paragraph (2-3 sentences) describing what the student will learn${hasMedia ? " (paraphrase the objectives from the attached brief)" : ""}.
 
-Then generate ${hasMedia ? "ONE task per task that appears in the attached brief (do not merge or skip)" : "3 to 5 tasks"}. Each task in this EXACT format:
+${hasMedia
+  ? `Then generate ONE \"## Task N: ...\" section for EVERY task in the attached brief — if the brief has 6 tasks, output 6 task sections. Do not stop early.`
+  : `Then generate 3 to 5 tasks.`} Each task in this EXACT format:
 
 ## Task 1: <short descriptive title>
 
@@ -71,7 +74,7 @@ Then generate ${hasMedia ? "ONE task per task that appears in the attached brief
 
 **Code:**
 \`\`\`cpp
-// complete, runnable, beginner-friendly C++ code that solves the task
+// complete, runnable, beginner-friendly C++ code (keep it short, 15-30 lines)
 \`\`\`
 
 **Expected Output:**
@@ -81,10 +84,11 @@ Then generate ${hasMedia ? "ONE task per task that appears in the attached brief
 
 **Explanation:** A short 2-3 sentence plain-English explanation of how the code works.
 
-After all tasks, end with:
+After ALL tasks (not after Task 1), end with:
 
 ## Conclusion
-A 3-4 sentence wrap-up of what was learned.${extra}`
+A 3-4 sentence wrap-up of what was learned across all tasks.${extra}`
+
       : `Generate a complete academic Assignment on the topic "${topic}" for the subject "${subject}".${mediaClause}
 
 STRICT FORMATTING RULES:
@@ -141,7 +145,7 @@ A short numbered list of 3-5 plausible academic references.${extra}`;
       geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
       },
       systemText,
       contents,
