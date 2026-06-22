@@ -325,7 +325,7 @@ const GroupDetailPage = () => {
 
   const copyCode = () => {
     if (group) {
-      navigator.clipboard.writeText(group.invite_code);
+      navigator.clipboard.writeText(inviteCode);
       toast.success("Invite code copied!");
     }
   };
@@ -427,7 +427,7 @@ const GroupDetailPage = () => {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{members.length} members</span>
               <button onClick={copyCode} className="flex items-center gap-1 hover:text-primary transition-colors">
-                <Hash className="w-3 h-3" />{group?.invite_code}
+                <Hash className="w-3 h-3" />{inviteCode}
                 <Copy className="w-2.5 h-2.5" />
               </button>
             </div>
@@ -542,7 +542,7 @@ const GroupDetailPage = () => {
                   <div className="glass rounded-xl p-3 flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Share this code</p>
-                      <p className="font-mono font-bold text-foreground text-lg">{group?.invite_code}</p>
+                      <p className="font-mono font-bold text-foreground text-lg">{inviteCode}</p>
                     </div>
                     <Button size="sm" variant="outline" onClick={copyCode} className="rounded-xl gap-1">
                       <Copy className="w-3 h-3" /> Copy
