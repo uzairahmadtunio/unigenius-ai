@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Download, Loader2, Bot, FileDown, File } from "lucide-react";
+import { FileText, Download, Loader2, Bot, FileDown, File, Paperclip, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,7 @@ const DocsGenPage = () => {
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [content, setContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [attachments, setAttachments] = useState<Array<{ name: string; mimeType: string; data: string; size: number }>>([]);
 
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
@@ -65,6 +66,35 @@ const DocsGenPage = () => {
     }
   }, [user, department]);
 
+  const handleFilePick = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const MAX_TOTAL = 8 * 1024 * 1024; // ~8 MB combined
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/jpg", "application/pdf"];
+    const next = [...attachments];
+    let total = next.reduce((s, a) => s + a.size, 0);
+
+    for (const f of Array.from(files)) {
+      if (next.length >= 6) { toast.error("Max 6 files"); break; }
+      if (!allowed.includes(f.type)) { toast.error(`${f.name}: only images or PDF`); continue; }
+      if (total + f.size > MAX_TOTAL) { toast.error("Total attachment size exceeds 8 MB"); break; }
+      const data = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const result = String(r.result || "");
+          const idx = result.indexOf(",");
+          resolve(idx >= 0 ? result.slice(idx + 1) : result);
+        };
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(f);
+      });
+      next.push({ name: f.name, mimeType: f.type, data, size: f.size });
+      total += f.size;
+    }
+    setAttachments(next);
+  };
+
+  const removeAttachment = (i: number) => setAttachments(attachments.filter((_, idx) => idx !== i));
+
   const generateDoc = async () => {
     if (!subject || !topic.trim()) { toast.error("Select a subject and enter a topic"); return; }
     setIsGenerating(true);
@@ -83,6 +113,7 @@ const DocsGenPage = () => {
           topic,
           additionalNotes,
           semester,
+          media: attachments.map(a => ({ mimeType: a.mimeType, data: a.data })),
           studentInfo: {
             name: studentName || "",
             rollNumber: rollNumber || "",
@@ -238,6 +269,47 @@ const DocsGenPage = () => {
                 rows={2}
               />
             </div>
+
+            {/* Teacher brief upload (image / PDF) */}
+            <div className="space-y-2 border-t border-border/50 pt-4">
+              <label className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5" />
+                Teacher's Brief (optional)
+              </label>
+              <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 rounded-xl border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-colors">
+                <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground text-center leading-tight">
+                  Upload teacher's assignment / lab manual<br />
+                  <span className="text-[10px] opacity-70">Images or PDF · up to 6 files · 8 MB total</span>
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { handleFilePick(e.target.files); e.target.value = ""; }}
+                />
+              </label>
+              {attachments.length > 0 && (
+                <div className="space-y-1.5">
+                  {attachments.map((a, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/40 border border-border/40">
+                      <File className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                      <span className="text-xs text-foreground truncate flex-1">{a.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{(a.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        onClick={() => removeAttachment(i)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label="Remove"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
 
             <Button
               onClick={generateDoc}
