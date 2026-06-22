@@ -283,4 +283,10 @@ const SupportChatWidgetInner = () => {
   );
 };
 
+const SupportChatWidget = () => {
+  const location = useLocation();
+  if (!ALLOWED_ROUTES.includes(location.pathname)) return null;
+  return <SupportChatWidgetInner />;
+};
+
 export default SupportChatWidget;
