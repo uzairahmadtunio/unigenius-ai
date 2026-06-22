@@ -26,6 +26,7 @@ const DynamicIcon = ({ name, ...props }: { name: string } & Omit<LucideProps, "r
 interface Slide {
   title: string;
   subtitle?: string;
+  paragraph?: string;
   bullets: string[];
   imageSuggestion: string;
   imageUrl?: string;
@@ -330,7 +331,8 @@ const PresentationPage = () => {
       const enriched: Slide[] = data.slides.map((s: any) => ({
         title: s.title || "Untitled",
         subtitle: s.subtitle || "",
-        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 3),
+        paragraph: s.paragraph || "",
+        bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 6),
         imageSuggestion: s.imageSuggestion || "",
         imageUrl: "",
         icon: s.icon || "presentation",
@@ -445,18 +447,32 @@ const PresentationPage = () => {
           }
         } else {
           // Header bar
-          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.6, fill: { color: t.pptxHeaderBg } });
+          s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.2, fill: { color: t.pptxHeaderBg } });
           s.addText(slide.title, {
-            x: 0.8, y: 0.2, w: 11.73, h: 1.2, fontSize: 36, bold: true,
+            x: 0.6, y: 0.2, w: 12.13, h: 0.9, fontSize: 30, bold: true,
             color: t.pptxTitle, fontFace: "Arial",
           });
 
-          const textWidth = hasImage ? 7 : 10.5;
-          // Bullets
+          const textWidth = hasImage ? 7.6 : 12;
+          let cursorY = 1.5;
+
+          if (slide.paragraph) {
+            s.addText(slide.paragraph, {
+              x: 0.6, y: cursorY, w: textWidth, h: 1, fontSize: 16, italic: true,
+              color: t.pptxBullet, fontFace: "Arial", lineSpacing: 22,
+            });
+            cursorY += 1.1;
+          }
+
+          // Bullets — auto-size based on count
+          const bulletCount = slide.bullets.length || 1;
+          const availH = 6.6 - cursorY;
+          const rowH = Math.min(0.7, availH / bulletCount);
+          const fontSize = bulletCount <= 4 ? 20 : 17;
           slide.bullets.forEach((bullet, bIdx) => {
             s.addText(`•   ${bullet}`, {
-              x: 1.4, y: 2.3 + bIdx * 1.4, w: textWidth, fontSize: 28, color: t.pptxBullet,
-              fontFace: "Arial", lineSpacing: 32,
+              x: 0.8, y: cursorY + bIdx * rowH, w: textWidth, h: rowH, fontSize, color: t.pptxBullet,
+              fontFace: "Arial", valign: "top",
             });
           });
 
@@ -465,7 +481,7 @@ const PresentationPage = () => {
             try {
               s.addImage({
                 data: imageDataMap[idx],
-                x: 8.8, y: 2, w: 4, h: 4,
+                x: 8.6, y: 1.5, w: 4.4, h: 4.4,
                 rounding: true,
               });
             } catch { /* skip */ }
@@ -513,13 +529,18 @@ const PresentationPage = () => {
           </div>
         </div>
         {/* Content: text + image side by side */}
-        <div className="flex gap-4 px-6 py-6">
-          {/* Bullets */}
-          <div className={`space-y-4 ${slide.imageUrl ? "flex-1" : "w-full"}`}>
+        <div className="flex gap-4 px-6 py-5">
+          {/* Bullets + paragraph */}
+          <div className={`space-y-3 ${slide.imageUrl ? "flex-1" : "w-full"}`}>
+            {slide.paragraph && (
+              <p className={`text-sm sm:text-base leading-relaxed italic opacity-90 ${t.slideBulletColor} mb-2`}>
+                {slide.paragraph}
+              </p>
+            )}
             {slide.bullets.map((bullet, bIdx) => (
               <div key={bIdx} className={`flex items-start gap-3 ${t.slideBulletColor}`}>
-                <span className={`w-2.5 h-2.5 rounded-full ${t.slideBulletDot} mt-1.5 flex-shrink-0`} />
-                <span className="text-base sm:text-lg font-medium leading-relaxed">{bullet}</span>
+                <span className={`w-2 h-2 rounded-full ${t.slideBulletDot} mt-2 flex-shrink-0`} />
+                <span className="text-sm sm:text-base font-medium leading-relaxed">{bullet}</span>
               </div>
             ))}
           </div>
