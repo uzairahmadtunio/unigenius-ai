@@ -66,6 +66,35 @@ const DocsGenPage = () => {
     }
   }, [user, department]);
 
+  const handleFilePick = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const MAX_TOTAL = 8 * 1024 * 1024; // ~8 MB combined
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/jpg", "application/pdf"];
+    const next = [...attachments];
+    let total = next.reduce((s, a) => s + a.size, 0);
+
+    for (const f of Array.from(files)) {
+      if (next.length >= 6) { toast.error("Max 6 files"); break; }
+      if (!allowed.includes(f.type)) { toast.error(`${f.name}: only images or PDF`); continue; }
+      if (total + f.size > MAX_TOTAL) { toast.error("Total attachment size exceeds 8 MB"); break; }
+      const data = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const result = String(r.result || "");
+          const idx = result.indexOf(",");
+          resolve(idx >= 0 ? result.slice(idx + 1) : result);
+        };
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(f);
+      });
+      next.push({ name: f.name, mimeType: f.type, data, size: f.size });
+      total += f.size;
+    }
+    setAttachments(next);
+  };
+
+  const removeAttachment = (i: number) => setAttachments(attachments.filter((_, idx) => idx !== i));
+
   const generateDoc = async () => {
     if (!subject || !topic.trim()) { toast.error("Select a subject and enter a topic"); return; }
     setIsGenerating(true);
@@ -84,6 +113,7 @@ const DocsGenPage = () => {
           topic,
           additionalNotes,
           semester,
+          media: attachments.map(a => ({ mimeType: a.mimeType, data: a.data })),
           studentInfo: {
             name: studentName || "",
             rollNumber: rollNumber || "",
