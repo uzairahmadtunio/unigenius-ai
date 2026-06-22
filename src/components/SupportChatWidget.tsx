@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircleQuestion, Send, X, ChevronDown } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +9,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SupportChatWidget = () => {
+// Only show the floating help widget on these low-distraction pages.
+// Everywhere else (chat, code lab, viva, admin, docs, exam prep, etc.)
+// it stays hidden so it never overlaps the user's working area.
+const ALLOWED_ROUTES = ["/contact", "/profile", "/premium"];
+
+const SupportChatWidgetInner = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem("support_widget_dismissed") === "1"
+  );
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [unreadAdmin, setUnreadAdmin] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+
 
   // Find or create ticket
   useEffect(() => {
@@ -141,6 +152,8 @@ const SupportChatWidget = () => {
 
   if (!user) return null;
 
+  if (dismissed) return null;
+
   return (
     <>
       {/* Floating Button */}
@@ -150,8 +163,18 @@ const SupportChatWidget = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className="fixed bottom-24 md:bottom-6 right-6 z-50"
+            className="fixed bottom-24 md:bottom-6 right-6 z-50 flex flex-col items-end gap-1"
           >
+            <button
+              onClick={() => {
+                sessionStorage.setItem("support_widget_dismissed", "1");
+                setDismissed(true);
+              }}
+              aria-label="Hide help widget"
+              className="w-5 h-5 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground text-[10px] flex items-center justify-center shadow"
+            >
+              ×
+            </button>
             <Button
               onClick={() => setOpen(true)}
               className="rounded-full w-14 h-14 shadow-lg gradient-primary relative"
@@ -167,6 +190,7 @@ const SupportChatWidget = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
 
       {/* Chat Panel */}
       <AnimatePresence>
@@ -257,6 +281,12 @@ const SupportChatWidget = () => {
       </AnimatePresence>
     </>
   );
+};
+
+const SupportChatWidget = () => {
+  const location = useLocation();
+  if (!ALLOWED_ROUTES.includes(location.pathname)) return null;
+  return <SupportChatWidgetInner />;
 };
 
 export default SupportChatWidget;

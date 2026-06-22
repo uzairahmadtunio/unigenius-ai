@@ -64,7 +64,6 @@ const App = () => (
             <Toaster />
             <Sonner />
             <GlobalAlertBanner />
-            <SupportChatWidget />
             <BrowserRouter>
               <ScrollToTop />
               <Routes>
@@ -106,6 +105,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <MobileBottomNav />
+              <SupportChatWidget />
             </BrowserRouter>
           </DarkModeInit>
         </DepartmentProvider>
