@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import PageShell from "@/components/PageShell";
-import { departmentInfo, Department } from "@/contexts/DepartmentContext";
+import { departmentInfo, Department, useDepartment } from "@/contexts/DepartmentContext";
 
 interface LeaderboardEntry {
   user_id: string;
@@ -30,6 +30,7 @@ type ScopeFilter = "global" | "department" | "semester" | "me";
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
+  const { department: activeDept } = useDepartment();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("global");
 
@@ -48,8 +49,11 @@ const LeaderboardPage = () => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Active department always reflects the navbar selection (live), falling back to the saved profile dept.
+  const effectiveDept: Department | null = activeDept ?? profile?.department ?? null;
+
   const semesterParam = scopeFilter === "semester" && profile?.current_semester ? profile.current_semester : null;
-  const departmentParam = scopeFilter === "department" && profile?.department ? profile.department : null;
+  const departmentParam = scopeFilter === "department" && effectiveDept ? effectiveDept : null;
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["leaderboard", timeFilter, scopeFilter, semesterParam, departmentParam],
@@ -74,7 +78,7 @@ const LeaderboardPage = () => {
     ? (currentUserEntry ? [currentUserEntry] : [])
     : ranked.slice(0, 25);
 
-  const missingDept = scopeFilter === "department" && !profile?.department;
+  const missingDept = scopeFilter === "department" && !effectiveDept;
   const missingSem = scopeFilter === "semester" && !profile?.current_semester;
 
   const deptLabel = (d?: Department | null) => (d ? departmentInfo[d].name : "—");
@@ -158,9 +162,9 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Scope description */}
-        {scopeFilter === "department" && profile?.department && (
+        {scopeFilter === "department" && effectiveDept && (
           <p className="text-xs text-muted-foreground">
-            Showing only <span className="font-semibold text-foreground">{departmentInfo[profile.department].fullName}</span> students.
+            Showing only <span className="font-semibold text-foreground">{departmentInfo[effectiveDept].fullName}</span> students.
           </p>
         )}
         {scopeFilter === "semester" && profile?.current_semester && (
