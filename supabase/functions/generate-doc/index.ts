@@ -145,7 +145,7 @@ A short numbered list of 3-5 plausible academic references.${extra}`;
       geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 32768 },
       },
       systemText,
       contents,
