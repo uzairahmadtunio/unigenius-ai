@@ -16,6 +16,7 @@ const WANDBOX_URL = "https://wandbox.org/api/compile.json";
 const LANG_MAP: Record<string, { compiler: string; label: string }> = {
   cpp: { compiler: "gcc-13.2.0", label: "C++ (gcc 13.2.0)" },
   python: { compiler: "cpython-3.12.7", label: "Python 3.12.7" },
+  javascript: { compiler: "nodejs-18.16.0", label: "Node.js 18.16.0" },
 };
 
 serve(async (req) => {
@@ -31,7 +32,9 @@ serve(async (req) => {
     const body = await req.json();
     const language = clampString(body.language, 16);
     const code = clampString(body.code, 50_000);
-    const stdin = clampString(body.stdin, 20_000);
+    let stdin = clampString(body.stdin, 20_000);
+    // Ensure stdin terminates with a newline so cin/input()/readline() flush the last value.
+    if (stdin && !stdin.endsWith("\n")) stdin += "\n";
 
     const target = LANG_MAP[language];
     if (!target) {
