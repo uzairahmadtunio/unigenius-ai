@@ -243,9 +243,134 @@ export async function streamChatWithFailover({
 }
 
 /**
+ * Recursively lowercases Gemini's schema "type" fields (OBJECT/ARRAY/STRING ...)
+ * so the schema is valid JSON Schema for OpenAI-compatible tool calling.
+ */
+function geminiSchemaToOpenAI(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+  if (Array.isArray(schema)) return schema.map(geminiSchemaToOpenAI);
+  const out: any = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (k === "type" && typeof v === "string") {
+      out.type = v.toLowerCase();
+    } else if (k === "properties" && v && typeof v === "object") {
+      out.properties = {};
+      for (const [pk, pv] of Object.entries(v as Record<string, unknown>)) {
+        out.properties[pk] = geminiSchemaToOpenAI(pv);
+      }
+    } else if (k === "items") {
+      out.items = geminiSchemaToOpenAI(v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/**
+ * Translate a Gemini-style body (system_instruction + contents + tools/function_declarations)
+ * into an OpenAI chat-completions body suitable for the Lovable AI Gateway.
+ */
+function geminiBodyToOpenAI(geminiBody: any): Record<string, unknown> {
+  const systemText: string | undefined =
+    geminiBody?.system_instruction?.parts?.map((p: any) => p.text).filter(Boolean).join("\n");
+  const messages: any[] = [];
+  if (systemText) messages.push({ role: "system", content: systemText });
+
+  for (const c of geminiBody?.contents || []) {
+    const role = c.role === "model" ? "assistant" : "user";
+    const blocks: any[] = [];
+    for (const p of c.parts || []) {
+      if (p.text) blocks.push({ type: "text", text: p.text });
+      const inline = p.inline_data || p.inlineData;
+      if (inline?.data && inline?.mime_type) {
+        if (String(inline.mime_type).startsWith("image/")) {
+          blocks.push({
+            type: "image_url",
+            image_url: { url: `data:${inline.mime_type};base64,${inline.data}` },
+          });
+        }
+      }
+    }
+    if (blocks.length === 1 && blocks[0].type === "text") {
+      messages.push({ role, content: blocks[0].text });
+    } else if (blocks.length > 0) {
+      messages.push({ role, content: blocks });
+    }
+  }
+
+  const tools: any[] = [];
+  let toolChoice: any;
+  for (const t of geminiBody?.tools || []) {
+    for (const fd of t.function_declarations || []) {
+      tools.push({
+        type: "function",
+        function: {
+          name: fd.name,
+          description: fd.description || "",
+          parameters: geminiSchemaToOpenAI(fd.parameters) || { type: "object", properties: {} },
+        },
+      });
+    }
+  }
+  const allowed: string[] | undefined =
+    geminiBody?.tool_config?.function_calling_config?.allowed_function_names;
+  if (allowed && allowed.length === 1) {
+    toolChoice = { type: "function", function: { name: allowed[0] } };
+  } else if (tools.length > 0) {
+    toolChoice = "auto";
+  }
+
+  return {
+    model: "google/gemini-2.5-flash",
+    messages,
+    ...(tools.length > 0 ? { tools, tool_choice: toolChoice } : {}),
+  };
+}
+
+/**
+ * Call Lovable AI Gateway and reshape the response to match Gemini's
+ * candidates[0].content.parts[].functionCall shape that existing callers expect.
+ */
+async function callLovableGatewayAsGemini(
+  geminiBody: Record<string, unknown>,
+): Promise<any | null> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) return null;
+  try {
+    const payload = geminiBodyToOpenAI(geminiBody);
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      console.warn("Lovable Gateway (gen) returned", resp.status, await resp.text().catch(() => ""));
+      return null;
+    }
+    const json = await resp.json();
+    const msg = json?.choices?.[0]?.message;
+    const parts: any[] = [];
+    if (msg?.content) parts.push({ text: String(msg.content) });
+    for (const tc of msg?.tool_calls || []) {
+      let args: any = {};
+      try { args = JSON.parse(tc?.function?.arguments || "{}"); } catch { args = {}; }
+      parts.push({ functionCall: { name: tc?.function?.name, args } });
+    }
+    return { candidates: [{ content: { parts } }] };
+  } catch (e) {
+    console.warn("Lovable Gateway (gen) threw:", e);
+    return null;
+  }
+}
+
+/**
  * Non-streaming JSON helper (for tool-calling / structured output).
- * Tries Gemini key rotation only — Lovable Gateway / Groq don't share Gemini's
- * function_declarations format, so we keep the existing tool-calling shape intact.
+ * Order: Gemini key rotation → Lovable AI Gateway fallback (LOVABLE_API_KEY).
+ * The Lovable fallback is critical when Gemini keys are revoked/leaked.
  */
 export async function generateContentWithFailover({
   modelPath,
@@ -255,30 +380,35 @@ export async function generateContentWithFailover({
   modelPath: string;
   geminiBody: Record<string, unknown>;
   corsHeaders: Record<string, string>;
-}): Promise<{ data: any; tier: "gemini"; keyIndex: number } | Response> {
+}): Promise<{ data: any; tier: "gemini" | "lovable"; keyIndex: number } | Response> {
   const result = await callGeminiWithRotation(modelPath, geminiBody, false);
-  if (!result) {
-    return new Response(
-      JSON.stringify({ error: "All AI keys are rate-limited. Please try again shortly." }),
-      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+
+  // Success on Gemini
+  if (result && result.response.ok) {
+    const data = await result.response.json();
+    return { data, tier: "gemini", keyIndex: result.keyIndex };
   }
-  if (!result.response.ok) {
-    const t = await result.response.text();
-    console.error("Gemini final error:", result.response.status, t);
-    if (result.response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded across all keys." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    return new Response(
-      JSON.stringify({ error: "AI service error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+
+  // Gemini failed (rate-limit, leaked key 403, server error, etc.) — try Lovable Gateway
+  if (result && !result.response.ok) {
+    const errText = await result.response.text().catch(() => "");
+    console.error("Gemini final error:", result.response.status, errText);
   }
-  const data = await result.response.json();
-  return { data, tier: "gemini", keyIndex: result.keyIndex };
+
+  const lovableData = await callLovableGatewayAsGemini(geminiBody);
+  if (lovableData) {
+    return { data: lovableData, tier: "lovable", keyIndex: -1 };
+  }
+
+  // Both providers failed
+  const status = result?.response.status === 429 ? 429 : 503;
+  const message = status === 429
+    ? "Rate limit exceeded. Please try again shortly."
+    : "AI service temporarily unavailable. Please try again.";
+  return new Response(
+    JSON.stringify({ error: message }),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
 }
 
 /**
