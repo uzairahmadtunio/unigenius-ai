@@ -286,14 +286,17 @@ const GroupsPage = () => {
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" /> {g.member_count || 1}
                       </span>
-                      <button
-                        onClick={e => { e.stopPropagation(); copyInviteCode(g.invite_code); }}
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        title="Copy invite code"
-                      >
-                        <Hash className="w-3 h-3" /> {g.invite_code}
-                        <Copy className="w-2.5 h-2.5" />
-                      </button>
+                      {g.is_owner && (
+                        <button
+                          onClick={e => { e.stopPropagation(); copyInviteCode(g.id); }}
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
+                          title="Copy invite code"
+                        >
+                          <Hash className="w-3 h-3" /> Copy code
+                          <Copy className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
