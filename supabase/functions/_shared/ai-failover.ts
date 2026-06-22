@@ -88,7 +88,8 @@ async function callLovableGateway(
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${key}`,
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "edge-fetch",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(openaiPayload),
@@ -100,6 +101,10 @@ async function callLovableGateway(
     console.warn("Lovable Gateway threw:", e);
     return null;
   }
+}
+
+function toGatewayModel(modelPath: string): string {
+  return modelPath.startsWith("google/") ? modelPath : `google/${modelPath}`;
 }
 
 /**
@@ -136,16 +141,26 @@ async function callGroq(
 export function geminiContentsToOpenAI(
   contents: any[],
   systemText?: string,
-): { role: string; content: string }[] {
-  const msgs: { role: string; content: string }[] = [];
+): any[] {
+  const msgs: any[] = [];
   if (systemText) msgs.push({ role: "system", content: systemText });
   for (const c of contents || []) {
     const role = c.role === "model" ? "assistant" : "user";
-    const text = (c.parts || [])
-      .map((p: any) => p.text)
-      .filter(Boolean)
-      .join("\n");
-    if (text) msgs.push({ role, content: text });
+    const blocks: any[] = [];
+    for (const p of c.parts || []) {
+      if (p.text) blocks.push({ type: "text", text: p.text });
+      const inline = p.inline_data || p.inlineData;
+      const mimeType = inline?.mime_type || inline?.mimeType;
+      if (inline?.data && mimeType) {
+        if (String(mimeType).startsWith("image/")) {
+          blocks.push({ type: "image_url", image_url: { url: `data:${mimeType};base64,${inline.data}` } });
+        } else if (String(mimeType).includes("pdf")) {
+          blocks.push({ type: "file", file: { filename: "uploaded-brief.pdf", file_data: `data:${mimeType};base64,${inline.data}` } });
+        }
+      }
+    }
+    if (blocks.length === 1 && blocks[0].type === "text") msgs.push({ role, content: blocks[0].text });
+    else if (blocks.length > 0) msgs.push({ role, content: blocks });
   }
   return msgs;
 }
@@ -186,12 +201,14 @@ export async function streamChatWithFailover({
 }): Promise<Response> {
   const multimodal = hasMultimodal(contents);
 
-  // Tier 1: Lovable Gateway (text-only fallback path)
-  if (allowLovable && !multimodal) {
+  // Tier 1: Lovable Gateway (supports text + image/PDF blocks in chat-completions format)
+  if (allowLovable) {
     const openaiMessages = geminiContentsToOpenAI(contents, systemText);
     const lovableResp = await callLovableGateway({
-      model: "google/gemini-2.5-flash",
+      model: toGatewayModel(modelPath),
       messages: openaiMessages,
+      max_tokens: (geminiBody as any)?.generationConfig?.maxOutputTokens || 8192,
+      temperature: (geminiBody as any)?.generationConfig?.temperature ?? 0.5,
       stream: true,
     });
     if (lovableResp && lovableResp.body) {
@@ -272,7 +289,7 @@ function geminiSchemaToOpenAI(schema: any): any {
  * Translate a Gemini-style body (system_instruction + contents + tools/function_declarations)
  * into an OpenAI chat-completions body suitable for the Lovable AI Gateway.
  */
-function geminiBodyToOpenAI(geminiBody: any): Record<string, unknown> {
+function geminiBodyToOpenAI(geminiBody: any, modelPath = "gemini-2.5-flash"): Record<string, unknown> {
   const systemText: string | undefined =
     geminiBody?.system_instruction?.parts?.map((p: any) => p.text).filter(Boolean).join("\n");
   const messages: any[] = [];
@@ -289,6 +306,11 @@ function geminiBodyToOpenAI(geminiBody: any): Record<string, unknown> {
           blocks.push({
             type: "image_url",
             image_url: { url: `data:${inline.mime_type};base64,${inline.data}` },
+          });
+        } else if (String(inline.mime_type).includes("pdf")) {
+          blocks.push({
+            type: "file",
+            file: { filename: "uploaded-brief.pdf", file_data: `data:${inline.mime_type};base64,${inline.data}` },
           });
         }
       }
@@ -323,8 +345,10 @@ function geminiBodyToOpenAI(geminiBody: any): Record<string, unknown> {
   }
 
   return {
-    model: "google/gemini-2.5-flash",
+    model: toGatewayModel(modelPath),
     messages,
+    max_tokens: geminiBody?.generationConfig?.maxOutputTokens || 8192,
+    temperature: geminiBody?.generationConfig?.temperature ?? 0.5,
     ...(tools.length > 0 ? { tools, tool_choice: toolChoice } : {}),
   };
 }
@@ -335,15 +359,17 @@ function geminiBodyToOpenAI(geminiBody: any): Record<string, unknown> {
  */
 async function callLovableGatewayAsGemini(
   geminiBody: Record<string, unknown>,
+  modelPath: string,
 ): Promise<any | null> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) return null;
   try {
-    const payload = geminiBodyToOpenAI(geminiBody);
+    const payload = geminiBodyToOpenAI(geminiBody, modelPath);
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${key}`,
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "edge-fetch",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -396,7 +422,7 @@ export async function generateContentWithFailover({
     console.error("Gemini final error:", result.response.status, errText);
   }
 
-  const lovableData = await callLovableGatewayAsGemini(geminiBody);
+  const lovableData = await callLovableGatewayAsGemini(geminiBody, modelPath);
   if (lovableData) {
     return { data: lovableData, tier: "lovable", keyIndex: -1 };
   }

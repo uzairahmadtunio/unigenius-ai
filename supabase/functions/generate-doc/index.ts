@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/auth.ts";
-import { streamChatWithFailover } from "../_shared/ai-failover.ts";
+import { generateContentWithFailover, streamChatWithFailover } from "../_shared/ai-failover.ts";
 import { enforceBodySize, clampString } from "../_shared/limits.ts";
 
 const corsHeaders = {
@@ -8,6 +8,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Expose-Headers": "x-ai-tier, x-ai-key-index",
 };
+
+async function extractBriefTasks(media: Array<{ mimeType: string; data: string }>, docType: string) {
+  if (media.length === 0) return "";
+
+  const parts: any[] = media.map((m) => ({ inline_data: { mime_type: m.mimeType, data: m.data } }));
+  parts.push({ text: `Read the attached teacher brief carefully, including tiny text in screenshots. Extract EVERY numbered task/question in order. Return ONLY compact JSON: {"taskCount":number,"tasks":[{"number":number,"title":"short title","statement":"exact task wording"}]}. If ${docType === "lab" ? "six" : "multiple"} tasks are visible, include all of them, not only Task 1.` });
+
+  const result = await generateContentWithFailover({
+    modelPath: "gemini-2.5-pro",
+    geminiBody: {
+      system_instruction: { parts: [{ text: "You are an OCR-quality academic brief extractor. Your only job is to read attached images/PDFs and list all tasks/questions exactly in order." }] },
+      contents: [{ role: "user", parts }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+    },
+    corsHeaders,
+  });
+
+  if (result instanceof Response) return "";
+  const text = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : text);
+    const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+    if (!tasks.length) return text;
+    return `\n\nEXTRACTED TEACHER TASKS (${parsed.taskCount || tasks.length} total):\n${tasks.map((t: any, i: number) => `Task ${t.number || i + 1}: ${t.statement || t.title || ""}`.trim()).join("\n")}`;
+  } catch {
+    return text ? `\n\nEXTRACTED TEACHER TASKS:\n${text}` : "";
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -41,9 +70,10 @@ serve(async (req) => {
 
     const extra = additionalNotes ? `\n\nAdditional instructions from student: ${additionalNotes}` : "";
     const hasMedia = media.length > 0;
+    const extractedTasks = await extractBriefTasks(media, type);
 
     const mediaClause = hasMedia
-      ? `\n\nCRITICAL — TEACHER'S BRIEF ATTACHED: The teacher's original lab/assignment brief is attached as ${media.length} file(s) above (images/PDF). Read EVERY page from top to bottom. Identify EVERY numbered task (Task 1, Task 2, Task 3, ... right up to the last one). You MUST generate one full section for EACH AND EVERY task found in the brief — DO NOT stop after Task 1, DO NOT merge tasks, DO NOT skip any task even if it looks similar to another. Use the teacher's exact wording and the same task numbers (Task 1, Task 2, ...). Count the tasks first, then write that many sections.`
+      ? `\n\nCRITICAL — TEACHER'S BRIEF ATTACHED: The teacher's original lab/assignment brief is attached as ${media.length} file(s) above (images/PDF). First use this extracted task list as authoritative, then cross-check the attachment. You MUST generate one full section for EACH AND EVERY task listed — DO NOT stop after Task 1, DO NOT merge tasks, DO NOT skip any task even if it looks similar to another. Use the teacher's exact wording and the same task numbers (Task 1, Task 2, ...).${extractedTasks}`
       : "";
 
     const prompt = type === "lab"
@@ -72,6 +102,8 @@ ${hasMedia
 
 **Objective:** One sentence describing the learning goal.
 
+**Algorithm:** 3-5 numbered steps explaining the approach before code.
+
 **Code:**
 \`\`\`cpp
 // complete, runnable, beginner-friendly C++ code (keep it short, 15-30 lines)
@@ -83,6 +115,8 @@ ${hasMedia
 \`\`\`
 
 **Explanation:** A short 2-3 sentence plain-English explanation of how the code works.
+
+**Result:** One sentence confirming the expected learning/result of this task.
 
 After ALL tasks (not after Task 1), end with:
 
@@ -128,7 +162,7 @@ A 3-4 sentence wrap-up.
 A short numbered list of 3-5 plausible academic references.${extra}`;
 
     const systemText = type === "lab"
-      ? `You are a professional lab manual writer for a Pakistani university. Output clean markdown. Never use pipe characters, never use horizontal rules, never inline-backtick single keywords. Never repeat the cover page header. Be precise, beginner-friendly, and complete.${hasMedia ? " When a brief is attached, follow it literally — every task, every constraint." : ""}`
+      ? `You are a professional lab manual writer for a Pakistani university. Output clean markdown. Never use pipe characters, never use horizontal rules, never inline-backtick single keywords. Never repeat the cover page header. Be precise, beginner-friendly, and complete.${hasMedia ? " When a brief is attached, follow the extracted task list literally — every task, every constraint. If the list says 6 tasks, write 6 complete task sections and only then write Conclusion." : ""}`
       : `You are a professional academic writer. Output clean markdown. Never use pipe characters, never use horizontal rules, never inline-backtick single words. Never repeat the cover page header. Write in clear, human, undergraduate English.${hasMedia ? " When a brief is attached, answer every question from it in order." : ""}`;
 
     // Build Gemini parts: media first (so the model sees the brief), then the prompt.

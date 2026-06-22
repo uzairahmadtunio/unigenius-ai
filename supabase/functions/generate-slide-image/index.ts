@@ -22,7 +22,8 @@ async function generateImageViaGateway(prompt: string, apiKey: string): Promise<
       const res = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          "Lovable-API-Key": apiKey,
+          "X-Lovable-AIG-SDK": "edge-fetch",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
