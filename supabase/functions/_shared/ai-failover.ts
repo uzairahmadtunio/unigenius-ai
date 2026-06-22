@@ -24,7 +24,8 @@ export function getLastWorkingKeyIndex() {
   return lastWorkingKeyIndex;
 }
 
-const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+// Rotate on ANY key-level failure: rate-limit, server error, expired/leaked key (400/401/403).
+const RETRYABLE_STATUSES = new Set([400, 401, 403, 429, 500, 502, 503, 504]);
 
 interface CallResult {
   response: Response;

@@ -33,61 +33,83 @@ serve(async (req) => {
     const sDept = studentInfo?.department || "Software Engineering";
     const sSemester = semester || "(Current Semester)";
 
+    // IMPORTANT: The PDF generator already builds a professional cover page with
+    // student info (Name: ${sName}, Roll No: ${sRoll}, Dept: ${sDept}, Semester: ${sSemester}).
+    // So the AI must NOT repeat the header / student info / university name.
+    // Also: NO markdown tables (pipes render as raw text), NO inline backticks around
+    // single keywords like \`do-while\` (they break flow), and NO horizontal rules (---).
+
     const prompt = type === "lab"
-      ? `Generate a complete Lab Manual for the subject "${subject}" on the topic "${topic}" in the EXACT style of the University of Larkano lab manuals.
+      ? `Generate a complete Lab Manual on the topic "${topic}" for the subject "${subject}".
 
-FORMAT — follow this EXACTLY:
+STRICT FORMATTING RULES:
+- DO NOT write the university name, department, subject header, or any student info table — the document cover page already has them.
+- DO NOT use markdown tables (no pipe characters | at all).
+- DO NOT use horizontal rules (---).
+- DO NOT wrap normal keywords like do-while, for, while, if in backticks. Only use \`\`\`cpp ... \`\`\` fenced blocks for actual code, and \`\`\` ... \`\`\` for output. Never inline-backtick single words.
+- Use plain prose. Short, clear sentences. Beginner-friendly.
 
-# UNIVERSITY OF LARKANO
-## Department of ${sDept}
-### Subject: ${subject}
----
+STRUCTURE — start directly with:
 
-**Student Information:**
-| Field | Details |
-|-------|---------|
-| **Name** | ${sName} |
-| **Roll No** | ${sRoll} |
-| **Department** | ${sDept} |
-| **Semester** | ${sSemester} |
+## Lab Objectives
+A short paragraph (2-3 sentences) describing what the student will learn.
 
----
+Then generate 3 to 5 tasks. Each task in this EXACT format:
 
-Then for EACH task:
+## Task 1: <short descriptive title>
 
-## Task [Number]
-**Problem Statement:** Write a clear, simple one-line problem.
-**Objective:** One-line goal.
+**Problem Statement:** One clear sentence describing what to build.
+
+**Objective:** One sentence describing the learning goal.
+
 **Code:**
 \`\`\`cpp
-// beginner-friendly C++ code
-\`\`\`
-**Result/Output:**
-\`\`\`
-(expected console output)
+// complete, runnable, beginner-friendly C++ code
 \`\`\`
 
----
+**Expected Output:**
+\`\`\`
+(sample console output)
+\`\`\`
 
-Generate 3-5 tasks. End with a ## Conclusion section.${extra}`
-      : `Generate a complete Assignment for "${subject}" on "${topic}".
+**Explanation:** A short 2-3 sentence plain-English explanation of how the code works.
 
-Write as an undergraduate student. Use simple English. Short paragraphs. Bullet points. Common vocabulary.
+After all tasks, end with:
 
-STRUCTURE:
-1. **Title Page**
-2. **Table of Contents**
-3. **Introduction**
-4. **Main Content**
-5. **Examples**
-6. **Summary / Conclusion**
-7. **References**
+## Conclusion
+A 3-4 sentence wrap-up of what was learned.${extra}`
+      : `Generate a complete academic Assignment on the topic "${topic}" for the subject "${subject}".
 
-Use markdown formatting.${extra}`;
+STRICT FORMATTING RULES:
+- DO NOT write the university name, department, subject header, or any student info table — the cover page already has them.
+- DO NOT use markdown tables (no pipe characters |).
+- DO NOT use horizontal rules (---).
+- DO NOT wrap normal English words in backticks. Use \`\`\`cpp ... \`\`\` only for real code blocks.
+- Write as a final-year undergraduate. Clear, simple, human English. Short paragraphs.
+
+STRUCTURE — start directly with:
+
+## Introduction
+2-3 paragraphs introducing the topic and its importance.
+
+## Main Concepts
+Detailed explanation of the key concepts. Use ### sub-headings for each concept. Use bullet points where helpful.
+
+## Practical Examples
+Worked examples. Use \`\`\`cpp blocks for code samples.
+
+## Applications
+Real-world uses (bullet points).
+
+## Conclusion
+A 3-4 sentence wrap-up.
+
+## References
+A short numbered list of 3-5 plausible academic references.${extra}`;
 
     const systemText = type === "lab"
-      ? `You are a lab manual generator for the University of Larkano. Generate lab manuals with header, student info table, and task-based structure. Use simple language. Markdown formatting.`
-      : `You are a document generator that writes like an undergraduate student. Simple, clear, human-like tone. Markdown formatting.`;
+      ? `You are a professional lab manual writer for a Pakistani university. Output clean markdown. Never use pipe characters, never use horizontal rules, never inline-backtick single keywords. Never repeat the cover page header. Be precise, beginner-friendly, and complete.`
+      : `You are a professional academic writer. Output clean markdown. Never use pipe characters, never use horizontal rules, never inline-backtick single words. Never repeat the cover page header. Write in clear, human, undergraduate English.`;
 
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
