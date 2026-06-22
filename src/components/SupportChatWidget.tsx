@@ -152,6 +152,8 @@ const SupportChatWidgetInner = () => {
 
   if (!user) return null;
 
+  if (dismissed) return null;
+
   return (
     <>
       {/* Floating Button */}
@@ -161,8 +163,18 @@ const SupportChatWidgetInner = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className="fixed bottom-24 md:bottom-6 right-6 z-50"
+            className="fixed bottom-24 md:bottom-6 right-6 z-50 flex flex-col items-end gap-1"
           >
+            <button
+              onClick={() => {
+                sessionStorage.setItem("support_widget_dismissed", "1");
+                setDismissed(true);
+              }}
+              aria-label="Hide help widget"
+              className="w-5 h-5 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground text-[10px] flex items-center justify-center shadow"
+            >
+              ×
+            </button>
             <Button
               onClick={() => setOpen(true)}
               className="rounded-full w-14 h-14 shadow-lg gradient-primary relative"
@@ -178,6 +190,7 @@ const SupportChatWidgetInner = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
 
       {/* Chat Panel */}
       <AnimatePresence>
