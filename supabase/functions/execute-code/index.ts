@@ -16,6 +16,7 @@ const WANDBOX_URL = "https://wandbox.org/api/compile.json";
 const LANG_MAP: Record<string, { compiler: string; label: string }> = {
   cpp: { compiler: "gcc-13.2.0", label: "C++ (gcc 13.2.0)" },
   python: { compiler: "cpython-3.12.7", label: "Python 3.12.7" },
+  javascript: { compiler: "nodejs-18.16.0", label: "Node.js 18.16.0" },
 };
 
 serve(async (req) => {
