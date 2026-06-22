@@ -233,6 +233,36 @@ const PresentationPage = () => {
     setExpandedNotes(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
   };
 
+  // File import — read text from .txt/.md/.csv/.json/.rtf/.html and feed into paste mode
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const okExt = /\.(txt|md|markdown|csv|json|rtf|html?|log)$/i;
+    if (!okExt.test(file.name)) {
+      toast.error("Supported: .txt, .md, .csv, .json, .rtf, .html — for PDFs/images, paste the text instead.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large. Max 2MB.");
+      e.target.value = "";
+      return;
+    }
+    try {
+      const text = await file.text();
+      const cleaned = text.replace(/\s+\n/g, "\n").trim();
+      if (!cleaned) { toast.error("File is empty."); return; }
+      setPasteText(cleaned);
+      setInputMode("paste");
+      toast.success(`Imported "${file.name}" — review and generate slides.`);
+    } catch {
+      toast.error("Could not read file.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+
   // Generate image for a single slide
   const generateImageForSlide = useCallback(async (slideIndex: number, description: string) => {
     setGeneratingImages(prev => new Set(prev).add(slideIndex));
