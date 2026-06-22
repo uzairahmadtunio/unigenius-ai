@@ -15,7 +15,8 @@ serve(async (req) => {
   const auth = await requireAuth(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
-  const tooBig = enforceBodySize(req, corsHeaders, 200_000);
+  // Allow up to ~12 MB so users can attach a few image / PDF brief pages.
+  const tooBig = enforceBodySize(req, corsHeaders, 12_000_000);
   if (tooBig) return tooBig;
 
   try {
