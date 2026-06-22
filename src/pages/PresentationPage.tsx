@@ -606,13 +606,18 @@ const PresentationPage = () => {
           {inputModes.map((mode) => (
             <button
               key={mode.key}
-              onClick={() => mode.key !== "import" && setInputMode(mode.key)}
-              disabled={mode.key === "import"}
-              className={`relative rounded-2xl p-4 sm:p-5 border-2 transition-all text-left ${
+              onClick={() => {
+                if (mode.key === "import") {
+                  fileInputRef.current?.click();
+                } else {
+                  setInputMode(mode.key);
+                }
+              }}
+              className={`relative rounded-2xl p-4 sm:p-5 border-2 transition-all text-left cursor-pointer ${
                 inputMode === mode.key
                   ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
                   : "border-border/50 bg-card/50 hover:border-primary/30"
-              } ${mode.key === "import" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              }`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
                 inputMode === mode.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -621,12 +626,17 @@ const PresentationPage = () => {
               </div>
               <p className="font-display font-semibold text-sm text-foreground">{mode.label}</p>
               <p className="text-[11px] text-muted-foreground">{mode.desc}</p>
-              {mode.key === "import" && (
-                <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">Soon</span>
-              )}
             </button>
           ))}
         </motion.div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.log,text/plain"
+          className="hidden"
+          onChange={handleFileImport}
+        />
+
 
         {/* Input Section */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 space-y-4">
