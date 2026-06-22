@@ -270,6 +270,47 @@ const DocsGenPage = () => {
               />
             </div>
 
+            {/* Teacher brief upload (image / PDF) */}
+            <div className="space-y-2 border-t border-border/50 pt-4">
+              <label className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5" />
+                Teacher's Brief (optional)
+              </label>
+              <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-4 rounded-xl border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-colors">
+                <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground text-center leading-tight">
+                  Upload teacher's assignment / lab manual<br />
+                  <span className="text-[10px] opacity-70">Images or PDF · up to 6 files · 8 MB total</span>
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { handleFilePick(e.target.files); e.target.value = ""; }}
+                />
+              </label>
+              {attachments.length > 0 && (
+                <div className="space-y-1.5">
+                  {attachments.map((a, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-muted/40 border border-border/40">
+                      <File className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                      <span className="text-xs text-foreground truncate flex-1">{a.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{(a.size / 1024).toFixed(0)} KB</span>
+                      <button
+                        onClick={() => removeAttachment(i)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label="Remove"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+
             <Button
               onClick={generateDoc}
               disabled={isGenerating}
