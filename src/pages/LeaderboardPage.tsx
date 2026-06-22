@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import PageShell from "@/components/PageShell";
-import { departmentInfo, Department } from "@/contexts/DepartmentContext";
+import { departmentInfo, Department, useDepartment } from "@/contexts/DepartmentContext";
 
 interface LeaderboardEntry {
   user_id: string;
