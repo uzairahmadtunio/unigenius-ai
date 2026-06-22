@@ -174,10 +174,10 @@ const DocsGenPage = () => {
     toast.success("Professional PDF downloaded!");
   };
 
-  const handleDOCX = () => {
+  const handleDOCX = async () => {
     if (!content) { toast.error("Generate a document first"); return; }
-    generateDOCX(content, pdfOpts);
-    toast.success("Word document downloaded!");
+    await generateDOCX(content, pdfOpts);
+    toast.success("Professional Word document downloaded!");
   };
 
   return (
@@ -339,11 +339,11 @@ const DocsGenPage = () => {
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {docType === "lab"
-                ? "Generates: Cover Page → TOC → Tasks (Code + Output) → Originality Report"
-                : "Generates: Cover Page → TOC → Content with Code Blocks → References → Originality Report"}
+                ? "Generates: Cover Page → TOC → All Tasks (Code + Output) → Conclusion"
+                : "Generates: Cover Page → TOC → Content with Code Blocks → References"}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {["Cover Page", "Table of Contents", "Page Numbers", "Code Formatting", "Originality Report"].map(f => (
+              {["Cover Page", "Table of Contents", "Page Numbers", "Code Formatting", "Clean DOCX"].map(f => (
                 <span key={f} className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{f}</span>
               ))}
             </div>

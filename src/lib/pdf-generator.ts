@@ -1,4 +1,23 @@
 import jsPDF from "jspdf";
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  Footer,
+  HeadingLevel,
+  LevelFormat,
+  Packer,
+  PageBreak,
+  PageNumber,
+  Paragraph,
+  ShadingType,
+  Table,
+  TableCell,
+  TableOfContents,
+  TableRow,
+  TextRun,
+  WidthType,
+} from "docx";
 
 // ── Types ──
 interface StudentInfo {
@@ -507,94 +526,180 @@ export function generateProfessionalPDF(content: string, opts: PDFOptions): void
 }
 
 // ══════════════════════════════════════════════════════
-// ── DOCX Export (HTML-based, Word compatible) ──
+// ── Native DOCX Export (real Word document, not HTML) ──
 // ══════════════════════════════════════════════════════
-export function generateDOCX(content: string, opts: PDFOptions): void {
+const PAGE_W_DXA = 11906;
+const PAGE_H_DXA = 16838;
+const DOC_LEFT = 2160; // 1.5"
+const DOC_RIGHT = 1440;
+const DOC_TOP = 1440;
+const DOC_BOTTOM = 1440;
+const DOC_CONTENT_W = PAGE_W_DXA - DOC_LEFT - DOC_RIGHT;
+
+function cleanMd(text = "") {
+  return text.replace(/\*\*/g, "").replace(/`([^`]+)`/g, "$1").trim();
+}
+
+function textPara(text: string, opts: { bold?: boolean; color?: string; size?: number; align?: keyof typeof AlignmentType; spacingAfter?: number; heading?: typeof HeadingLevel[keyof typeof HeadingLevel] } = {}) {
+  return new Paragraph({
+    heading: opts.heading,
+    alignment: opts.align ? AlignmentType[opts.align] : undefined,
+    spacing: { after: opts.spacingAfter ?? 120, line: 360 },
+    children: [new TextRun({ text: cleanMd(text), bold: opts.bold, color: opts.color || "1E1E1E", size: opts.size ?? 24, font: "Times New Roman" })],
+  });
+}
+
+function labeledPara(label: string, value: string) {
+  return new Paragraph({
+    spacing: { after: 120, line: 360 },
+    alignment: AlignmentType.JUSTIFIED,
+    children: [
+      new TextRun({ text: `${label}: `, bold: true, color: "0F326E", size: 24, font: "Times New Roman" }),
+      new TextRun({ text: cleanMd(value), size: 24, font: "Times New Roman" }),
+    ],
+  });
+}
+
+function codeBlock(lines: string[]) {
+  const children = lines.length
+    ? lines.map((line) => new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: line || " ", font: "Courier New", size: 18, color: "20232A" })] }))
+    : [new Paragraph({ text: " " })];
+
+  return new Table({
+    width: { size: DOC_CONTENT_W, type: WidthType.DXA },
+    columnWidths: [DOC_CONTENT_W],
+    rows: [new TableRow({ children: [new TableCell({
+      width: { size: DOC_CONTENT_W, type: WidthType.DXA },
+      shading: { fill: "F3F6FB", type: ShadingType.CLEAR },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4, color: "B8C2D6" },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: "B8C2D6" },
+        left: { style: BorderStyle.SINGLE, size: 4, color: "B8C2D6" },
+        right: { style: BorderStyle.SINGLE, size: 4, color: "B8C2D6" },
+      },
+      margins: { top: 140, bottom: 140, left: 180, right: 180 },
+      children,
+    })] })],
+  });
+}
+
+function markdownToDocxChildren(markdown: string) {
+  const children: any[] = [];
+  const lines = markdown.split("\n").map(sanitizeLine);
+  let inCode = false;
+  let codeLines: string[] = [];
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.startsWith("```")) {
+      if (!inCode) { inCode = true; codeLines = []; }
+      else { children.push(codeBlock(codeLines)); children.push(textPara("", { spacingAfter: 80 })); inCode = false; }
+      continue;
+    }
+    if (inCode) { codeLines.push(raw); continue; }
+    if (!line.trim()) { children.push(textPara("", { spacingAfter: 80 })); continue; }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)/);
+    if (heading) {
+      const level = heading[1].length;
+      children.push(new Paragraph({
+        heading: level === 1 ? HeadingLevel.HEADING_1 : level === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3,
+        spacing: { before: level <= 2 ? 260 : 180, after: 120 },
+        border: level <= 2 ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: "B4BED2", space: 4 } } : undefined,
+        children: [new TextRun({ text: cleanMd(heading[2]), bold: true, color: "0F326E", size: level === 1 ? 32 : level === 2 ? 28 : 24, font: "Times New Roman" })],
+      }));
+      continue;
+    }
+
+    const labeled = line.match(/^\*\*(.+?):\*\*\s*(.*)$/) || line.match(/^(.{2,35}?):\s+(.+)$/);
+    if (labeled) { children.push(labeledPara(cleanMd(labeled[1]), labeled[2] || "")); continue; }
+
+    const bullet = line.match(/^[\-*]\s+(.+)/);
+    if (bullet) {
+      children.push(new Paragraph({ numbering: { reference: "doc-bullets", level: 0 }, spacing: { after: 80, line: 360 }, children: [new TextRun({ text: cleanMd(bullet[1]), size: 24, font: "Times New Roman" })] }));
+      continue;
+    }
+
+    const numbered = line.match(/^(\d+)\.\s+(.+)/);
+    if (numbered) {
+      children.push(new Paragraph({ numbering: { reference: "doc-numbers", level: 0 }, spacing: { after: 80, line: 360 }, children: [new TextRun({ text: cleanMd(numbered[2]), size: 24, font: "Times New Roman" })] }));
+      continue;
+    }
+
+    children.push(new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 120, line: 360 }, children: [new TextRun({ text: cleanMd(line), size: 24, font: "Times New Roman" })] }));
+  }
+
+  if (inCode) children.push(codeBlock(codeLines));
+  return children;
+}
+
+export async function generateDOCX(content: string, opts: PDFOptions): Promise<void> {
   const { subject, topic, teacherName, studentInfo } = opts;
+  const date = new Date().toLocaleDateString("en-PK", { year: "numeric", month: "long", day: "numeric" });
+  const infoRows = [
+    ...(teacherName ? [["Submitted To", teacherName]] : []),
+    ["Submitted By", studentInfo.name || "—"],
+    ["Roll Number", studentInfo.rollNumber || "—"],
+    ["Section", studentInfo.section || "—"],
+    ["Semester", `${opts.semester}`],
+    ["Date", date],
+  ];
 
-  // Convert markdown to styled HTML
-  let html = content;
-  html = html.replace(/^#### (.+)$/gm, '<h4 style="font-family:\'Times New Roman\';color:#0F326E;font-size:13pt;margin-top:12pt;">$1</h4>');
-  html = html.replace(/^### (.+)$/gm, '<h3 style="font-family:\'Times New Roman\';color:#0F326E;font-size:14pt;margin-top:16pt;">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="font-family:\'Times New Roman\';color:#0F326E;font-size:16pt;margin-top:20pt;border-bottom:1pt solid #B4BED2;padding-bottom:4pt;">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 style="font-family:\'Times New Roman\';color:#0F326E;font-size:20pt;margin-top:24pt;page-break-before:always;">$1</h1>');
-  html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  html = html.replace(/`([^`]+)`/g, '<code style="background:#F5F5FA;padding:1pt 3pt;font-family:\'Courier New\';font-size:10pt;border:0.5pt solid #C8C8D2;">$1</code>');
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) =>
-    `<div style="background:#F5F5FA;border:1pt solid #BEBECE;border-radius:3pt;padding:8pt 10pt;margin:10pt 0;font-family:'Courier New';font-size:9pt;white-space:pre-wrap;line-height:1.4;">${lang ? `<div style="font-size:7pt;color:#666;margin-bottom:4pt;font-weight:bold;">${lang.toUpperCase()}</div>` : ""}${code.replace(/</g, "&lt;")}</div>`
-  );
-  html = html.replace(/^[\-\*] (.+)$/gm, "<li style='margin-bottom:3pt;'>$1</li>");
-  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/gs, (m) => `<ul style="margin-left:18pt;margin-top:6pt;margin-bottom:6pt;">${m}</ul>`);
-  html = html.replace(/\n\n/g, "</p><p style='text-align:justify;line-height:1.5;margin-bottom:6pt;'>");
-  html = `<p style='text-align:justify;line-height:1.5;margin-bottom:6pt;'>${html}</p>`;
+  const doc = new Document({
+    title: topic,
+    creator: "UniGenius AI",
+    features: { updateFields: true },
+    styles: {
+      default: { document: { run: { font: "Times New Roman", size: 24 }, paragraph: { spacing: { line: 360 } } } },
+      paragraphStyles: [
+        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 32, bold: true, color: "0F326E", font: "Times New Roman" }, paragraph: { spacing: { before: 260, after: 140 }, outlineLevel: 0 } },
+        { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true, color: "0F326E", font: "Times New Roman" }, paragraph: { spacing: { before: 220, after: 120 }, outlineLevel: 1 } },
+        { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 24, bold: true, color: "0F326E", font: "Times New Roman" }, paragraph: { spacing: { before: 160, after: 100 }, outlineLevel: 2 } },
+      ],
+    },
+    numbering: {
+      config: [
+        { reference: "doc-bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+        { reference: "doc-numbers", levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+      ],
+    },
+    sections: [{
+      properties: { page: { size: { width: PAGE_W_DXA, height: PAGE_H_DXA }, margin: { top: DOC_TOP, right: DOC_RIGHT, bottom: DOC_BOTTOM, left: DOC_LEFT } } },
+      footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT], size: 18, color: "777777", font: "Times New Roman" })] })] }) },
+      children: [
+        textPara(studentInfo.university || "University of Larkana", { bold: true, color: "0F326E", size: 52, align: "CENTER", spacingAfter: 80 }),
+        textPara(`Department of ${studentInfo.department || "Software Engineering"}`, { size: 26, align: "CENTER", spacingAfter: 420 }),
+        textPara(opts.docType === "lab" ? "LAB MANUAL" : "ASSIGNMENT REPORT", { bold: true, size: 36, align: "CENTER", spacingAfter: 120 }),
+        textPara(subject, { size: 28, align: "CENTER", spacingAfter: 300 }),
+        new Table({
+          width: { size: DOC_CONTENT_W, type: WidthType.DXA },
+          columnWidths: [DOC_CONTENT_W],
+          rows: [new TableRow({ children: [new TableCell({ width: { size: DOC_CONTENT_W, type: WidthType.DXA }, shading: { fill: "F2F5FA", type: ShadingType.CLEAR }, borders: { top: { style: BorderStyle.SINGLE, size: 8, color: "B4BED2" }, bottom: { style: BorderStyle.SINGLE, size: 8, color: "B4BED2" }, left: { style: BorderStyle.SINGLE, size: 8, color: "B4BED2" }, right: { style: BorderStyle.SINGLE, size: 8, color: "B4BED2" } }, margins: { top: 220, bottom: 220, left: 240, right: 240 }, children: [textPara(topic, { bold: true, size: 26, align: "CENTER", spacingAfter: 0 })] })] })],
+        }),
+        textPara("", { spacingAfter: 360 }),
+        new Table({
+          width: { size: 5200, type: WidthType.DXA },
+          columnWidths: [2100, 3100],
+          alignment: AlignmentType.CENTER,
+          rows: infoRows.map(([label, value]) => new TableRow({ children: [
+            new TableCell({ width: { size: 2100, type: WidthType.DXA }, borders: {}, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [textPara(`${label}:`, { size: 22, color: "666666", spacingAfter: 0 })] }),
+            new TableCell({ width: { size: 3100, type: WidthType.DXA }, borders: {}, margins: { top: 100, bottom: 100, left: 120, right: 120 }, children: [textPara(value, { size: 22, bold: label.includes("Submitted") || label.includes("Roll"), spacingAfter: 0 })] }),
+          ] })),
+        }),
+        new Paragraph({ children: [new PageBreak()] }),
+        textPara("Table of Contents", { bold: true, color: "0F326E", size: 36, align: "CENTER", spacingAfter: 240 }),
+        new TableOfContents("", { hyperlink: true, headingStyleRange: "1-3" }),
+        new Paragraph({ children: [new PageBreak()] }),
+        ...markdownToDocxChildren(content),
+      ],
+    }],
+  });
 
-  const docContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-<head><meta charset="utf-8">
-<style>
-  @page { 
-    margin-top: 1in; margin-bottom: 1in; margin-right: 1in; margin-left: 1.5in;
-    mso-page-orientation: portrait; size: A4;
-  }
-  @page :first { margin-top: 0; margin-bottom: 0; }
-  body { 
-    font-family: 'Times New Roman', Times, serif; 
-    font-size: 12pt; color: #1E1E1E; line-height: 1.5; text-align: justify;
-  }
-  h1, h2, h3, h4 { color: #0F326E; font-family: 'Times New Roman', Times, serif; }
-  h1 { font-size: 20pt; page-break-before: always; margin-top: 24pt; }
-  h2 { font-size: 16pt; border-bottom: 1pt solid #B4BED2; padding-bottom: 4pt; margin-top: 20pt; }
-  h3 { font-size: 14pt; margin-top: 16pt; }
-  p { margin-bottom: 6pt; }
-  .cover { 
-    text-align: center; page-break-after: always; 
-    padding-top: 60pt; padding-bottom: 40pt;
-  }
-  .cover h1 { font-size: 26pt; color: #0F326E; margin-bottom: 4pt; page-break-before: auto; border: none; }
-  .cover h2 { font-size: 15pt; color: #444; font-weight: normal; border: none; margin-top: 4pt; }
-  .cover .topic { 
-    background: #F2F2F8; padding: 12pt 20pt; margin: 24pt auto; 
-    max-width: 360pt; border: 0.5pt solid #B4B4C8; font-size: 14pt; font-weight: bold;
-  }
-  .cover hr { border: none; border-top: 2pt solid #0F326E; margin: 16pt 50pt; }
-  .info-table { margin: 24pt auto; text-align: left; border: 0.5pt solid #C8C8D2; padding: 10pt 16pt; }
-  .info-table td { padding: 3pt 10pt; font-size: 11pt; vertical-align: top; }
-  .info-table .label { color: #666; font-weight: normal; }
-  .toc { page-break-after: always; padding-top: 20pt; }
-  .toc h2 { text-align: center; border: none; color: #0F326E; }
-  .toc-line { margin: 4pt 0; }
-  .originality { 
-    background: #F5FCF5; border: 1pt solid #50A050; padding: 12pt 16pt; 
-    margin-top: 24pt; page-break-before: always;
-  }
-  .originality h3 { color: #0F326E; margin-top: 0; }
-</style></head><body>
-<div class="cover">
-  <h1>${studentInfo.university || "University of Larkana"}</h1>
-  <h2>Department of ${studentInfo.department || "Software Engineering"}</h2>
-  <hr>
-  <h2 style="font-size:18pt;font-weight:bold;color:#1E1E1E;margin-top:16pt;">${opts.docType === "lab" ? "LAB MANUAL" : "ASSIGNMENT REPORT"}</h2>
-  <h2 style="font-size:14pt;color:#555;margin-top:4pt;">${subject}</h2>
-  <div class="topic">${topic}</div>
-  <table class="info-table">
-    ${teacherName ? `<tr><td class="label">Submitted To:</td><td><b>${teacherName}</b></td></tr>` : ""}
-    <tr><td class="label">Submitted By:</td><td><b>${studentInfo.name || "—"}</b></td></tr>
-    <tr><td class="label">Roll Number:</td><td><b>${studentInfo.rollNumber || "—"}</b></td></tr>
-    <tr><td class="label">Section:</td><td>${studentInfo.section || "—"}</td></tr>
-    <tr><td class="label">Semester:</td><td>${opts.semester}</td></tr>
-    <tr><td class="label">Date:</td><td>${new Date().toLocaleDateString("en-PK", { year: "numeric", month: "long", day: "numeric" })}</td></tr>
-  </table>
-</div>
-${html}
-<div class="originality" style="margin-top:30px;font-size:9pt;color:#888;text-align:center;">
-  <p>Date: ${new Date().toLocaleDateString("en-PK", { year: "numeric", month: "long", day: "numeric" })}</p>
-</div>
-</body></html>`;
-
-  const blob = new Blob([docContent], { type: "application/msword" });
+  const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${subject.replace(/\s+/g, "_")}_${opts.docType}.doc`;
+  a.download = `${subject.replace(/\s+/g, "_")}_${opts.docType}.docx`;
   a.click();
   URL.revokeObjectURL(url);
 }
