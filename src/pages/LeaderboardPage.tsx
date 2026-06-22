@@ -78,7 +78,7 @@ const LeaderboardPage = () => {
     ? (currentUserEntry ? [currentUserEntry] : [])
     : ranked.slice(0, 25);
 
-  const missingDept = scopeFilter === "department" && !profile?.department;
+  const missingDept = scopeFilter === "department" && !effectiveDept;
   const missingSem = scopeFilter === "semester" && !profile?.current_semester;
 
   const deptLabel = (d?: Department | null) => (d ? departmentInfo[d].name : "—");
