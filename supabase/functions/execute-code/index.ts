@@ -8,14 +8,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Piston: free public sandboxed code execution API.
-// Docs: https://github.com/engineer-man/piston
-const PISTON_URL = "https://emkc.org/api/v2/piston/execute";
+// Wandbox: free public sandboxed code execution API (no auth, no whitelist).
+// Docs: https://github.com/melpon/wandbox/blob/master/kennel/API.rst
+const WANDBOX_URL = "https://wandbox.org/api/compile.json";
 
-// Map our language tag → Piston language + a known-good runtime version.
-const LANG_MAP: Record<string, { language: string; version: string; filename: string }> = {
-  cpp: { language: "c++", version: "10.2.0", filename: "main.cpp" },
-  python: { language: "python", version: "3.10.0", filename: "main.py" },
+// Map our language tag → Wandbox compiler.
+const LANG_MAP: Record<string, { compiler: string; label: string }> = {
+  cpp: { compiler: "gcc-13.2.0", label: "C++ (gcc 13.2.0)" },
+  python: { compiler: "cpython-3.12.7", label: "Python 3.12.7" },
 };
 
 serve(async (req) => {
@@ -49,7 +49,7 @@ serve(async (req) => {
 
     const startedAt = Date.now();
 
-    const pistonResp = await fetch(PISTON_URL, {
+    const resp = await fetch(WANDBOX_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,52 +57,51 @@ serve(async (req) => {
         "User-Agent": "UniGeniusAI/1.0 (+https://unigenius.lovable.app)",
       },
       body: JSON.stringify({
-        language: target.language,
-        version: target.version,
-        files: [{ name: target.filename, content: code }],
+        code,
+        compiler: target.compiler,
         stdin,
-        compile_timeout: 10_000,
-        run_timeout: 5_000,
-        compile_memory_limit: -1,
-        run_memory_limit: -1,
+        save: false,
       }),
     });
 
     const elapsedMs = Date.now() - startedAt;
 
-    if (!pistonResp.ok) {
-      const text = await pistonResp.text().catch(() => "");
-      console.error("Piston error", pistonResp.status, text);
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      console.error("Wandbox error", resp.status, text);
       return new Response(
-        JSON.stringify({ error: `Execution service error (${pistonResp.status})` }),
+        JSON.stringify({ error: `Execution service error (${resp.status})` }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const data = await pistonResp.json();
-    // data: { language, version, run: {stdout, stderr, code, signal, output}, compile?: {...} }
+    const data = await resp.json();
+    // data: { status, signal, compiler_output, compiler_error, program_output, program_error }
+
+    const exitCode = Number.isFinite(Number(data.status)) ? Number(data.status) : null;
 
     return new Response(
       JSON.stringify({
-        language: data.language,
-        version: data.version,
-        compile: data.compile
+        language,
+        version: target.label,
+        compile: (data.compiler_error || data.compiler_output)
           ? {
-              stdout: data.compile.stdout || "",
-              stderr: data.compile.stderr || "",
-              code: data.compile.code,
+              stdout: data.compiler_output || "",
+              stderr: data.compiler_error || "",
+              code: data.compiler_error ? 1 : 0,
             }
           : null,
         run: {
-          stdout: data.run?.stdout || "",
-          stderr: data.run?.stderr || "",
-          code: data.run?.code,
-          signal: data.run?.signal || null,
+          stdout: data.program_output || "",
+          stderr: data.program_error || "",
+          code: exitCode,
+          signal: data.signal || null,
         },
         executionTimeMs: elapsedMs,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     console.error("execute-code error:", e);
     return new Response(
