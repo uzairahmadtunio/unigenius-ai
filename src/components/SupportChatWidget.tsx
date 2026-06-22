@@ -14,9 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 // it stays hidden so it never overlaps the user's working area.
 const ALLOWED_ROUTES = ["/contact", "/profile", "/premium"];
 
-const SupportChatWidget = () => {
+const SupportChatWidgetInner = () => {
   const { user } = useAuth();
-  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(
     () => typeof window !== "undefined" && sessionStorage.getItem("support_widget_dismissed") === "1"
@@ -28,8 +27,6 @@ const SupportChatWidget = () => {
   const [unreadAdmin, setUnreadAdmin] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const allowed = ALLOWED_ROUTES.includes(location.pathname);
-  if (!allowed || dismissed) return null;
 
 
   // Find or create ticket
