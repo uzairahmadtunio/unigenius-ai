@@ -324,11 +324,14 @@ const GroupDetailPage = () => {
   };
 
   const copyCode = () => {
-    if (group) {
+    if (inviteCode) {
       navigator.clipboard.writeText(inviteCode);
       toast.success("Invite code copied!");
+    } else {
+      toast.error("Only the owner can view the invite code");
     }
   };
+
 
   // ── Avatar Upload (Owner only) ──
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
