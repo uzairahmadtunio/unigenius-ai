@@ -162,9 +162,9 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Scope description */}
-        {scopeFilter === "department" && profile?.department && (
+        {scopeFilter === "department" && effectiveDept && (
           <p className="text-xs text-muted-foreground">
-            Showing only <span className="font-semibold text-foreground">{departmentInfo[profile.department].fullName}</span> students.
+            Showing only <span className="font-semibold text-foreground">{departmentInfo[effectiveDept].fullName}</span> students.
           </p>
         )}
         {scopeFilter === "semester" && profile?.current_semester && (
