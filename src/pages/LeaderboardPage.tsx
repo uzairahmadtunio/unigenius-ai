@@ -30,6 +30,7 @@ type ScopeFilter = "global" | "department" | "semester" | "me";
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
+  const { department: activeDept } = useDepartment();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("global");
 
@@ -48,8 +49,11 @@ const LeaderboardPage = () => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Active department always reflects the navbar selection (live), falling back to the saved profile dept.
+  const effectiveDept: Department | null = activeDept ?? profile?.department ?? null;
+
   const semesterParam = scopeFilter === "semester" && profile?.current_semester ? profile.current_semester : null;
-  const departmentParam = scopeFilter === "department" && profile?.department ? profile.department : null;
+  const departmentParam = scopeFilter === "department" && effectiveDept ? effectiveDept : null;
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["leaderboard", timeFilter, scopeFilter, semesterParam, departmentParam],
