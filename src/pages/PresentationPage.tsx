@@ -569,8 +569,30 @@ const PresentationPage = () => {
   const inputModes: { key: InputMode; icon: React.ReactNode; label: string; desc: string }[] = [
     { key: "ai", icon: <Wand2 className="w-5 h-5" />, label: "Generate with AI", desc: "Enter a topic" },
     { key: "paste", icon: <FileText className="w-5 h-5" />, label: "Paste in Text", desc: "Paste raw content" },
-    { key: "import", icon: <Upload className="w-5 h-5" />, label: "Import File", desc: "Coming soon" },
+    { key: "import", icon: <Upload className="w-5 h-5" />, label: "Import File", desc: ".txt .md .csv .json" },
   ];
+
+  // Mini slide mock for theme preview
+  const MiniSlide = ({ themeKey }: { themeKey: ThemeKey }) => {
+    const tk = THEMES[themeKey];
+    return (
+      <div className={`${tk.slideBg} w-full aspect-video rounded-lg overflow-hidden border border-border/40 shadow-md`}>
+        <div className={`${tk.slideHeaderBg} px-3 py-2 flex items-center gap-1.5`}>
+          <Presentation className={`w-3 h-3 ${tk.slideTitleColor}`} />
+          <span className={`text-[9px] font-bold uppercase tracking-wide ${tk.slideTitleColor}`}>Sample Title</span>
+        </div>
+        <div className="px-3 py-2 space-y-1.5">
+          {["Key insight one", "Supporting point", "Closing takeaway"].map((b, i) => (
+            <div key={i} className={`flex items-start gap-1.5 ${tk.slideBulletColor}`}>
+              <span className={`w-1 h-1 rounded-full ${tk.slideBulletDot} mt-1 flex-shrink-0`} />
+              <span className="text-[8px] leading-tight">{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <PageShell
