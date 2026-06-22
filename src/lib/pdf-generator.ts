@@ -140,7 +140,7 @@ function renderCoverPage(doc: jsPDF, opts: PDFOptions) {
   doc.setFont("times", "italic");
   doc.setFontSize(9);
   doc.setTextColor(120, 120, 120);
-  doc.text("Submitted in partial fulfillment of academic coursework", CENTER_X, PAGE_H - 30, { align: "center" });
+  // (footer tagline removed per user request)
 }
 
 // ── Parse markdown into structured sections ──
