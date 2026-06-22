@@ -32,7 +32,9 @@ serve(async (req) => {
     const body = await req.json();
     const language = clampString(body.language, 16);
     const code = clampString(body.code, 50_000);
-    const stdin = clampString(body.stdin, 20_000);
+    let stdin = clampString(body.stdin, 20_000);
+    // Ensure stdin terminates with a newline so cin/input()/readline() flush the last value.
+    if (stdin && !stdin.endsWith("\n")) stdin += "\n";
 
     const target = LANG_MAP[language];
     if (!target) {
