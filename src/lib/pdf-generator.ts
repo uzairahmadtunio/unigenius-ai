@@ -222,9 +222,16 @@ function renderTOC(doc: jsPDF, sections: Section[], pageMap: Map<number, number>
     const titleText = `${prefix}  ${s.title}`;
     const pageNum = pageMap.get(idx) || "";
 
-    doc.text(titleText, LEFT_M + indent, y);
+    // Reserve ~15mm on the right for the page number so titles never collide with it.
+    const titleMaxW = CONTENT_W - indent - 15;
+    const wrapped = doc.splitTextToSize(titleText, titleMaxW) as string[];
 
-    // Dotted leader + page number
+    if (y + wrapped.length * (isMain ? 7 : 6) > CONTENT_END_Y) return;
+
+    wrapped.forEach((wl, i) => {
+      doc.text(wl, LEFT_M + indent, y + i * (isMain ? 7 : 6));
+    });
+
     if (pageNum) {
       doc.setFont("times", "normal");
       doc.setFontSize(11);
@@ -232,8 +239,7 @@ function renderTOC(doc: jsPDF, sections: Section[], pageMap: Map<number, number>
       doc.text(`${pageNum}`, PAGE_W - RIGHT_M, y, { align: "right" });
     }
 
-    y += isMain ? 9 : 7;
-    if (y > CONTENT_END_Y) return;
+    y += wrapped.length * (isMain ? 7 : 6) + (isMain ? 3 : 2);
   });
 }
 
