@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircleQuestion, Send, X, ChevronDown } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +9,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Only show the floating help widget on these low-distraction pages.
+// Everywhere else (chat, code lab, viva, admin, docs, exam prep, etc.)
+// it stays hidden so it never overlaps the user's working area.
+const ALLOWED_ROUTES = ["/contact", "/profile", "/premium"];
+
 const SupportChatWidget = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem("support_widget_dismissed") === "1"
+  );
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [unreadAdmin, setUnreadAdmin] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const allowed = ALLOWED_ROUTES.includes(location.pathname);
+  if (!allowed || dismissed) return null;
+
 
   // Find or create ticket
   useEffect(() => {
