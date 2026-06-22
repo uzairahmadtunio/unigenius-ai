@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles, Target, Eye, Trophy, Linkedin, Github, Heart } from "lucide-react";
+import { Sparkles, Target, Eye, Trophy, Linkedin, Github, Heart, Globe } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { Card } from "@/components/ui/card";
 import founderImg from "@/assets/founder-uzair.png";
