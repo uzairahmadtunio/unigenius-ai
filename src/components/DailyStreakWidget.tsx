@@ -152,16 +152,23 @@ const DailyStreakWidget = () => {
             </Button>
           )}
           {currentStreak === 0 && canRecover && (
-            <Button
-              size="sm"
-              onClick={recoverStreak}
-              disabled={recovering}
-              variant="outline"
-              className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500"
-            >
-              <Heart className="w-3.5 h-3.5" />
-              Revive Streak
-            </Button>
+            <div className="flex flex-col items-end gap-0.5">
+              <Button
+                size="sm"
+                onClick={recoverStreak}
+                disabled={recovering}
+                variant="outline"
+                className="rounded-xl gap-1.5 text-xs border-rose-500/40 text-rose-500 hover:bg-rose-500/10"
+              >
+                <Heart className="w-3.5 h-3.5" />
+                {recovering ? "Restoring..." : "Restore Streak"}
+              </Button>
+              <span className="text-[9px] text-muted-foreground font-medium">
+                {isUnlimited
+                  ? "Admin · Unlimited"
+                  : `${recoveryRemaining ?? 0} of ${monthlyLimit} left this month`}
+              </span>
+            </div>
           )}
           <div className="text-center">
             <div className="flex items-center gap-1 justify-center">
