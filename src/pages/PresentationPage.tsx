@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon, FileText, Upload, Wand2, RefreshCw } from "lucide-react";
+import { Presentation, Sparkles, Download, Loader2, Edit3, Check, X, Plus, Minus, Trash2, Volume2, Square, Palette, ArrowUp, MessageSquareText, ImageIcon, FileText, Upload, Wand2, RefreshCw, Eye } from "lucide-react";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import type { LucideProps } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import PageShell from "@/components/PageShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -32,7 +33,7 @@ interface Slide {
   speakerNotes: string;
 }
 
-type ThemeKey = "academic" | "darkTech" | "minimalist";
+type ThemeKey = "academic" | "darkTech" | "minimalist" | "corporate" | "sunset" | "forest" | "royal" | "monochrome";
 type InputMode = "ai" | "paste" | "import";
 
 interface ThemeConfig {
@@ -71,13 +72,8 @@ const THEMES: Record<ThemeKey, ThemeConfig> = {
     slideHintBg: "bg-[#EFF6FF]",
     slideHintText: "text-[#6B7280]",
     notesBg: "bg-blue-50/60 dark:bg-blue-950/20",
-    pptxBg: "F0F4F8",
-    pptxHeaderBg: "1E40AF",
-    pptxTitle: "FFFFFF",
-    pptxSubtitle: "CBD5E1",
-    pptxBullet: "1E293B",
-    pptxHint: "6B7280",
-    pptxSlideNum: "94A3B8",
+    pptxBg: "F0F4F8", pptxHeaderBg: "1E40AF", pptxTitle: "FFFFFF", pptxSubtitle: "CBD5E1",
+    pptxBullet: "1E293B", pptxHint: "6B7280", pptxSlideNum: "94A3B8",
   },
   darkTech: {
     label: "⚡ Dark Tech",
@@ -92,13 +88,8 @@ const THEMES: Record<ThemeKey, ThemeConfig> = {
     slideHintBg: "bg-[#1E293B]",
     slideHintText: "text-[#64748B]",
     notesBg: "bg-purple-950/30",
-    pptxBg: "0F172A",
-    pptxHeaderBg: "0E7490",
-    pptxTitle: "FFFFFF",
-    pptxSubtitle: "67E8F9",
-    pptxBullet: "CBD5E1",
-    pptxHint: "64748B",
-    pptxSlideNum: "475569",
+    pptxBg: "0F172A", pptxHeaderBg: "0E7490", pptxTitle: "FFFFFF", pptxSubtitle: "67E8F9",
+    pptxBullet: "CBD5E1", pptxHint: "64748B", pptxSlideNum: "475569",
   },
   minimalist: {
     label: "📄 Minimalist",
@@ -113,13 +104,88 @@ const THEMES: Record<ThemeKey, ThemeConfig> = {
     slideHintBg: "bg-[#F4F4F5] dark:bg-[#27272A]",
     slideHintText: "text-[#A1A1AA]",
     notesBg: "bg-zinc-50/60 dark:bg-zinc-800/30",
-    pptxBg: "FAFAFA",
-    pptxHeaderBg: "18181B",
-    pptxTitle: "FFFFFF",
-    pptxSubtitle: "A1A1AA",
-    pptxBullet: "3F3F46",
-    pptxHint: "A1A1AA",
-    pptxSlideNum: "A1A1AA",
+    pptxBg: "FAFAFA", pptxHeaderBg: "18181B", pptxTitle: "FFFFFF", pptxSubtitle: "A1A1AA",
+    pptxBullet: "3F3F46", pptxHint: "A1A1AA", pptxSlideNum: "A1A1AA",
+  },
+  corporate: {
+    label: "💼 Corporate",
+    desc: "Navy & Gold Executive",
+    slideBg: "bg-[#F8FAFC] dark:bg-[#0F1B3D]",
+    slideHeaderBg: "bg-gradient-to-r from-[#0F1B3D] via-[#1E3A5F] to-[#0F1B3D]",
+    slideTitleColor: "text-white",
+    slideSubtitleColor: "text-[#E8C76C]",
+    slideBulletColor: "text-[#1E293B] dark:text-[#E2E8F0]",
+    slideBulletDot: "bg-[#C9A84C]",
+    slideNumberColor: "text-[#94A3B8]",
+    slideHintBg: "bg-[#E8EDF3] dark:bg-[#1E3A5F]",
+    slideHintText: "text-[#64748B]",
+    notesBg: "bg-amber-50/60 dark:bg-amber-950/20",
+    pptxBg: "F8FAFC", pptxHeaderBg: "0F1B3D", pptxTitle: "FFFFFF", pptxSubtitle: "E8C76C",
+    pptxBullet: "1E293B", pptxHint: "64748B", pptxSlideNum: "94A3B8",
+  },
+  sunset: {
+    label: "🌅 Sunset Glow",
+    desc: "Coral & Plum Gradient",
+    slideBg: "bg-[#FFF8F5] dark:bg-[#1A0F1F]",
+    slideHeaderBg: "bg-gradient-to-br from-[#FF6B6B] via-[#EE5A70] to-[#6C5CE7]",
+    slideTitleColor: "text-white",
+    slideSubtitleColor: "text-white/90",
+    slideBulletColor: "text-[#3D1F2F] dark:text-[#FCE7E7]",
+    slideBulletDot: "bg-[#EE5A70]",
+    slideNumberColor: "text-[#C44569]/60",
+    slideHintBg: "bg-[#FFE8E8] dark:bg-[#3D1F2F]",
+    slideHintText: "text-[#C44569]",
+    notesBg: "bg-rose-50/60 dark:bg-rose-950/20",
+    pptxBg: "FFF8F5", pptxHeaderBg: "EE5A70", pptxTitle: "FFFFFF", pptxSubtitle: "FCE7E7",
+    pptxBullet: "3D1F2F", pptxHint: "C44569", pptxSlideNum: "C44569",
+  },
+  forest: {
+    label: "🌿 Forest Calm",
+    desc: "Emerald & Cream Natural",
+    slideBg: "bg-[#F5F0E8] dark:bg-[#0F1F17]",
+    slideHeaderBg: "bg-gradient-to-r from-[#064E3B] to-[#0D7A5F]",
+    slideTitleColor: "text-white",
+    slideSubtitleColor: "text-[#A7F3D0]",
+    slideBulletColor: "text-[#1F2937] dark:text-[#DCE5D4]",
+    slideBulletDot: "bg-[#0D7A5F]",
+    slideNumberColor: "text-[#84A98C]",
+    slideHintBg: "bg-[#DCE5D4] dark:bg-[#1A3C2A]",
+    slideHintText: "text-[#4A6741]",
+    notesBg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+    pptxBg: "F5F0E8", pptxHeaderBg: "064E3B", pptxTitle: "FFFFFF", pptxSubtitle: "A7F3D0",
+    pptxBullet: "1F2937", pptxHint: "4A6741", pptxSlideNum: "84A98C",
+  },
+  royal: {
+    label: "👑 Royal Premium",
+    desc: "Deep Purple & Gold",
+    slideBg: "bg-[#FAF7FF] dark:bg-[#1A0F2E]",
+    slideHeaderBg: "bg-gradient-to-r from-[#2D1B69] via-[#5B21B6] to-[#C9A84C]",
+    slideTitleColor: "text-white",
+    slideSubtitleColor: "text-[#F0D78C]",
+    slideBulletColor: "text-[#1F1235] dark:text-[#E9D5FF]",
+    slideBulletDot: "bg-[#C9A84C]",
+    slideNumberColor: "text-[#A78BFA]",
+    slideHintBg: "bg-[#EDE9FE] dark:bg-[#2D1B69]",
+    slideHintText: "text-[#5B21B6]",
+    notesBg: "bg-purple-50/60 dark:bg-purple-950/20",
+    pptxBg: "FAF7FF", pptxHeaderBg: "2D1B69", pptxTitle: "FFFFFF", pptxSubtitle: "F0D78C",
+    pptxBullet: "1F1235", pptxHint: "5B21B6", pptxSlideNum: "A78BFA",
+  },
+  monochrome: {
+    label: "◼️ Monochrome Pop",
+    desc: "Bold Black & Accent",
+    slideBg: "bg-white dark:bg-[#0A0A0A]",
+    slideHeaderBg: "bg-[#0A0A0A] dark:bg-[#FF5722]",
+    slideTitleColor: "text-white",
+    slideSubtitleColor: "text-[#FF5722] dark:text-white",
+    slideBulletColor: "text-[#0A0A0A] dark:text-white",
+    slideBulletDot: "bg-[#FF5722]",
+    slideNumberColor: "text-[#737373]",
+    slideHintBg: "bg-[#F5F5F5] dark:bg-[#171717]",
+    slideHintText: "text-[#737373]",
+    notesBg: "bg-orange-50/60 dark:bg-orange-950/20",
+    pptxBg: "FFFFFF", pptxHeaderBg: "0A0A0A", pptxTitle: "FFFFFF", pptxSubtitle: "FF5722",
+    pptxBullet: "0A0A0A", pptxHint: "737373", pptxSlideNum: "737373",
   },
 };
 
@@ -142,6 +208,8 @@ const PresentationPage = () => {
   const [inputMode, setInputMode] = useState<InputMode>("ai");
   const [generatingImages, setGeneratingImages] = useState<Set<number>>(new Set());
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [themePreviewOpen, setThemePreviewOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { isAdmin } = useAdmin();
 
   const slidesContainerRef = useRef<HTMLDivElement>(null);
@@ -164,6 +232,36 @@ const PresentationPage = () => {
   const toggleNotes = (idx: number) => {
     setExpandedNotes(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
   };
+
+  // File import — read text from .txt/.md/.csv/.json/.rtf/.html and feed into paste mode
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const okExt = /\.(txt|md|markdown|csv|json|rtf|html?|log)$/i;
+    if (!okExt.test(file.name)) {
+      toast.error("Supported: .txt, .md, .csv, .json, .rtf, .html — for PDFs/images, paste the text instead.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large. Max 2MB.");
+      e.target.value = "";
+      return;
+    }
+    try {
+      const text = await file.text();
+      const cleaned = text.replace(/\s+\n/g, "\n").trim();
+      if (!cleaned) { toast.error("File is empty."); return; }
+      setPasteText(cleaned);
+      setInputMode("paste");
+      toast.success(`Imported "${file.name}" — review and generate slides.`);
+    } catch {
+      toast.error("Could not read file.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
 
   // Generate image for a single slide
   const generateImageForSlide = useCallback(async (slideIndex: number, description: string) => {
@@ -471,8 +569,30 @@ const PresentationPage = () => {
   const inputModes: { key: InputMode; icon: React.ReactNode; label: string; desc: string }[] = [
     { key: "ai", icon: <Wand2 className="w-5 h-5" />, label: "Generate with AI", desc: "Enter a topic" },
     { key: "paste", icon: <FileText className="w-5 h-5" />, label: "Paste in Text", desc: "Paste raw content" },
-    { key: "import", icon: <Upload className="w-5 h-5" />, label: "Import File", desc: "Coming soon" },
+    { key: "import", icon: <Upload className="w-5 h-5" />, label: "Import File", desc: ".txt .md .csv .json" },
   ];
+
+  // Mini slide mock for theme preview
+  const MiniSlide = ({ themeKey }: { themeKey: ThemeKey }) => {
+    const tk = THEMES[themeKey];
+    return (
+      <div className={`${tk.slideBg} w-full aspect-video rounded-lg overflow-hidden border border-border/40 shadow-md`}>
+        <div className={`${tk.slideHeaderBg} px-3 py-2 flex items-center gap-1.5`}>
+          <Presentation className={`w-3 h-3 ${tk.slideTitleColor}`} />
+          <span className={`text-[9px] font-bold uppercase tracking-wide ${tk.slideTitleColor}`}>Sample Title</span>
+        </div>
+        <div className="px-3 py-2 space-y-1.5">
+          {["Key insight one", "Supporting point", "Closing takeaway"].map((b, i) => (
+            <div key={i} className={`flex items-start gap-1.5 ${tk.slideBulletColor}`}>
+              <span className={`w-1 h-1 rounded-full ${tk.slideBulletDot} mt-1 flex-shrink-0`} />
+              <span className="text-[8px] leading-tight">{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <PageShell
@@ -486,13 +606,18 @@ const PresentationPage = () => {
           {inputModes.map((mode) => (
             <button
               key={mode.key}
-              onClick={() => mode.key !== "import" && setInputMode(mode.key)}
-              disabled={mode.key === "import"}
-              className={`relative rounded-2xl p-4 sm:p-5 border-2 transition-all text-left ${
+              onClick={() => {
+                if (mode.key === "import") {
+                  fileInputRef.current?.click();
+                } else {
+                  setInputMode(mode.key);
+                }
+              }}
+              className={`relative rounded-2xl p-4 sm:p-5 border-2 transition-all text-left cursor-pointer ${
                 inputMode === mode.key
                   ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
                   : "border-border/50 bg-card/50 hover:border-primary/30"
-              } ${mode.key === "import" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              }`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
                 inputMode === mode.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -501,12 +626,17 @@ const PresentationPage = () => {
               </div>
               <p className="font-display font-semibold text-sm text-foreground">{mode.label}</p>
               <p className="text-[11px] text-muted-foreground">{mode.desc}</p>
-              {mode.key === "import" && (
-                <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">Soon</span>
-              )}
             </button>
           ))}
         </motion.div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.log,text/plain"
+          className="hidden"
+          onChange={handleFileImport}
+        />
+
 
         {/* Input Section */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 space-y-4">
@@ -536,7 +666,7 @@ const PresentationPage = () => {
             <div className="flex items-center gap-2">
               <Palette className="w-4 h-4 text-muted-foreground" />
               <Select value={theme} onValueChange={(v) => setTheme(v as ThemeKey)}>
-                <SelectTrigger className="w-[180px] rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[200px] rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
                     <SelectItem key={key} value={key}>
@@ -546,7 +676,44 @@ const PresentationPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Dialog open={themePreviewOpen} onOpenChange={setThemePreviewOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 h-9 text-xs">
+                    <Eye className="w-3.5 h-3.5" /> Preview
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Choose a Theme — Live Preview</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                    {(Object.keys(THEMES) as ThemeKey[]).map((key) => {
+                      const tk = THEMES[key];
+                      const selected = theme === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => { setTheme(key); setThemePreviewOpen(false); toast.success(`Theme set: ${tk.label}`); }}
+                          className={`text-left rounded-xl p-2 border-2 transition-all ${
+                            selected ? "border-primary shadow-lg shadow-primary/20 bg-primary/5" : "border-border/40 hover:border-primary/40"
+                          }`}
+                        >
+                          <MiniSlide themeKey={key} />
+                          <div className="px-1 pt-2 pb-1 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">{tk.label}</p>
+                              <p className="text-[10px] text-muted-foreground">{tk.desc}</p>
+                            </div>
+                            {selected && <Check className="w-4 h-4 text-primary" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
+
 
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-muted-foreground">Slides:</label>
