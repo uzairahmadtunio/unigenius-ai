@@ -19,24 +19,33 @@ serve(async (req) => {
 
     const count = Math.min(Math.max(slideCount || 8, 3), 20);
 
-    const prompt = `Create a university-level presentation on: "${topic}"
+    const prompt = `Create a rich, Gamma-style university-level presentation on: "${topic}"
 
-Generate exactly ${count} slides. Output ONLY a valid JSON array, no markdown.
+Generate exactly ${count} slides. Output ONLY a valid JSON array, no markdown fences.
 
-SLIDE 1: title slide with subtitle "Presented by: Uzair Ahmad & Group", empty bullets array.
-SLIDES 2-${count - 1}: content slides with EXACTLY 3 short bullet points (max 8 words each).
-SLIDE ${count}: "THANK YOU" with ["Any Questions?"].
+STRUCTURE:
+- SLIDE 1: title slide. Set "title" to the main topic, "subtitle" to "Presented by: Uzair Ahmad & Group", empty "bullets" array, short "paragraph" (1 sentence hook).
+- SLIDES 2..${count - 1}: content slides. Each MUST contain:
+    - "title": punchy 2-5 word section title
+    - "paragraph": 1-2 sentence intro/context (25-45 words) that frames the topic of the slide
+    - "bullets": 4 to 6 substantive bullet points, each 8-16 words, factual and specific (no fluff like "important" or "useful"). Include real-world examples, numbers, names, or comparisons where possible.
+    - "imageSuggestion": vivid visual description for an AI image generator (style + subject)
+    - "icon": one lucide-react icon name in kebab-case relevant to the slide
+    - "speakerNotes": 2-3 sentences expanding the slide for the presenter
+- SLIDE ${count}: "THANK YOU" with bullets ["Any Questions?"], short paragraph thanking the audience.
 
-Each object: { "title": string, "subtitle": string (optional), "bullets": string[], "imageSuggestion": string, "icon": string (lucide kebab-case), "speakerNotes": string }`;
+Make slides feel like a polished Gamma.app deck: dense but readable, varied topics across slides (history, concepts, applications, comparisons, future), never repeating points.
 
-    const systemText = `You are a strict presentation designer. Make clean, minimal slides. Each content slide has EXACTLY 3 bullet points under 8 words. First slide = title only. Last slide = THANK YOU. Output ONLY valid JSON array.`;
+Each object schema: { "title": string, "subtitle"?: string, "paragraph": string, "bullets": string[], "imageSuggestion": string, "icon": string, "speakerNotes": string }`;
+
+    const systemText = `You are a world-class presentation designer who builds Gamma.app-quality decks. Slides are content-rich: every content slide has an intro paragraph PLUS 4-6 detailed, specific bullet points (8-16 words each). Avoid generic filler. Output ONLY a valid JSON array.`;
 
     const result = await generateContentWithFailover({
       modelPath: "gemini-2.5-flash",
       geminiBody: {
         system_instruction: { parts: [{ text: systemText }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+        generationConfig: { temperature: 0.8, maxOutputTokens: 8192 },
       },
       corsHeaders,
     });
@@ -56,7 +65,8 @@ Each object: { "title": string, "subtitle": string (optional), "bullets": string
     slides = slides.map((s: any) => ({
       title: s.title || "Untitled Slide",
       subtitle: s.subtitle || "",
-      bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 3).map((b: string) => b.split(" ").slice(0, 10).join(" ")),
+      paragraph: s.paragraph || "",
+      bullets: (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 6).map((b: string) => String(b).split(" ").slice(0, 22).join(" ")),
       imageSuggestion: s.imageSuggestion || "",
       icon: s.icon || "presentation",
       speakerNotes: s.speakerNotes || "",
