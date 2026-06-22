@@ -28,9 +28,8 @@ async function generateImageViaGateway(prompt: string, apiKey: string): Promise<
         },
         body: JSON.stringify({
           model,
-          prompt,
-          size: "1792x1024",
-          response_format: "b64_json",
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
         }),
       });
       if (!res.ok) {
