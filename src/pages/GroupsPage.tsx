@@ -172,10 +172,17 @@ const GroupsPage = () => {
     }
   };
 
-  const copyInviteCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Invite code copied!");
+  const copyInviteCode = async (groupId: string) => {
+    try {
+      const { data, error } = await supabase.rpc("get_group_invite_code" as any, { _group_id: groupId });
+      if (error || !data) throw error || new Error("Not allowed");
+      navigator.clipboard.writeText(String(data));
+      toast.success("Invite code copied!");
+    } catch {
+      toast.error("Only the owner can copy the invite code");
+    }
   };
+
 
   if (!user) {
     return (
