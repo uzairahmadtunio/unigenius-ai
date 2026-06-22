@@ -149,12 +149,17 @@ const GroupDetailPage = () => {
   }, [messages]);
 
   const fetchGroup = async () => {
-    const { data } = await supabase.from("groups").select("*").eq("id", groupId!).single();
+    const { data } = await supabase.from("groups").select("id, name, description, owner_id, avatar_url").eq("id", groupId!).single();
     if (data) {
       setGroup(data as any);
       setEditName((data as any).name);
       setEditDesc((data as any).description || "");
+      if (user && (data as any).owner_id === user.id) {
+        const { data: code } = await supabase.rpc("get_group_invite_code" as any, { _group_id: groupId });
+        if (code) setInviteCode(String(code));
+      }
     }
+
   };
 
   const fetchMembers = async () => {
