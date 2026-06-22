@@ -19,7 +19,6 @@ interface Group {
   id: string;
   name: string;
   description: string | null;
-  invite_code: string;
   owner_id: string;
   semester: number;
   created_at: string;
@@ -27,6 +26,9 @@ interface Group {
   member_count?: number;
   is_owner?: boolean;
 }
+
+const GROUP_COLS = "id, name, description, owner_id, semester, created_at, avatar_url";
+
 
 const GroupAvatar = ({ url, name, size = "md" }: { url?: string | null; name?: string; size?: "sm" | "md" }) => {
   const sizes = { sm: "w-8 h-8", md: "w-10 h-10" };
@@ -72,7 +74,7 @@ const GroupsPage = () => {
       // Also check owned groups
       const { data: owned } = await supabase
         .from("groups")
-        .select("*")
+        .select(GROUP_COLS)
         .eq("owner_id", user.id);
       setGroups((owned as Group[]) || []);
       setLoading(false);
@@ -82,13 +84,13 @@ const GroupsPage = () => {
     const groupIds = memberships.map(m => m.group_id);
     const { data } = await supabase
       .from("groups")
-      .select("*")
+      .select(GROUP_COLS)
       .in("id", groupIds);
 
     // Also get owned groups not yet in memberships
     const { data: owned } = await supabase
       .from("groups")
-      .select("*")
+      .select(GROUP_COLS)
       .eq("owner_id", user.id);
 
     const allGroups = new Map<string, Group>();
@@ -170,10 +172,17 @@ const GroupsPage = () => {
     }
   };
 
-  const copyInviteCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Invite code copied!");
+  const copyInviteCode = async (groupId: string) => {
+    try {
+      const { data, error } = await supabase.rpc("get_group_invite_code" as any, { _group_id: groupId });
+      if (error || !data) throw error || new Error("Not allowed");
+      navigator.clipboard.writeText(String(data));
+      toast.success("Invite code copied!");
+    } catch {
+      toast.error("Only the owner can copy the invite code");
+    }
   };
+
 
   if (!user) {
     return (
@@ -277,14 +286,17 @@ const GroupsPage = () => {
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" /> {g.member_count || 1}
                       </span>
-                      <button
-                        onClick={e => { e.stopPropagation(); copyInviteCode(g.invite_code); }}
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        title="Copy invite code"
-                      >
-                        <Hash className="w-3 h-3" /> {g.invite_code}
-                        <Copy className="w-2.5 h-2.5" />
-                      </button>
+                      {g.is_owner && (
+                        <button
+                          onClick={e => { e.stopPropagation(); copyInviteCode(g.id); }}
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
+                          title="Copy invite code"
+                        >
+                          <Hash className="w-3 h-3" /> Copy code
+                          <Copy className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>

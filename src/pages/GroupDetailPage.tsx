@@ -29,10 +29,10 @@ interface GroupData {
   id: string;
   name: string;
   description: string | null;
-  invite_code: string;
   owner_id: string;
   avatar_url: string | null;
 }
+
 
 interface Member {
   user_id: string;
@@ -103,8 +103,10 @@ const GroupDetailPage = () => {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const isOwner = user && group?.owner_id === user.id;
+
 
   useEffect(() => {
     if (user && groupId) {
@@ -147,12 +149,17 @@ const GroupDetailPage = () => {
   }, [messages]);
 
   const fetchGroup = async () => {
-    const { data } = await supabase.from("groups").select("*").eq("id", groupId!).single();
+    const { data } = await supabase.from("groups").select("id, name, description, owner_id, avatar_url").eq("id", groupId!).single();
     if (data) {
       setGroup(data as any);
       setEditName((data as any).name);
       setEditDesc((data as any).description || "");
+      if (user && (data as any).owner_id === user.id) {
+        const { data: code } = await supabase.rpc("get_group_invite_code" as any, { _group_id: groupId });
+        if (code) setInviteCode(String(code));
+      }
     }
+
   };
 
   const fetchMembers = async () => {
@@ -317,11 +324,14 @@ const GroupDetailPage = () => {
   };
 
   const copyCode = () => {
-    if (group) {
-      navigator.clipboard.writeText(group.invite_code);
+    if (inviteCode) {
+      navigator.clipboard.writeText(inviteCode);
       toast.success("Invite code copied!");
+    } else {
+      toast.error("Only the owner can view the invite code");
     }
   };
+
 
   // ── Avatar Upload (Owner only) ──
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,10 +429,12 @@ const GroupDetailPage = () => {
             <h1 className="font-display font-bold text-foreground text-lg">{group?.name || "Loading..."}</h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{members.length} members</span>
-              <button onClick={copyCode} className="flex items-center gap-1 hover:text-primary transition-colors">
-                <Hash className="w-3 h-3" />{group?.invite_code}
-                <Copy className="w-2.5 h-2.5" />
-              </button>
+              {isOwner && inviteCode && (
+                <button onClick={copyCode} className="flex items-center gap-1 hover:text-primary transition-colors">
+                  <Hash className="w-3 h-3" />{inviteCode}
+                  <Copy className="w-2.5 h-2.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -535,7 +547,7 @@ const GroupDetailPage = () => {
                   <div className="glass rounded-xl p-3 flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Share this code</p>
-                      <p className="font-mono font-bold text-foreground text-lg">{group?.invite_code}</p>
+                      <p className="font-mono font-bold text-foreground text-lg">{inviteCode}</p>
                     </div>
                     <Button size="sm" variant="outline" onClick={copyCode} className="rounded-xl gap-1">
                       <Copy className="w-3 h-3" /> Copy

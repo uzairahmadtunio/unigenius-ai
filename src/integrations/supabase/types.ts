@@ -1408,6 +1408,7 @@ export type Database = {
           semester: number
         }[]
       }
+      get_group_invite_code: { Args: { _group_id: string }; Returns: string }
       get_leaderboard_filtered: {
         Args: {
           department_filter?: string
