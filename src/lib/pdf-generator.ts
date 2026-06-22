@@ -286,37 +286,51 @@ function renderContent(doc: jsPDF, markdown: string): Map<number, number> {
           codeLang = rawLine.slice(3).trim();
           codeBuffer = [];
         } else {
-          // Render code block
+          // Render code block — wrap long lines so nothing overflows the page width.
           inCodeBlock = false;
-          const codeHeight = codeBuffer.length * CODE_LINE_H + 14;
-          y = checkPageBreak(doc, y, Math.min(codeHeight, 60));
-
-          // Background
-          doc.setFillColor(245, 245, 250);
-          doc.setDrawColor(190, 190, 205);
-          const actualHeight = Math.min(codeHeight, CONTENT_END_Y - y + 5);
-          doc.roundedRect(LEFT_M, y - 3, CONTENT_W, actualHeight, 2, 2, "FD");
-
-          // Language label
-          if (codeLang) {
-            doc.setFillColor(50, 55, 75);
-            doc.roundedRect(PAGE_W - RIGHT_M - 30, y - 2, 29, 6, 1.5, 1.5, "F");
-            doc.setFont("courier", "bold");
-            doc.setFontSize(7);
-            doc.setTextColor(210, 215, 230);
-            doc.text(codeLang.toUpperCase(), PAGE_W - RIGHT_M - 15.5, y + 2, { align: "center" });
-          }
-
-          y += 6;
           doc.setFont("courier", "normal");
           doc.setFontSize(9);
-          doc.setTextColor(35, 35, 45);
+          const CODE_INNER_W = CONTENT_W - 10; // 5mm padding each side
+          const wrappedCode: string[] = [];
           for (const codeLine of codeBuffer) {
-            y = checkPageBreak(doc, y, CODE_LINE_H);
-            doc.text(codeLine.replace(/\t/g, "    "), LEFT_M + 5, y);
-            y += CODE_LINE_H;
+            const expanded = codeLine.replace(/\t/g, "    ");
+            const parts = doc.splitTextToSize(expanded || " ", CODE_INNER_W) as string[];
+            wrappedCode.push(...(parts.length ? parts : [" "]));
           }
-          y += 6;
+
+          // Render in chunks so blocks that exceed a page break cleanly.
+          let idx = 0;
+          while (idx < wrappedCode.length) {
+            y = checkPageBreak(doc, y, CODE_LINE_H * 3);
+            const available = Math.floor((CONTENT_END_Y - y - 8) / CODE_LINE_H);
+            const take = Math.max(1, Math.min(available, wrappedCode.length - idx));
+            const slice = wrappedCode.slice(idx, idx + take);
+            const blockH = slice.length * CODE_LINE_H + 10;
+
+            doc.setFillColor(245, 245, 250);
+            doc.setDrawColor(190, 190, 205);
+            doc.roundedRect(LEFT_M, y - 3, CONTENT_W, blockH, 2, 2, "FD");
+
+            if (codeLang && idx === 0) {
+              doc.setFillColor(50, 55, 75);
+              doc.roundedRect(PAGE_W - RIGHT_M - 30, y - 2, 29, 6, 1.5, 1.5, "F");
+              doc.setFont("courier", "bold");
+              doc.setFontSize(7);
+              doc.setTextColor(210, 215, 230);
+              doc.text(codeLang.toUpperCase(), PAGE_W - RIGHT_M - 15.5, y + 2, { align: "center" });
+            }
+
+            let cy = y + 6;
+            doc.setFont("courier", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(35, 35, 45);
+            for (const wl of slice) {
+              doc.text(wl, LEFT_M + 5, cy);
+              cy += CODE_LINE_H;
+            }
+            y = cy + 4;
+            idx += take;
+          }
           codeBuffer = [];
           codeLang = "";
         }
