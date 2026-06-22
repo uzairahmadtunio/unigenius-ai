@@ -208,6 +208,8 @@ const PresentationPage = () => {
   const [inputMode, setInputMode] = useState<InputMode>("ai");
   const [generatingImages, setGeneratingImages] = useState<Set<number>>(new Set());
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [themePreviewOpen, setThemePreviewOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { isAdmin } = useAdmin();
 
   const slidesContainerRef = useRef<HTMLDivElement>(null);
