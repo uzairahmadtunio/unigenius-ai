@@ -29,10 +29,10 @@ interface GroupData {
   id: string;
   name: string;
   description: string | null;
-  invite_code: string;
   owner_id: string;
   avatar_url: string | null;
 }
+
 
 interface Member {
   user_id: string;
