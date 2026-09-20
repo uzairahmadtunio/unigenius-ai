@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://tvazcfwsnjjbwvzvxghx.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "unigenius-ai",
+      "version": "0.1.0",
+      "title": "UniGenius AI"
+    },
+    "tools": [
+      {
+        "name": "get_profile",
+        "title": "Get my academic profile",
+        "description": "Get the signed-in student's UniGenius profile: display name, department, current semester, roll number and Pro status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": null,
+        "outputSchema": null
+      },
+      {
+        "name": "get_attendance_summary",
+        "title": "Get attendance summary",
+        "description": "Summarise the signed-in student's attendance per subject (present, absent, percentage) for a semester, with the most recent records.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "semester": {
+              "type": "integer",
+              "description": "Semester number to summarise. Omit for all semesters."
+            },
+            "subject": {
+              "type": "string",
+              "description": "Filter to a single subject name."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_study_plan",
+        "title": "Get my study plan",
+        "description": "Get the signed-in student's latest generated weekly study plan, including subjects, weekly hours and schedule.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": null,
+        "outputSchema": null
+      },
+      {
+        "name": "list_flashcard_sets",
+        "title": "List my flashcard sets",
+        "description": "List the signed-in student's saved flashcard sets, with card counts and optionally the cards themselves.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "Filter by subject name."
+            },
+            "includeCards": {
+              "type": "boolean",
+              "description": "Include the cards of each set (default false)."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of sets to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_study_materials",
+        "title": "List study materials",
+        "description": "List teacher-uploaded study materials available to the signed-in student, optionally filtered by subject or semester.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "Filter by subject name."
+            },
+            "semester": {
+              "type": "integer",
+              "description": "Filter by semester number."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of materials to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_upcoming_exams",
+        "title": "List upcoming exams",
+        "description": "List upcoming exams from the university exam schedule, optionally filtered by semester.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "semester": {
+              "type": "integer",
+              "description": "Filter by semester number."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of exams to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_study_session",
+        "title": "Log a study session",
+        "description": "Record a completed study session for the signed-in student so it counts toward progress tracking.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "Subject that was studied."
+            },
+            "durationMinutes": {
+              "type": "integer",
+              "description": "How long the session lasted, in minutes."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Optional notes about what was covered."
+            }
+          },
+          "required": [
+            "subject",
+            "durationMinutes"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
