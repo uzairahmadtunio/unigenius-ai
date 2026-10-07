@@ -17,6 +17,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { formatDistanceToNow } from "date-fns";
 import { Trash2, CheckCheck } from "lucide-react";
 import { PushSettingsPanel } from "@/components/PushSettingsPanel";
+import { NavItems } from "@/components/AppSidebar";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
@@ -101,16 +102,16 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
   };
 
   return (
-    <nav className="sticky top-0 z-40 glass border-b border-border/50">
-      <div className="container mx-auto flex items-center justify-between h-16 px-4 gap-2">
+    <nav className="sticky top-0 z-40 bg-background/85 backdrop-blur-md border-b border-border">
+      <div className="w-full mx-auto flex items-center justify-between h-16 px-4 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {onMenuToggle && (
-            <Button variant="ghost" size="icon" className="rounded-xl md:hidden shrink-0" onClick={onMenuToggle}>
+            <Button variant="ghost" size="icon" className="rounded-lg md:hidden shrink-0" onClick={onMenuToggle}>
               <Menu className="w-5 h-5" />
             </Button>
           )}
           <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
               <GraduationCap className="w-5 h-5 text-primary-foreground" />
             </div>
             <div className="flex items-center gap-2 min-w-0">
@@ -128,35 +129,35 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Desktop / tablet inline actions */}
-          <Button variant="ghost" size="sm" className="rounded-xl text-xs hidden sm:flex" onClick={() => navigate("/about")}>
+          <Button variant="ghost" size="sm" className="rounded-lg text-xs hidden sm:flex" onClick={() => navigate("/about")}>
             About
           </Button>
-          <Button variant="ghost" size="sm" className="rounded-xl text-xs hidden sm:flex" onClick={() => navigate("/contact")}>
+          <Button variant="ghost" size="sm" className="rounded-lg text-xs hidden sm:flex" onClick={() => navigate("/contact")}>
             Contact
           </Button>
           {isTeacher && !isAdmin && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/teacher-dashboard")}>
+            <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/teacher-dashboard")}>
               <GraduationCap className="w-3 h-3" /> Teacher Panel
             </Button>
           )}
           {isAdmin && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/admin")}>
+            <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1.5 hidden md:flex text-primary" onClick={() => navigate("/admin")}>
               <Shield className="w-3 h-3" /> Admin
             </Button>
           )}
           {department && (
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs gap-1.5 hidden lg:flex" onClick={clearDepartment}>
+            <Button variant="ghost" size="sm" className="rounded-lg text-xs gap-1.5 hidden lg:flex" onClick={clearDepartment}>
               <RefreshCw className="w-3 h-3" /> Change Dept
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className="rounded-xl hidden sm:flex">
+          <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className="rounded-lg hidden sm:flex">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
           {user && (
             <Popover onOpenChange={handleBellOpen}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-xl relative">
+                <Button variant="ghost" size="icon" className="rounded-lg relative">
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
@@ -165,7 +166,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-0 rounded-xl" align="end">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-0 rounded-lg" align="end">
                 <div className="p-3 border-b border-border flex items-center justify-between">
                   <p className="font-display font-semibold text-sm">Notifications</p>
                   {unreadCount > 0 && (
@@ -224,7 +225,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-xl hidden md:flex"
+                      className="rounded-lg hidden md:flex"
                       onClick={() => {
                         const msg = `Check out UniGenius AI – The ultimate assistant for Software Engineering students. Fix C++ code, generate lab manuals, track attendance, and more. Join here: ${window.location.origin} — Built by Uzair Ahmad`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
@@ -236,7 +237,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   <TooltipContent><p className="text-xs">Invite Friends</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button variant="ghost" size="icon" className="rounded-xl hidden md:flex" onClick={() => navigate("/profile")}>
+              <Button variant="ghost" size="icon" className="rounded-lg hidden md:flex" onClick={() => navigate("/profile")}>
                 <Settings className="w-4 h-4" />
               </Button>
               <Avatar className="w-8 h-8 cursor-pointer border border-primary/20 hidden sm:flex" onClick={() => navigate("/profile")}>
@@ -245,12 +246,12 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
                   {user.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button variant="ghost" size="icon" className="rounded-xl hidden md:flex" onClick={signOut}>
+              <Button variant="ghost" size="icon" className="rounded-lg hidden md:flex" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" className="rounded-xl hidden sm:flex" onClick={() => navigate("/auth")}>
+            <Button variant="ghost" size="sm" className="rounded-lg hidden sm:flex" onClick={() => navigate("/auth")}>
               <User className="w-4 h-4 mr-1" /> Sign In
             </Button>
           )}
@@ -258,7 +259,7 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
           {/* Mobile burger menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl sm:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="rounded-lg lg:hidden" aria-label="Open menu">
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
@@ -270,9 +271,14 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 {user && (
+                  <div className="pb-3 mb-2 border-b border-border">
+                    <NavItems onNavigate={() => setMobileOpen(false)} />
+                  </div>
+                )}
+                {user && (
                   <button
                     onClick={() => { setMobileOpen(false); navigate("/profile"); }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <Avatar className="w-9 h-9 border border-primary/20">
                       <AvatarImage src={avatarUrl} />
@@ -327,11 +333,11 @@ const Navbar = ({ onMenuToggle, showMenu }: NavbarProps) => {
               </div>
               <div className="p-3 border-t border-border">
                 {user ? (
-                  <Button variant="outline" className="w-full rounded-xl text-xs" onClick={() => { setMobileOpen(false); signOut(); }}>
+                  <Button variant="outline" className="w-full rounded-lg text-xs" onClick={() => { setMobileOpen(false); signOut(); }}>
                     <LogOut className="w-4 h-4 mr-2" /> Sign Out
                   </Button>
                 ) : (
-                  <Button className="w-full rounded-xl text-xs gradient-primary" onClick={() => { setMobileOpen(false); navigate("/auth"); }}>
+                  <Button className="w-full rounded-lg text-xs gradient-primary" onClick={() => { setMobileOpen(false); navigate("/auth"); }}>
                     <User className="w-4 h-4 mr-2" /> Sign In
                   </Button>
                 )}
@@ -357,7 +363,7 @@ const MobileMenuItem = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left ${highlight ? "text-primary" : "text-foreground"}`}
+    className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left ${highlight ? "text-primary" : "text-foreground"}`}
   >
     <Icon className="w-4 h-4 shrink-0" />
     <span className="text-sm font-medium">{label}</span>

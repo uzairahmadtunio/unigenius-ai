@@ -45,6 +45,7 @@ import GlobalAlertBanner from "./components/GlobalAlertBanner";
 import SupportChatWidget from "./components/SupportChatWidget";
 import MobileBottomNav from "./components/MobileBottomNav";
 import ScrollToTop from "./components/ScrollToTop";
+import AppSidebar, { useSidebarVisible } from "./components/AppSidebar";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,11 @@ const DarkModeInit = ({ children }: { children: React.ReactNode }) => {
     document.documentElement.classList.add("dark");
   }, []);
   return <>{children}</>;
+};
+
+const ContentShell = ({ children }: { children: React.ReactNode }) => {
+  const withSidebar = useSidebarVisible();
+  return <div className={withSidebar ? "lg:pl-60" : undefined}>{children}</div>;
 };
 
 const App = () => (
@@ -67,6 +73,8 @@ const App = () => (
             <GlobalAlertBanner />
             <BrowserRouter>
               <ScrollToTop />
+              <AppSidebar />
+              <ContentShell>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/ai-tutor" element={<ChatPage />} />
@@ -106,6 +114,7 @@ const App = () => (
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </ContentShell>
               <MobileBottomNav />
               <SupportChatWidget />
             </BrowserRouter>
