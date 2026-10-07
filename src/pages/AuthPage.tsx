@@ -17,6 +17,13 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const rawNext = new URLSearchParams(window.location.search).get("next") || "";
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  const returnUrl = window.location.origin + nextPath;
+  const goNext = () => {
+    if (nextPath.startsWith("/.lovable/")) window.location.href = returnUrl;
+    else navigate(nextPath);
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,14 +47,14 @@ const AuthPage = () => {
         } else {
           toast.success("Welcome back!");
         }
-        navigate("/");
+        goNext();
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { full_name: name },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: returnUrl,
           },
         });
         if (error) throw error;
@@ -62,7 +69,7 @@ const AuthPage = () => {
 
   const handleGoogleLogin = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: returnUrl,
     });
     if (error) toast.error(error.message);
   };
